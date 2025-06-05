@@ -1,0 +1,20 @@
+{
+  "name": "being-lawful-website",
+  "version": "1.0.0",
+  "description": "being a lawful website ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Aditya Sharma",
+  "license": "ISC",
+  "dependencies": {
+    "bootstrap": "^5.3.6",
+    "dotenv": "^16.5.0",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0",
+    "express-session": "^1.18.1",
+    "firebase": "^11.8.1",
+    "firebase-admin": "^13.4.0"
+  }
+}

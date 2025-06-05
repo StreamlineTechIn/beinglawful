@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - Being Lawful</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #28a745;
+            color: #fff;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            padding: 20px;
+            border-top-right-radius: 20px;
+            border-bottom-right-radius: 20px;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+        .sidebar h4 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+        }
+        .sidebar .nav-link {
+            color: #fff;
+            padding: 10px 15px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: block;
+            text-decoration: none;
+            font-size: 1.1rem;
+        }
+        .sidebar .nav-link:hover {
+            background-color: #218838;
+        }
+        .sidebar .nav-link.active {
+            background-color: #1e7e34;
+        }
+        .main-content {
+            margin-left: 250px;
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            height: 100vh;
+        }
+        .dashboard-container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            min-height: 90vh;
+        }
+        .dashboard-container h2 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+            font-size: 2rem;
+        }
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+        .section h3 {
+            color: #28a745;
+            margin-bottom: 20px;
+            font-size: 1.5rem;
+        }
+        .btn-custom {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+            font-size: 1.1rem;
+        }
+        .btn-custom:hover {
+            background-color: #218838;
+        }
+        .btn-custom:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .exam-instructions {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .exam-instructions h4 {
+            margin-bottom: 10px;
+            font-size: 1.2rem;
+            color: #2c3e50;
+        }
+        .exam-instructions ul {
+            margin: 0;
+            padding-left: 20px;
+            font-size: 1rem;
+        }
+        .mcq-question {
+            margin-bottom: 20px;
+        }
+        .mcq-question p {
+            font-weight: 500;
+            margin-bottom: 10px;
+            color: #2c3e50;
+        }
+        .mcq-question label {
+            margin-left: 10px;
+            font-size: 1rem;
+        }
+        .score-message {
+            color: #28a745;
+            text-align: center;
+            font-size: 1.4rem;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .results-card {
+            background-color: #f8f9fa;
+            border: 2px solid #28a745;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+        .result-stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+        .stat-item {
+            text-align: center;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .stat-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .progress-section {
+            margin-bottom: 30px;
+        }
+        .progress-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f8f9fa;
+        }
+        .progress-icon {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-weight: bold;
+        }
+        .progress-icon.completed {
+            background-color: #28a745;
+            color: white;
+        }
+        .progress-icon.pending {
+            background-color: #ffc107;
+            color: white;
+        }
+        .progress-icon.disabled {
+            background-color: #6c757d;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h4>Student Panel</h4>
+        <a href="#" class="nav-link active">Dashboard</a>
+        <a href="/" class="nav-link">Home</a>
+        <a href="/login" class="nav-link">Logout</a>
+    </div>
+
+    <div class="main-content">
+        <div class="dashboard-container">
+            <h2>Welcome, <%= studentName %>!</h2>
+
+            <!-- Progress Overview Section -->
+            <div class="section">
+                <h3>Test Progress</h3>
+                <div class="progress-section">
+                    <div class="progress-item">
+                        <div class="progress-icon <%= hasCompletedTrial1 ? 'completed' : 'pending' %>">
+                            <%= hasCompletedTrial1 ? '✓' : '1' %>
+                        </div>
+                        <div>
+                            <strong>Trial Test 1</strong><br>
+                            <small><%= hasCompletedTrial1 ? 'Completed' : 'Pending' %></small>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-icon <%= hasCompletedTrial2 ? 'completed' : (hasCompletedTrial1 ? 'pending' : 'disabled') %>">
+                            <%= hasCompletedTrial2 ? '✓' : '2' %>
+                        </div>
+                        <div>
+                            <strong>Trial Test 2</strong><br>
+                            <small><%= hasCompletedTrial2 ? 'Completed' : (hasCompletedTrial1 ? 'Available' : 'Locked') %></small>
+                        </div>
+                    </div>
+                    <div class="progress-item">
+                        <div class="progress-icon <%= hasCompletedMCQ ? 'completed' : ((hasCompletedTrial1 && hasCompletedTrial2) ? 'pending' : 'disabled') %>">
+                            <%= hasCompletedMCQ ? '✓' : '3' %>
+                        </div>
+                        <div>
+                            <strong>Main Exam</strong><br>
+                            <small><%= hasCompletedMCQ ? 'Completed' : ((hasCompletedTrial1 && hasCompletedTrial2) ? 'Available' : 'Locked') %></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exam Results Section -->
+            <% if (hasCompletedTrial1) { %>
+            <div class="section">
+                <h3>Trial Test 1 Results</h3>
+                <div class="results-card">
+                    <div class="score-message">
+                        Your Score: <%= trial1Score %>/<%= trial1TotalQuestions %> (<%= trial1Percentage %>%)
+                    </div>
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <div class="stat-number"><%= trial1CorrectAnswers %></div>
+                            <div class="stat-label">Correct Answers</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number"><%= trial1WrongAnswers %></div>
+                            <div class="stat-label">Wrong Answers</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number"><%= trial1Percentage %>%</div>
+                            <div class="stat-label">Percentage</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+
+            <% if (hasCompletedTrial2) { %>
+            <div class="section">
+                <h3>Trial Test 2 Results</h3>
+                <div class="results-card">
+                    <div class="score-message">
+                        Your Score: <%= trial2Score %>/<%= trial2TotalQuestions %> (<%= trial2Percentage %>%)
+                    </div>
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <div class="stat-number"><%= trial2CorrectAnswers %></div>
+                            <div class="stat-label">Correct Answers</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number"><%= trial2WrongAnswers %></div>
+                            <div class="stat-label">Wrong Answers</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number"><%= trial2Percentage %>%</div>
+                            <div class="stat-label">Percentage</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+
+            <% if (showResults && hasCompletedMCQ) { %>
+            <div class="section">
+                <h3>Main Exam Results</h3>
+                <div class="results-card">
+                    <div class="score-message">
+                        Your Score: <%= score %>/<%= totalQuestions %> (<%= percentage %>%)
+                    </div>
+                    <div class="result-stats">
+                        <div class="stat-item">
+                            <div class="stat-number"><%= correctAnswers %></div>
+                            <div class="stat-label">Correct Answers</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number"><%= wrongAnswers %></div>
+                            <div class="stat-label">Wrong Answers</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-number"><%= percentage %>%</div>
+                            <div class="stat-label">Percentage</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+
+            <!-- Trial Test 1 Section -->
+            <% if (!hasCompletedTrial1) { %>
+            <div class="section">
+                <h3>Trial Test 1</h3>
+                <div class="exam-instructions">
+                    <h4>Instructions</h4>
+                    <ul>
+                        <li>This is a practice test to familiarize you with the interface.</li>
+                        <li>Complete all questions and submit.</li>
+                        <li>You must complete this to unlock Trial Test 2.</li>
+                    </ul>
+                </div>
+                <form action="/submit-trial1" method="POST" id="trial1-form">
+                    <% trial1.forEach((mcq, index) => { %>
+                        <div class="mcq-question">
+                            <p>Question <%= index + 1 %>: <%= mcq.question %></p>
+                            <% mcq.options.forEach((option, optIndex) => { %>
+                                <div>
+                                    <input type="radio" id="t1-q<%= index %>-<%= optIndex %>" name="q<%= index %>" value="<%= option %>" required>
+                                    <label for="t1-q<%= index %>-<%= optIndex %>"><%= option %></label>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% }) %>
+                    <input type="hidden" name="parentMobile1" value="<%= parentMobile1 %>">
+                    <button type="submit" class="btn-custom">Submit Trial 1</button>
+                </form>
+            </div>
+            <% } %>
+
+            <!-- Trial Test 2 Section -->
+            <% if (hasCompletedTrial1 && !hasCompletedTrial2) { %>
+            <div class="section">
+                <h3>Trial Test 2</h3>
+                <div class="exam-instructions">
+                    <h4>Instructions</h4>
+                    <ul>
+                        <li>This is the second practice test.</li>
+                        <li>Complete all questions and submit.</li>
+                        <li>You must complete this to unlock the Main Exam.</li>
+                    </ul>
+                </div>
+                <form action="/submit-trial2" method="POST" id="trial2-form">
+                    <% trial2.forEach((mcq, index) => { %>
+                        <div class="mcq-question">
+                            <p>Question <%= index + 1 %>: <%= mcq.question %></p>
+                            <% mcq.options.forEach((option, optIndex) => { %>
+                                <div>
+                                    <input type="radio" id="t2-q<%= index %>-<%= optIndex %>" name="q<%= index %>" value="<%= option %>" required>
+                                    <label for="t2-q<%= index %>-<%= optIndex %>"><%= option %></label>
+                                </div>
+                            <% }) %>
+                        </div>
+                    <% }) %>
+                    <input type="hidden" name="parentMobile1" value="<%= parentMobile1 %>">
+                    <button type="submit" class="btn-custom">Submit Trial 2</button>
+                </form>
+            </div>
+            <% } %>
+
+            <!-- Main Exam Section -->
+            <% if (hasCompletedTrial1 && hasCompletedTrial2 && !hasCompletedMCQ) { %>
+            <div class="section">
+                <h3>Main Exam</h3>
+                <div class="exam-instructions">
+                    <h4>Instructions</h4>
+                    <ul>
+                        <li>This is the final exam consisting of <%= mcqs.length %> questions.</li>
+                        <li>Answer all questions carefully - you cannot change answers after submission.</li>
+                        <li>Do not switch tabs or leave the page during the exam.</li>
+                    </ul>
+                </div>
+                <a href="/mcq-test/<%= parentMobile1 %>" class="btn-custom">Start Main Exam</a>
+            </div>
+            <% } %>
+        </div>
+    </div>
+
+    <script>
+        // Form submission validation for trial tests
+        document.getElementById('trial1-form')?.addEventListener('submit', function (e) {
+            const answered = document.querySelectorAll('#trial1-form input[type="radio"]:checked').length;
+            if (answered < <%= trial1.length %>) {
+                e.preventDefault();
+                alert('Please answer all questions before submitting Trial Test 1.');
+            }
+        });
+
+        document.getElementById('trial2-form')?.addEventListener('submit', function (e) {
+            const answered = document.querySelectorAll('#trial2-form input[type="radio"]:checked').length;
+            if (answered < <%= trial2.length %>) {
+                e.preventDefault();
+                alert('Please answer all questions before submitting Trial Test 2.');
+            }
+        });
+    </script>
+</body>
+</html>

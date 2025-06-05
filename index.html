@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Being Lawful</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet"/>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+    }
+
+    /* Navbar Styling */
+    .navbar {
+      background-color: rgba(255, 255, 255, 0.95) !important;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      padding: 15px 0;
+      transition: all 0.3s ease;
+    }
+
+    .navbar-brand img {
+      transition: transform 0.3s ease;
+    }
+
+    .navbar-brand img:hover {
+      transform: scale(1.1);
+    }
+
+    .nav-link {
+      color: #333 !important;
+      font-weight: 500;
+      margin: 0 15px;
+      position: relative;
+      transition: color 0.3s ease;
+    }
+
+    .nav-link:hover {
+      color: #007bff !important;
+    }
+
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      background-color: #007bff;
+      bottom: -5px;
+      left: 0;
+      transition: width 0.3s ease;
+    }
+
+    .nav-link:hover::after {
+      width: 100%;
+    }
+
+    /* Hero Section */
+    .hero-section {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('./Assets/samvidhan.png');
+      background-size: cover;
+      background-position: center;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    .hero-button {
+      background-color: transparent;
+      border: 2px solid #f0f0f0;
+      padding: 12px 24px;
+      font-weight: bold;
+      color: #f0f0f0;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      border-radius: 5px;
+    }
+
+    .hero-button:hover {
+      background-color: #fff;
+      color: black;
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    /* Vision Section */
+    .vision-wrapper {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #f8f9fa;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .vision-title {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .card-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 900px;
+    }
+
+    .card-box {
+      background-color: #dcdcdc;
+      border-radius: 20px;
+      padding: 20px;
+      flex: 1 1 300px;
+      max-width: 400px;
+      text-align: left;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .card-box:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .card-box h5 {
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .card-box p {
+      font-size: 14px;
+      margin: 0;
+      color: #666;
+    }
+
+    @media (max-width: 576px) {
+      .vision-title {
+        font-size: 24px;
+      }
+
+      .card-box {
+        max-width: 100%;
+        text-align: center;
+      }
+
+      .card-box p {
+        text-align: justify;
+      }
+    }
+
+    /* Book Section */
+    .book-section {
+      background-color: tan;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 20px;
+      text-align: center;
+    }
+
+    .book-title {
+      font-weight: 700;
+      font-size: 32px;
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .book-content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      align-items: center;
+      justify-content: center;
+      max-width: 1100px;
+    }
+
+    .book-text {
+      flex: 1 1 300px;
+      max-width: 600px;
+      background-color: #e0e0e0;
+      padding: 20px;
+      border-radius: 8px;
+      transition: transform 0.3s ease;
+    }
+
+    .book-text:hover {
+      transform: translateY(-5px);
+    }
+
+    .book-text p {
+      margin-bottom: 20px;
+      font-size: 16px;
+      color: #666;
+    }
+
+    .buy-button {
+      padding: 10px 30px;
+      background-color: #333;
+      border: none;
+      border-radius: 5px;
+      font-weight: 600;
+      color: #fff;
+      transition: all 0.3s ease;
+    }
+
+    .buy-button:hover {
+      background-color: #007bff;
+      transform: translateY(-3px);
+    }
+
+    .book-image {
+      flex: 0 0 250px;
+      height: 400px;
+      background-image: url('./Assets/being_lawful.jpg');
+      background-size: cover;
+      background-position: center;
+      background-color: #ccc;
+      border-radius: 20px;
+      transition: transform 0.3s ease;
+    }
+
+    .book-image:hover {
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 768px) {
+      .book-title {
+        font-size: 24px;
+      }
+
+      .book-content {
+        flex-direction: column;
+      }
+
+      .book-image {
+        width: 100%;
+        height: 300px;
+      }
+    }
+
+    /* Activities Section */
+    .activities-section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 20px;
+      text-align: center;
+      background-color: #fff;
+    }
+
+    .activities-title {
+      font-weight: 700;
+      font-size: 32px;
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .activities-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .activity-box {
+      background-color: #e0e0e0;
+      border-radius: 20px;
+      height: 150px;
+      transition: transform 0.3s ease;
+    }
+
+    .activity-box:hover {
+      transform: translateY(-5px);
+    }
+
+    .activity-box-large {
+      grid-row: span 2;
+      height: 320px;
+    }
+
+    @media (max-width: 768px) {
+      .activities-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .activity-box-large {
+        grid-row: span 1;
+        height: 150px;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .activities-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .activity-box,
+      .activity-box-large {
+        height: 120px;
+      }
+
+      .activities-title {
+        font-size: 24px;
+      }
+    }
+
+    /* Author Note Section */
+    .author-section {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 20px;
+      text-align: center;
+      background-color: tan;
+    }
+
+    .author-title {
+      font-weight: 700;
+      font-size: 32px;
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .author-content {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px;
+      align-items: center;
+      justify-content: center;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .author-photo {
+      flex: 0 0 300px;
+      height: 300px;
+      background-image: url('./Assets/vibhawaribhidwe.jpg');
+      background-size: cover;
+      background-position: center;
+      background-color: #e0e0e0;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+    }
+
+    .author-photo:hover {
+      transform: scale(1.05);
+    }
+
+    .author-text {
+      flex: 1 1 300px;
+      background-color: #e0e0e0;
+      padding: 20px;
+      border-radius: 20px;
+      height: 300px;
+      transition: transform 0.3s ease;
+    }
+
+    .author-text:hover {
+      transform: translateY(-5px);
+    }
+
+    @media (max-width: 768px) {
+      .author-content {
+        flex-direction: column;
+      }
+
+      .author-photo,
+      .author-text {
+        width: 100%;
+        height: 250px;
+      }
+
+      .author-title {
+        font-size: 24px;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .author-photo,
+      .author-text {
+        height: 200px;
+      }
+    }
+
+    /* Samvidhan Hero Section */
+    .samvidhan-hero-section {
+      background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('./Assets/samvidhan.png');
+      background-size: cover;
+      background-position: center;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .samvidhan-hero-button {
+      background-color: transparent;
+      border: 2px solid #f0f0f0;
+      padding: 12px 24px;
+      font-weight: bold;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      transition: all 0.3s ease;
+      border-radius: 5px;
+    }
+
+    .samvidhan-hero-button a {
+      color: #f0f0f0;
+      text-decoration: none;
+    }
+
+    .samvidhan-hero-button:hover {
+      background-color: #fff;
+      transform: translateY(-3px);
+      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    .samvidhan-hero-button:hover a {
+      color: black;
+    }
+
+    /* Our Partners Section */
+    .partners-section {
+      min-height: 50vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 60px 20px;
+      text-align: center;
+      background-color: #fff;
+    }
+
+    .partners-title {
+      font-weight: 700;
+      font-size: 32px;
+      margin-bottom: 40px;
+      color: #333;
+    }
+
+    .partners-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      justify-content: center;
+      max-width: 900px;
+      width: 100%;
+    }
+
+    .partner-logo {
+      width: 150px;
+      height: 150px;
+      background-color: #000;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+    }
+
+    .partner-logo:hover {
+      transform: scale(1.1);
+    }
+
+    @media (max-width: 768px) {
+      .partners-grid {
+        gap: 15px;
+      }
+
+      .partner-logo {
+        width: 120px;
+        height: 120px;
+      }
+
+      .partners-title {
+        font-size: 24px;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .partner-logo {
+        width: 100px;
+        height: 100px;
+      }
+    }
+
+    /* Footer Section */
+    .footer-section {
+      background-color: #333;
+      padding: 60px 20px;
+      text-align: center;
+      color: #fff;
+    }
+
+    .footer-content {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 40px;
+      max-width: 900px;
+      margin: 0 auto;
+      margin-bottom: 20px;
+    }
+
+    .footer-column {
+      flex: 1 1 200px;
+      text-align: left;
+    }
+
+    .footer-column h5 {
+      font-weight: 700;
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #fff;
+    }
+
+    .footer-column ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .footer-column ul li {
+      margin-bottom: 10px;
+    }
+
+    .footer-column ul li a {
+      color: #ccc;
+      text-decoration: none;
+      transition: color 0.3s ease;
+    }
+
+    .footer-column ul li a:hover {
+      color: #007bff;
+    }
+
+    .footer-bottom {
+      margin-top: 20px;
+      font-size: 14px;
+      color: #ccc;
+    }
+
+    @media (max-width: 768px) {
+      .footer-content {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+      }
+
+      .footer-column {
+        text-align: center;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .footer-column h5 {
+        font-size: 16px;
+      }
+
+      .footer-bottom {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg bg-light fixed-top" data-aos="fade-down" data-aos-duration="800">
+  <div class="container">
+    <a class="navbar-brand" href="#hero"><img src="./Assets/logo.png" alt="Logo" width="60"/></a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarContent">
+      <ul class="navbar-nav align-items-center">
+        <li class="nav-item"><a class="nav-link" href="#hero">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="#vision">About</a></li>
+        <li class="nav-item"><a class="nav-link" href="#book">Book</a></li>
+        <li class="nav-item"><a class="nav-link" href="#activities">Activities</a></li>
+        <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero Section -->
+<div class="hero-section" id="hero" data-aos="fade-up" data-aos-duration="1000">
+  <button class="hero-button" data-aos="zoom-in" data-aos-delay="300" data-bs-toggle="modal" data-bs-target="#participateModal">Participate Now</button>
+</div>
+
+<!-- Modal for Participation Options -->
+<div class="modal fade" id="participateModal" tabindex="-1" aria-labelledby="participateModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="participateModalLabel">Select Participant Type</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p>Please select your role to participate:</p>
+        <a href="/participation?type=Student" class="btn btn-primary mx-2">Student</a>
+        <a href="/school-participation" class="btn btn-primary mx-2">School</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Vision Section -->
+<div class="vision-wrapper" id="vision" data-aos="fade-up" data-aos-duration="1000">
+  <div class="vision-title" data-aos="fade-up" data-aos-delay="200">Being Lawful: 75 years of Constitution</div>
+  <div class="card-container">
+    <div class="card-box" data-aos="fade-right" data-aos-delay="300">
+      <h5>Vision and Mission</h5>
+      <p><strong>Vision:</strong> Celebrate the spirit of constitution and instill a sense of pride and respect for it.</p>
+      <p><strong>Mission:</strong> Promote ethical conduct and empower GenZ as catalysts for positive change.</p>
+    </div>
+    <div class="card-box" data-aos="fade-left" data-aos-delay="400">
+      <h5>Activities in Being Lawful</h5>
+      <ul>
+        <li>Interactive workshop for highschool students</li>
+        <li>Civic Awareness</li>
+        <li>Fun quiz and games</li>
+        <li>AI learnings</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- Book Overview Centered Section -->
+<div class="book-section" id="book" data-aos="fade-up" data-aos-duration="1000">
+  <div class="book-title" data-aos="fade-up" data-aos-delay="200">Being a lawful book overview</div>
+  <div class="book-content">
+    <div class="book-text" data-aos="fade-right" data-aos-delay="300">
+      <p>
+        In their vulnerability, children need protection from life's injustices. This book serves as a guide, imparting knowledge about their rights, safety measures, and remedies in challenging situations. Additionally, as they grow, they must comprehend their responsibilities, respect others' rights, and grasp the significance of 'Being Lawful', the central theme of this book.
+      </p>
+      <p>
+        As empowered citizens, children have the ability to shape the future of India. The book encourages them to expand their focus beyond self-interest to encompass society, our country, and the entire world. Embracing the philosophy of Vasudhaiva Kutumbakam—the global family—is what the world needs today.
+      </p>
+      <p>
+        May this book provide a fresh perspective on this journey, proving valuable not only to children but also to their parents and teachers.
+      </p>
+      <button class="buy-button" data-aos="zoom-in" data-aos-delay="400">Buy Now</button>
+    </div>
+    <div class="book-image" data-aos="fade-left" data-aos-delay="300"></div>
+  </div>
+</div>
+
+<!-- Activities Section -->
+<div class="activities-section" id="activities" data-aos="fade-up" data-aos-duration="1000">
+  <div class="activities-title" data-aos="fade-up" data-aos-delay="200">Activities</div>
+  <div class="activities-grid">
+    <div class="activity-box" data-aos="fade-up" data-aos-delay="300"></div>
+    <div class="activity-box" data-aos="fade-up" data-aos-delay="400"></div>
+    <div class="activity-box activity-box-large" data-aos="fade-up" data-aos-delay="500"></div>
+    <div class="activity-box" data-aos="fade-up" data-aos-delay="600"></div>
+    <div class="activity-box" data-aos="fade-up" data-aos-delay="700"></div>
+  </div>
+</div>
+
+<!-- Author Note Section -->
+<div class="author-section" id="author" data-aos="fade-up" data-aos-duration="1000">
+  <div class="author-title" data-aos="fade-up" data-aos-delay="200">Author Note</div>
+  <div class="author-content">
+    <div class="author-photo" data-aos="fade-right" data-aos-delay="300"></div>
+    <div class="author-text" data-aos="fade-left" data-aos-delay="300">
+        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia aliquam corporis ut esse beatae eum quis excepturi quia provident error voluptate est dolore qui quisquam modi accusantium officiis, tempora ullam?
+        Tempore dolorum animi quaerat. Recusandae suscipit consequuntur corporis, vero iusto id rerum culpa magnam numquam maxime corrupti. Hic fugiat molestiae temporibus unde iste quasi voluptate, nobis odit! Neque, ipsa in!
+        Impedit exercitationem earum dolores dignissimos officiis veniam, molestiae consequatur totam laborum nisi, eius consectetur, repellendus magni iusto atque sit veritatis in quae dolor fugiat sapiente voluptate? Quis, quasi iure. Placeat.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Samvidhan Hero Section -->
+<div class="samvidhan-hero-section" id="samvidhan" data-aos="fade-up" data-aos-duration="1000">
+  <button class="samvidhan-hero-button" data-aos="zoom-in" data-aos-delay="300"><a href="https://constitution75.com/">Visit Now</a></button>
+</div>
+
+<!-- Our Partners Section -->
+<div class="partners-section" id="partners" data-aos="fade-up" data-aos-duration="1000">
+  <div class="partners-title" data-aos="fade-up" data-aos-delay="200">Our Partners</div>
+  <div class="partners-grid">
+    <div class="partner-logo" data-aos="fade-up" data-aos-delay="300"></div>
+    <div class="partner-logo" data-aos="fade-up" data-aos-delay="400"></div>
+    <div class="partner-logo" data-aos="fade-up" data-aos-delay="500"></div>
+    <div class="partner-logo" data-aos="fade-up" data-aos-delay="600"></div>
+  </div>
+</div>
+
+<!-- Footer Section -->
+<footer class="footer-section" id="footer" data-aos="fade-up" data-aos-duration="1000">
+  <div class="footer-content">
+    <div class="footer-column" data-aos="fade-up" data-aos-delay="200">
+      <h5>Quick Links</h5>
+      <ul>
+        <li><a href="#hero">Home</a></li>
+        <li><a href="#vision">About</a></li>
+        <li><a href="#book">Book</a></li>
+        <li><a href="#activities">Activities</a></li>
+      </ul>
+    </div>
+    <div class="footer-column" data-aos="fade-up" data-aos-delay="300">
+      <h5>Contact Us</h5>
+      <ul>
+        <li>Email: info@beinglawful.in</li>
+        <li>Phone: +91 123-456-7890</li>
+        <li>Address: 123 Lawful Street, India</li>
+      </ul>
+    </div>
+    <div class="footer-column" data-aos="fade-up" data-aos-delay="400">
+      <h5>Follow Us</h5>
+      <ul>
+        <li><a href="#">Facebook</a></li>
+        <li><a href="#">Twitter</a></li>
+        <li><a href="#">Instagram</a></li>
+        <li><a href="#">LinkedIn</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom" data-aos="fade-up" data-aos-delay="500">
+    <p>© 2025 Being Lawful. All Rights Reserved.</p>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+<script>
+  AOS.init({
+    duration: 800,
+    easing: 'ease-in-out',
+    once: true,
+    mirror: false
+  });
+</script>
+</body>
+</html>

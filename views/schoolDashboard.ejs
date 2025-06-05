@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Dashboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #ddd;
+        }
+        .error {
+            color: red;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>School Dashboard - <%= schoolName %></h1>
+
+        <% if (error) { %>
+            <p class="error"><%= error %></p>
+        <% } %>
+
+        <h2>Student Performance</h2>
+        <% if (students && students.length > 0) { %>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student Name</th>
+                        <th>Class</th>
+                        <th>Completed Main Exam</th>
+                        <th>Main Exam Score</th>
+                        <th>Main Exam Percentage</th>
+                        <th>Trial 1 Score</th>
+                        <th>Trial 2 Score</th>
+                        <th>Completed At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% students.forEach(student => { %>
+                        <tr>
+                            <td><%= student.studentName %></td>
+                            <td><%= student.studentClass %></td>
+                            <td><%= student.hasCompletedMCQ ? 'Yes' : 'No' %></td>
+                            <td><%= student.score %> / <%= student.totalQuestions %></td>
+                            <td><%= student.percentage %>%</td>
+                          <td><%= student.trial1Score %> / 2</td>
+<!-- ... -->
+<td><%= student.trial2Score %> / 2</td>
+                            <td><%= student.completedAt %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        <% } else { %>
+            <p>No students found for this school.</p>
+        <% } %>
+    </div>
+</body>
+</html>

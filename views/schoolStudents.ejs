@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>School Dashboard - Being Lawful</title>
+    <title>Students of <%= schoolName %> - Being Lawful</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,7 +11,7 @@
             margin: 0;
             padding: 20px;
         }
-        .dashboard-container {
+        .container {
             max-width: 1000px;
             margin: 0 auto;
             background-color: white;
@@ -19,13 +19,9 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        .dashboard-container h2 {
+        .container h2 {
             text-align: center;
             color: #333;
-        }
-        .error {
-            color: red;
-            text-align: center;
         }
         table {
             width: 100%;
@@ -47,23 +43,20 @@
     </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <h2><%= schoolName %> Dashboard</h2>
-        <% if (error) { %>
-            <div class="error"><%= error %></div>
-        <% } %>
+    <div class="container">
+        <h2>Students of <%= schoolName %></h2>
         <% if (students.length > 0) { %>
             <table>
                 <thead>
                     <tr>
                         <th>Student Name</th>
                         <th>Class</th>
-                        <th>Trial 1 (%)</th>
-                        <th>Trial 2 (%)</th>
-                        <th>MCQ Completed</th>
-                        <th>MCQ Score</th>
-                        <th>MCQ Percentage</th>
-                        <th>Completed At</th>
+                        <th>Parent Mobile 1</th>
+                        <th>Parent Mobile 2</th>
+                        <th>Parent Email</th>
+                        <th>Address</th>
+                        <th>City</th>
+                        <th>Pincode</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -71,12 +64,12 @@
                         <tr>
                             <td><%= student.studentName %></td>
                             <td><%= student.studentClass %></td>
-                            <td><%= student.trial1Percentage %></td>
-                            <td><%= student.trial2Percentage %></td>
-                            <td><%= student.hasCompletedMCQ ? 'Yes' : 'No' %></td>
-                            <td><%= student.score %> / <%= student.totalQuestions %></td>
-                            <td><%= student.percentage %>%</td>
-                            <td><%= student.completedAt %></td>
+                            <td><%= student.parentMobile1 %></td>
+                            <td><%= student.parentMobile2 || 'N/A' %></td>
+                            <td><%= student.parentEmail %></td>
+                            <td><%= student.address %></td>
+                            <td><%= student.city %></td>
+                            <td><%= student.pincode %></td>
                         </tr>
                     <% }) %>
                 </tbody>

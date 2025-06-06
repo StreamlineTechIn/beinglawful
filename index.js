@@ -2,12 +2,21 @@ const express = require('express');
 const path = require('path');
 const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
+const session = require('express-session');
 require('dotenv').config();
 
 const app = express();
 
 // Disable view cache for development
 app.set('view cache', false);
+
+// Session middleware
+app.use(session({
+    secret: 'your-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: { secure: false }
+}));
 
 const trialTests = {
     trial1: [
@@ -80,6 +89,19 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '.')));
+
+// Hardcoded admin credentials (for simplicity; replace with proper auth in production)
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD = 'admin123';
+
+// Middleware to check if user is authenticated
+function requireAdmin(req, res, next) {
+    if (req.session.isAdmin) {
+        next();
+    } else {
+        res.redirect('/admin-login');
+    }
+}
 
 async function getRandomQuestions(limit = 30) {
     try {
@@ -540,7 +562,7 @@ app.get('/school-dashboard', async (req, res) => {
         const schoolEmail = req.query.username;
         if (!schoolEmail) {
             error = 'Please login first';
-            return res.render('schoolDashboard', { schoolName, students, error });
+            return res.render('schoolDashboard', { schoolName, students, error, trialTests });
         }
 
         // Fetch the school to get the school name
@@ -549,7 +571,7 @@ app.get('/school-dashboard', async (req, res) => {
             .get();
         if (schoolSnapshot.empty) {
             error = 'School not found';
-            return res.render('schoolDashboard', { schoolName, students, error });
+            return res.render('schoolDashboard', { schoolName, students, error, trialTests });
         }
         schoolName = schoolSnapshot.docs[0].data().schoolName;
 
@@ -575,11 +597,11 @@ app.get('/school-dashboard', async (req, res) => {
             };
         });
 
-        res.render('schoolDashboard', { schoolName, students, error });
+        res.render('schoolDashboard', { schoolName, students, error, trialTests });
     } catch (err) {
         console.error('Error loading school dashboard:', err.message, err.stack);
         error = 'Error loading student data.';
-        res.render('schoolDashboard', { schoolName, students, error });
+        res.render('schoolDashboard', { schoolName, students, error, trialTests });
     }
 });
 
@@ -607,11 +629,14 @@ app.post('/school-login', async (req, res) => {
 app.get('/participation', async (req, res) => {
     try {
         const type = req.query.type || 'Student';
-        const snapshot = await db.collection('schools').get();
+        // Fetch only approved schools
+        const snapshot = await db.collection('schools')
+            .where('isApproved', '==', true)
+            .get();
         const schoolNames = snapshot.docs.map(doc => doc.data().schoolName);
         res.render('participation', { type, schoolNames });
     } catch (error) {
-        console.error('Error fetching school names:', error.message, error.stack);
+        console.error('Error fetching approved school names:', error.message, error.stack);
         res.status(500).send('Error loading participation form.');
     }
 });
@@ -685,7 +710,9 @@ app.post('/school-participate', async (req, res) => {
         principalNumber: req.body.principalNumber,
         principalEmail: req.body.principalEmail,
         civicsTeacherNumber: req.body.civicsTeacherNumber,
-        civicsTeacherEmail: req.body.civicsTeacherEmail
+        civicsTeacherEmail: req.body.civicsTeacherEmail,
+        isApproved: false,
+        eventDate: null
     };
     if (!school.schoolName || !school.city || !school.district || !school.pincode ||
         !school.schoolPhoneNumber || !school.schoolEmail || !school.principalNumber ||
@@ -728,6 +755,107 @@ app.get('/school-students', async (req, res) => {
         console.error('Error fetching students:', error.message, error.stack);
         res.status(500).send('Error fetching student data.');
     }
+});
+
+// Admin Routes
+app.get('/admin-login', (req, res) => {
+    if (req.session.isAdmin) {
+        return res.redirect('/admin');
+    }
+    res.render('adminLogin', { error: null });
+});
+
+app.post('/admin-login', (req, res) => {
+    const { username, password } = req.body;
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        req.session.isAdmin = true;
+        res.redirect('/admin');
+    } else {
+        res.render('adminLogin', { error: 'Invalid username or password' });
+    }
+});
+
+app.get('/admin', requireAdmin, async (req, res) => {
+    try {
+        // Fetch all schools
+        const schoolsSnapshot = await db.collection('schools').get();
+        const allSchools = schoolsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            eventDate: doc.data().eventDate ? doc.data().eventDate.toDate().toISOString().split('T')[0] : null
+        }));
+
+        // Split schools into pending, approved, and scheduled
+        const pendingSchools = allSchools.filter(school => !school.isApproved);
+        const approvedSchools = allSchools.filter(school => school.isApproved && !school.eventDate);
+        const scheduledSchools = allSchools.filter(school => school.isApproved && school.eventDate);
+
+        // Fetch all participants
+        const participantsSnapshot = await db.collection('participants').get();
+        const participants = participantsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            studentName: doc.data().studentName || 'N/A',
+            parentMobile1: doc.data().parentMobile1 || 'N/A',
+            schoolNameDropdown: doc.data().schoolNameDropdown || 'N/A',
+            score: doc.data().score || 0,
+            totalQuestions: doc.data().totalQuestions || 30,
+            percentage: doc.data().percentage || 0,
+            trial1Score: doc.data().trial1Score || 0,
+            trial1Percentage: doc.data().trial1Percentage || 0,
+            trial2Score: doc.data().trial2Score || 0,
+            trial2Percentage: doc.data().trial2Percentage || 0
+        }));
+
+        res.render('adminPanel', {
+            pendingSchools,
+            approvedSchools,
+            scheduledSchools,
+            participants,
+            trialTests
+        });
+    } catch (error) {
+        console.error('Error loading admin panel:', error.message, error.stack);
+        res.status(500).send('Error loading admin panel.');
+    }
+});
+
+app.post('/admin/approve-school/:schoolId', requireAdmin, async (req, res) => {
+    try {
+        const schoolId = req.params.schoolId;
+        await db.collection('schools').doc(schoolId).update({
+            isApproved: true
+        });
+        res.redirect('/admin');
+    } catch (error) {
+        console.error('Error approving school:', error.message, error.stack);
+        res.status(500).send('Error approving school.');
+    }
+});
+
+app.post('/admin/assign-event-date/:schoolId', requireAdmin, async (req, res) => {
+    try {
+        const schoolId = req.params.schoolId;
+        const { eventDate } = req.body;
+        if (!eventDate) {
+            return res.status(400).send('Event date is required.');
+        }
+        await db.collection('schools').doc(schoolId).update({
+            eventDate: new Date(eventDate)
+        });
+        res.redirect('/admin');
+    } catch (error) {
+        console.error('Error assigning event date:', error.message, error.stack);
+        res.status(500).send('Error assigning event date.');
+    }
+});
+
+app.get('/admin/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            console.error('Error during logout:', err);
+        }
+        res.redirect('/admin-login');
+    });
 });
 
 const PORT = process.env.PORT || 3000;

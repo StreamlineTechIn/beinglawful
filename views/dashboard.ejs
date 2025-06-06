@@ -15,6 +15,7 @@
             height: 100vh;
             overflow: hidden;
         }
+
         .sidebar {
             width: 250px;
             background-color: #28a745;
@@ -48,6 +49,7 @@
         .sidebar .nav-link.active {
             background-color: #1e7e34;
         }
+
         .main-content {
             margin-left: 250px;
             flex: 1;
@@ -70,6 +72,7 @@
             color: #2c3e50;
             font-size: 2rem;
         }
+
         .section {
             margin-bottom: 40px;
             padding: 20px;
@@ -81,6 +84,7 @@
             margin-bottom: 20px;
             font-size: 1.5rem;
         }
+
         .btn-custom {
             display: block;
             width: 100%;
@@ -102,6 +106,12 @@
             background-color: #6c757d;
             cursor: not-allowed;
         }
+
+        .btn-completed {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+
         .exam-instructions {
             background-color: #e9ecef;
             padding: 15px;
@@ -118,6 +128,7 @@
             padding-left: 20px;
             font-size: 1rem;
         }
+
         .mcq-question {
             margin-bottom: 20px;
         }
@@ -130,6 +141,7 @@
             margin-left: 10px;
             font-size: 1rem;
         }
+
         .score-message {
             color: #28a745;
             text-align: center;
@@ -137,6 +149,18 @@
             margin-bottom: 20px;
             font-weight: bold;
         }
+        .status-message {
+            text-align: center;
+            font-size: 1.1rem;
+            color: #6c757d;
+        }
+        .result-message {
+            color: #dc3545;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1rem;
+        }
+
         .results-card {
             background-color: #f8f9fa;
             border: 2px solid #28a745;
@@ -144,26 +168,32 @@
             padding: 20px;
             text-align: center;
         }
+
         .result-stats {
             display: flex;
             justify-content: space-around;
             margin-top: 20px;
         }
+
         .stat-item {
             text-align: center;
         }
+
         .stat-number {
             font-size: 2rem;
             font-weight: bold;
             color: #28a745;
         }
+
         .stat-label {
             font-size: 0.9rem;
             color: #6c757d;
         }
+
         .progress-section {
             margin-bottom: 30px;
         }
+
         .progress-item {
             display: flex;
             align-items: center;
@@ -172,6 +202,7 @@
             border-radius: 5px;
             background-color: #f8f9fa;
         }
+
         .progress-icon {
             width: 30px;
             height: 30px;
@@ -182,17 +213,34 @@
             margin-right: 15px;
             font-weight: bold;
         }
+
         .progress-icon.completed {
             background-color: #28a745;
             color: white;
         }
+
         .progress-icon.pending {
             background-color: #ffc107;
             color: white;
         }
+
         .progress-icon.disabled {
             background-color: #6c757d;
             color: white;
+        }
+
+        .warning-message {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: #dc3545;
+            color: #fff;
+            text-align: center;
+            padding: 10px;
+            z-index: 1000;
+            display: none;
+            font-size: 1rem;
         }
     </style>
 </head>
@@ -205,6 +253,10 @@
     </div>
 
     <div class="main-content">
+        <div id="warning-message" class="warning-message">
+            Warning: Tab switching detected! Please stay on this page during the exam.
+        </div>
+
         <div class="dashboard-container">
             <h2>Welcome, <%= studentName %>!</h2>
 
@@ -243,56 +295,6 @@
             </div>
 
             <!-- Exam Results Section -->
-            <% if (hasCompletedTrial1) { %>
-            <div class="section">
-                <h3>Trial Test 1 Results</h3>
-                <div class="results-card">
-                    <div class="score-message">
-                        Your Score: <%= trial1Score %>/<%= trial1TotalQuestions %> (<%= trial1Percentage %>%)
-                    </div>
-                    <div class="result-stats">
-                        <div class="stat-item">
-                            <div class="stat-number"><%= trial1CorrectAnswers %></div>
-                            <div class="stat-label">Correct Answers</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number"><%= trial1WrongAnswers %></div>
-                            <div class="stat-label">Wrong Answers</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number"><%= trial1Percentage %>%</div>
-                            <div class="stat-label">Percentage</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <% } %>
-
-            <% if (hasCompletedTrial2) { %>
-            <div class="section">
-                <h3>Trial Test 2 Results</h3>
-                <div class="results-card">
-                    <div class="score-message">
-                        Your Score: <%= trial2Score %>/<%= trial2TotalQuestions %> (<%= trial2Percentage %>%)
-                    </div>
-                    <div class="result-stats">
-                        <div class="stat-item">
-                            <div class="stat-number"><%= trial2CorrectAnswers %></div>
-                            <div class="stat-label">Correct Answers</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number"><%= trial2WrongAnswers %></div>
-                            <div class="stat-label">Wrong Answers</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number"><%= trial2Percentage %>%</div>
-                            <div class="stat-label">Percentage</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <% } %>
-
             <% if (showResults && hasCompletedMCQ) { %>
             <div class="section">
                 <h3>Main Exam Results</h3>
@@ -388,15 +390,72 @@
                         <li>This is the final exam consisting of <%= mcqs.length %> questions.</li>
                         <li>Answer all questions carefully - you cannot change answers after submission.</li>
                         <li>Do not switch tabs or leave the page during the exam.</li>
+                        <li>The exam will open in a new window in fullscreen mode.</li>
                     </ul>
                 </div>
-                <a href="/mcq-test/<%= parentMobile1 %>" class="btn-custom">Start Main Exam</a>
+                <a href="/mcq-test/<%= parentMobile1 %>" target="_blank" class="btn-custom" onclick="return startMainExam()">Start Main Exam</a>
             </div>
             <% } %>
         </div>
     </div>
 
     <script>
+        // Tab switching detection
+        let tabSwitchCount = 0;
+        let isExamActive = <%= hasCompletedTrial1 && hasCompletedTrial2 && !hasCompletedMCQ ? 'true' : 'false' %>;
+
+        document.addEventListener('visibilitychange', function () {
+            if (isExamActive && document.hidden) {
+                tabSwitchCount++;
+                const warningMessage = document.getElementById('warning-message');
+                warningMessage.style.display = 'block';
+                setTimeout(() => {
+                    warningMessage.style.display = 'none';
+                }, 5000);
+                if (tabSwitchCount >= 3) {
+                    alert('Warning: Multiple tab switches detected. Your exam may be terminated.');
+                    // Optionally redirect or disable exam
+                }
+            }
+        });
+
+        // Prevent right-click during exam
+        document.addEventListener('contextmenu', function (e) {
+            if (isExamActive) {
+                e.preventDefault();
+                alert('Right-click is disabled during the exam.');
+            }
+        });
+
+        // Prevent back/refresh during exam
+        window.addEventListener('beforeunload', function (e) {
+            if (isExamActive) {
+                e.preventDefault();
+                e.returnValue = 'Leaving the page may end your exam session. Are you sure?';
+            }
+        });
+
+        // Start main exam function
+        function startMainExam() {
+            if (!confirm('Are you sure you want to start the main exam?')) {
+                return false;
+            }
+            try {
+                // Attempt to open in fullscreen
+                const examWindow = window.open('/mcq-test/<%= parentMobile1 %>', '_blank');
+                if (examWindow) {
+                    examWindow.document.documentElement.requestFullscreen().catch(err => {
+                        console.error('Fullscreen request failed:', err);
+                    });
+                }
+                return true;
+            } catch (err) {
+                console.error('Error opening exam window:', err);
+                alert('Error starting the exam. Please try again.');
+                return false;
+            }
+        }
+
         // Form submission validation for trial tests
         document.getElementById('trial1-form')?.addEventListener('submit', function (e) {
             const answered = document.querySelectorAll('#trial1-form input[type="radio"]:checked').length;

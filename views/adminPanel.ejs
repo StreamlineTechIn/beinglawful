@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Being Lawful</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .container h2 {
+            text-align: center;
+            color: #333;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .section h3 {
+            color: #4CAF50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        table th, table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        table th {
+            background-color: #4CAF50;
+            color: white;
+        }
+        table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .action-form {
+            display: inline-block;
+        }
+        .action-form button {
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .action-form button:hover {
+            background-color: #45a049;
+        }
+        .logout {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .logout a {
+            padding: 10px 20px;
+            background-color: #f44336;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .logout a:hover {
+            background-color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Admin Panel</h2>
+
+        <div class="section">
+            <h3>Pending Schools</h3>
+            <% if (pendingSchools.length > 0) { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>School Name</th>
+                            <th>City</th>
+                            <th>School Email</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% pendingSchools.forEach(school => { %>
+                            <tr>
+                                <td><%= school.schoolName %></td>
+                                <td><%= school.city %></td>
+                                <td><%= school.schoolEmail %></td>
+                                <td>
+                                    <form class="action-form" action="/admin/approve-school/<%= school.id %>" method="POST">
+                                        <button type="submit">Approve</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <p>No pending schools.</p>
+            <% } %>
+        </div>
+
+        <div class="section">
+            <h3>Approved Schools (Not Scheduled)</h3>
+            <% if (approvedSchools.length > 0) { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>School Name</th>
+                            <th>City</th>
+                            <th>School Email</th>
+                            <th>Assign Event Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% approvedSchools.forEach(school => { %>
+                            <tr>
+                                <td><%= school.schoolName %></td>
+                                <td><%= school.city %></td>
+                                <td><%= school.schoolEmail %></td>
+                                <td>
+                                    <form class="action-form" action="/admin/assign-event-date/<%= school.id %>" method="POST">
+                                        <input type="date" name="eventDate" required>
+                                        <button type="submit">Assign</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <p>No approved schools awaiting scheduling.</p>
+            <% } %>
+        </div>
+
+        <div class="section">
+            <h3>Scheduled Schools</h3>
+            <% if (scheduledSchools.length > 0) { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>School Name</th>
+                            <th>City</th>
+                            <th>School Email</th>
+                            <th>Event Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% scheduledSchools.forEach(school => { %>
+                            <tr>
+                                <td><%= school.schoolName %></td>
+                                <td><%= school.city %></td>
+                                <td><%= school.schoolEmail %></td>
+                                <td><%= school.eventDate %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <p>No scheduled schools.</p>
+            <% } %>
+        </div>
+
+        <div class="section">
+            <h3>Participants</h3>
+            <% if (participants.length > 0) { %>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Parent Mobile</th>
+                            <th>School Name</th>
+                            <th>Trial 1 (%)</th>
+                            <th>Trial 2 (%)</th>
+                            <th>MCQ Score</th>
+                            <th>MCQ Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% participants.forEach(participant => { %>
+                            <tr>
+                                <td><%= participant.studentName %></td>
+                                <td><%= participant.parentMobile1 %></td>
+                                <td><%= participant.schoolNameDropdown %></td>
+                                <td><%= participant.trial1Percentage %></td>
+                                <td><%= participant.trial2Percentage %></td>
+                                <td><%= participant.score %> / <%= participant.totalQuestions %></td>
+                                <td><%= participant.percentage %>%</td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            <% } else { %>
+                <p>No participants found.</p>
+            <% } %>
+        </div>
+
+        <div class="logout">
+            <a href="/admin/logout">Logout</a>
+        </div>
+    </div>
+</body>
+</html>

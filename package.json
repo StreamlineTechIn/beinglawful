@@ -1,20 +1,32 @@
 {
   "name": "being-lawful-website",
   "version": "1.0.0",
-  "description": "being a lawful website ",
+  "description": "Being a lawful website",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js",
+    "build": "npm install && npm install --prefix functions",
+    "deploy": "firebase deploy --only functions,hosting",
+    "serve": "firebase emulators:start --only functions,hosting"
   },
   "author": "Aditya Sharma",
   "license": "ISC",
   "dependencies": {
     "bootstrap": "^5.3.6",
+    "cross-env": "^7.0.3",
     "dotenv": "^16.5.0",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
     "firebase": "^11.8.1",
-    "firebase-admin": "^13.4.0"
+    "firebase-admin": "^13.4.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "devDependencies": {
+    "firebase-tools": "^14.4.0"
+  },
+  "engines": {
+    "node": "20"
   }
 }

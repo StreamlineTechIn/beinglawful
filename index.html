@@ -12,7 +12,6 @@
       padding: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       scroll-behavior: smooth;
-      overflow-x: hidden;
     }
 
     /* Navbar Styling */
@@ -23,12 +22,10 @@
       transition: all 0.3s ease;
     }
 
-    .navbar-brand img {
-      transition: transform 0.3s ease;
-    }
-
-    .navbar-brand img:hover {
-      transform: scale(1.1);
+    .navbar-brand {
+      font-family:  'Comic Sans MS', cursive;
+      color:#f5c542;
+      font-weight: bold;
     }
 
     .nav-link {
@@ -60,7 +57,7 @@
 
     /* Hero Section */
     .hero-section {
-      background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('./Assets/samvidhan.png');
+      background: linear-gradient(rgba(245, 245, 220, 0.8), rgba(245, 245, 220, 0.8)), url('https://www.transparenttextures.com/patterns/paper-fibers.png');
       background-size: cover;
       background-position: center;
       height: 100vh;
@@ -68,24 +65,104 @@
       justify-content: center;
       align-items: center;
       position: relative;
+      padding: 20px;
+    }
+
+    .hero-content {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1200px;
+      width: 100%;
+      gap: 40px;
+    }
+
+    .hero-text {
+      flex: 1;
+      text-align: left;
+      color: #333;
+      font-size: 18px;
+      line-height: 1.6;
+    }
+
+    .hero-circle {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      background-color: #f5c542;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .hero-circle::before {
+      content: '';
+      position: absolute;
+      width: 340px;
+      height: 340px;
+      border-radius: 50%;
+      background: url('https://www.transparenttextures.com/patterns/circles.png') repeat;
+      background-size: 50px;
+      opacity: 0.5;
+    }
+
+    .hero-circle-text {
+      font-size: 48px;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
     }
 
     .hero-button {
       background-color: transparent;
-      border: 2px solid #f0f0f0;
+      border: 2px solid #333;
       padding: 12px 24px;
       font-weight: bold;
-      color: #f0f0f0;
+      color: #333;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       transition: all 0.3s ease;
       border-radius: 5px;
+      margin-top: 20px;
     }
 
     .hero-button:hover {
-      background-color: #fff;
-      color: black;
+      background-color: #333;
+      color: #fff;
       transform: translateY(-3px);
       box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    @media (max-width: 768px) {
+      .hero-content {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .hero-text {
+        font-size: 16px;
+      }
+
+      .hero-circle {
+        width: 200px;
+        height: 200px;
+      }
+
+      .hero-circle::before {
+        width: 240px;
+        height: 240px;
+      }
+
+      .hero-circle-text {
+        font-size: 32px;
+      }
+
+      .hero-button {
+        margin: 20px auto;
+      }
     }
 
     /* Vision Section */
@@ -93,9 +170,10 @@
       display: flex;
       flex-direction: column;
       justify-content: center;
+
       align-items: center;
       min-height: 100vh;
-      background-color: #f8f9fa;
+      background-image: url('./Assets/bg.png');
       padding: 60px 20px;
       text-align: center;
     }
@@ -401,19 +479,41 @@
 
     /* Samvidhan Hero Section */
     .samvidhan-hero-section {
-      background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('./Assets/samvidhan.png');
+      background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('./Assets/samvidhan.png');
       background-size: cover;
       background-position: center;
       height: 100vh;
       display: flex;
-      justify-content: center;
+      justify-content: flex-start;
       align-items: center;
+      padding-left: 50px;
+    }
+
+    .samvidhan-hero-content {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      text-align: left;
+    }
+
+    .samvidhan-hero-title {
+      color: #fff;
+      font-size: 48px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .samvidhan-hero-subtitle {
+      color: #fff;
+      font-size: 24px;
+      font-weight: 400;
+      margin-bottom: 20px;
     }
 
     .samvidhan-hero-button {
       background-color: transparent;
-      border: 2px solid #f0f0f0;
-      padding: 12px 24px;
+      border: 2px solid #fff;
+      padding: 10px 20px;
       font-weight: bold;
       box-shadow: 0 2px 5px rgba(0,0,0,0.2);
       transition: all 0.3s ease;
@@ -421,8 +521,9 @@
     }
 
     .samvidhan-hero-button a {
-      color: #f0f0f0;
+      color: #fff;
       text-decoration: none;
+      font-size: 16px;
     }
 
     .samvidhan-hero-button:hover {
@@ -432,7 +533,21 @@
     }
 
     .samvidhan-hero-button:hover a {
-      color: black;
+      color: #000;
+    }
+
+    @media (max-width: 768px) {
+      .samvidhan-hero-section {
+        padding-left: 20px;
+      }
+
+      .samvidhan-hero-title {
+        font-size: 36px;
+      }
+
+      .samvidhan-hero-subtitle {
+        font-size: 18px;
+      }
     }
 
     /* Our Partners Section */
@@ -554,13 +669,7 @@
     }
 
     @media (max-width: 768px) {
-      .footer-content {
-        flex-direction: column;
-        gap: 20px;
-        text-align: center;
-      }
-
-      .footer-column {
+        .footer-column {
         text-align: center;
       }
     }
@@ -581,13 +690,13 @@
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg bg-light fixed-top" data-aos="fade-down" data-aos-duration="800">
   <div class="container">
-    <a class="navbar-brand" href="#hero"><img src="./Assets/logo.png" alt="Logo" width="60"/></a>
+    <a class="navbar-brand" href="#hero"> Being lawful</a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse justify-content-end" id="navbarContent">
       <ul class="navbar-nav align-items-center">
-        <li class="nav-item"><a class="nav-link" href="#hero">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="#Home">Home</a></li>
         <li class="nav-item"><a class="nav-link" href="#vision">About</a></li>
         <li class="nav-item"><a class="nav-link" href="#book">Book</a></li>
         <li class="nav-item"><a class="nav-link" href="#activities">Activities</a></li>
@@ -598,8 +707,18 @@
 </nav>
 
 <!-- Hero Section -->
-<div class="hero-section" id="hero" data-aos="fade-up" data-aos-duration="1000">
-  <button class="hero-button" data-aos="zoom-in" data-aos-delay="300" data-bs-toggle="modal" data-bs-target="#participateModal">Participate Now</button>
+<div class="hero-section" id="Home" data-aos="fade-up" data-aos-duration="1000">
+  <div class="hero-content">
+    <div class="hero-text" data-aos="fade-right" data-aos-delay="200">
+      <p>
+        As India commemorates the 75th anniversary of its Constitution in 2025, it becomes imperative to engage the younger generation in understanding and embodying the foundational values that have shaped our nation. The "Being Lawful" workshop is designed for students from 9th to 12th standard, with an aim to help them recognize the Constitution's relevance in their daily conduct. This initiative aspires to transform the topic of Constitution from a mere academic subject into a lived experience for students, fostering a generation that upholds and cherishes democratic principles.
+      </p>
+      <button class="hero-button" data-aos="zoom-in" data-aos-delay="300" data-bs-toggle="modal" data-bs-target="#participateModal">Participate Now</button>
+    </div>
+    <div class="hero-circle" data-aos="fade-left" data-aos-delay="200">
+      <div class="hero-circle-text">BEING<br>LAWFUL</div>
+    </div>
+  </div>
 </div>
 
 <!-- Modal for Participation Options -->
@@ -621,9 +740,11 @@
 
 <!-- Vision Section -->
 <div class="vision-wrapper" id="vision" data-aos="fade-up" data-aos-duration="1000">
-  <div class="vision-title" data-aos="fade-up" data-aos-delay="200">Being Lawful: 75 years of Constitution</div>
+  <div class="vision-title" data-aos="fade-up" data-aos-delay="200">Celebrating 75 years of Samvidhan. <br>
+  Hamara Samvidhan, Hamara Swabhiman </div>
   <div class="card-container">
     <div class="card-box" data-aos="fade-right" data-aos-delay="300">
+      <h5>Being Lawful </h5>
       <h5>Vision and Mission</h5>
       <p><strong>Vision:</strong> Celebrate the spirit of constitution and instill a sense of pride and respect for it.</p>
       <p><strong>Mission:</strong> Promote ethical conduct and empower GenZ as catalysts for positive change.</p>
@@ -642,7 +763,7 @@
 
 <!-- Book Overview Centered Section -->
 <div class="book-section" id="book" data-aos="fade-up" data-aos-duration="1000">
-  <div class="book-title" data-aos="fade-up" data-aos-delay="200">Being a lawful book overview</div>
+  <div class="book-title" data-aos="fade-up" data-aos-delay="200">Being lawful book overview</div>
   <div class="book-content">
     <div class="book-text" data-aos="fade-right" data-aos-delay="300">
       <p>
@@ -678,16 +799,24 @@
   <div class="author-content">
     <div class="author-photo" data-aos="fade-right" data-aos-delay="300"></div>
     <div class="author-text" data-aos="fade-left" data-aos-delay="300">
-        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia aliquam corporis ut esse beatae eum quis excepturi quia provident error voluptate est dolore qui quisquam modi accusantium officiis, tempora ullam?
-        Tempore dolorum animi quaerat. Recusandae suscipit consequuntur corporis, vero iusto id rerum culpa magnam numquam maxime corrupti. Hic fugiat molestiae temporibus unde iste quasi voluptate, nobis odit! Neque, ipsa in!
-        Impedit exercitationem earum dolores dignissimos officiis veniam, molestiae consequatur totam laborum nisi, eius consectetur, repellendus magni iusto atque sit veritatis in quae dolor fugiat sapiente voluptate? Quis, quasi iure. Placeat.</p>
+      <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia aliquam corporis ut esse beatae eum quis excepturi quia provident error voluptate est dolore qui quisquam modi accusantium officiis, tempora ullam?
+      Tempore dolorum animi quaerat. Recusandae suscipit consequuntur corporis, vero iusto id rerum culpa magnam numquam maxime corrupti. Hic fugiat molestiae temporibus unde iste quasi voluptate, nobis odit! Neque, ipsa in!
+      Impedit exercitationem earum dolores dignissimos officiis veniam, molestiae consequatur totam laborum nisi, eius consectetur, repellendus magni iusto atque sit veritatis in quae dolor fugiat sapiente voluptate? Quis, quasi iure. Placeat.</p>
     </div>
   </div>
 </div>
 
 <!-- Samvidhan Hero Section -->
 <div class="samvidhan-hero-section" id="samvidhan" data-aos="fade-up" data-aos-duration="1000">
-  <button class="samvidhan-hero-button" data-aos="zoom-in" data-aos-delay="300"><a href="https://constitution75.com/">Visit Now</a></button>
+  <div class="samvidhan-hero-content">
+    <div class="samvidhan-hero-title" data-aos="fade-up" data-aos-delay="200">
+      Visit Constitution75.com
+    </div>
+    <div class="samvidhan-hero-subtitle" data-aos="fade-up" data-aos-delay="200">
+      Celebrating 75 years of Samvidhan
+    </div>
+    <button class="samvidhan-hero-button" data-aos="zoom-in" data-aos-delay="300"><a href="https://constitution75.com/">Visit Now</a></button>
+  </div>
 </div>
 
 <!-- Our Partners Section -->

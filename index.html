@@ -4,754 +4,142 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Being Lawful</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet"/>
   <style>
     html, body {
       margin: 0;
       padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       scroll-behavior: smooth;
     }
 
-    /* Navbar Styling */
     .navbar {
-      background-color: rgba(255, 255, 255, 0.95) !important;
+      background-color: rgba(255, 255, 255, 0.95);
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      padding: 15px 0;
-      transition: all 0.3s ease;
     }
 
-    .navbar-brand {
-      font-family:  'Comic Sans MS', cursive;
-      color:#f5c542;
-      font-weight: bold;
-    }
-
-    .nav-link {
-      color: #333 !important;
-      font-weight: 500;
-      margin: 0 15px;
-      position: relative;
-      transition: color 0.3s ease;
-    }
-
-    .nav-link:hover {
-      color: #007bff !important;
-    }
-
-    .nav-link::after {
-      content: '';
-      position: absolute;
-      width: 0;
-      height: 2px;
-      background-color: #007bff;
-      bottom: -5px;
-      left: 0;
-      transition: width 0.3s ease;
-    }
-
-    .nav-link:hover::after {
-      width: 100%;
-    }
-
-    /* Hero Section */
-    .hero-section {
+    .hero-bg {
       background: linear-gradient(rgba(245, 245, 220, 0.8), rgba(245, 245, 220, 0.8)), url('https://www.transparenttextures.com/patterns/paper-fibers.png');
       background-size: cover;
       background-position: center;
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      position: relative;
-      padding: 20px;
     }
 
-    .hero-content {
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-      justify-content: space-between;
-      max-width: 1200px;
-      width: 100%;
-      gap: 40px;
-    }
-
-    .hero-text {
-      flex: 1;
-      text-align: left;
-      color: #333;
-      font-size: 18px;
-      line-height: 1.6;
-    }
-
-    .hero-circle {
-      position: relative;
-      width: 300px;
-      height: 300px;
-      background-color: #f5c542;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-    }
-
-    .hero-circle::before {
+    .circle-bg::before {
       content: '';
       position: absolute;
-      width: 340px;
-      height: 340px;
+      width: 100%;
+      height: 100%;
       border-radius: 50%;
       background: url('https://www.transparenttextures.com/patterns/circles.png') repeat;
       background-size: 50px;
       opacity: 0.5;
     }
 
-    .hero-circle-text {
-      font-size: 48px;
-      font-weight: 700;
-      color: #fff;
-      text-align: center;
-      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-    }
-
-    .hero-button {
-      background-color: transparent;
-      border: 2px solid #333;
-      padding: 12px 24px;
-      font-weight: bold;
-      color: #333;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      transition: all 0.3s ease;
-      border-radius: 5px;
-      margin-top: 20px;
-    }
-
-    .hero-button:hover {
-      background-color: #333;
-      color: #fff;
-      transform: translateY(-3px);
-      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    }
-
-    @media (max-width: 768px) {
-      .hero-content {
-        flex-direction: column;
-        text-align: center;
-      }
-
-      .hero-text {
-        font-size: 16px;
-      }
-
-      .hero-circle {
-        width: 200px;
-        height: 200px;
-      }
-
-      .hero-circle::before {
-        width: 240px;
-        height: 240px;
-      }
-
-      .hero-circle-text {
-        font-size: 32px;
-      }
-
-      .hero-button {
-        margin: 20px auto;
-      }
-    }
-
-    /* Vision Section */
-    .vision-wrapper {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-
-      align-items: center;
-      min-height: 100vh;
+    .vision-bg {
       background-image: url('./Assets/bg.png');
-      padding: 60px 20px;
-      text-align: center;
+      background-size: cover;
+      background-position: center;
     }
 
-    .vision-title {
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 40px;
-      color: #333;
-    }
-
-    .card-container {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 20px;
-      width: 100%;
-      max-width: 900px;
-    }
-
-    .card-box {
-      background-color: #dcdcdc;
-      border-radius: 20px;
-      padding: 20px;
-      flex: 1 1 300px;
-      max-width: 400px;
-      text-align: left;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-
-    .card-box:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    }
-
-    .card-box h5 {
-      font-weight: 600;
-      margin-bottom: 10px;
-      color: #333;
-    }
-
-    .card-box p {
-      font-size: 14px;
-      margin: 0;
-      color: #666;
-    }
-
-    @media (max-width: 576px) {
-      .vision-title {
-        font-size: 24px;
-      }
-
-      .card-box {
-        max-width: 100%;
-        text-align: center;
-      }
-
-      .card-box p {
-        text-align: justify;
-      }
-    }
-
-    /* Book Section */
-    .book-section {
-      background-color: tan;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 60px 20px;
-      text-align: center;
-    }
-
-    .book-title {
-      font-weight: 700;
-      font-size: 32px;
-      margin-bottom: 40px;
-      color: #333;
-    }
-
-    .book-content {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 30px;
-      align-items: center;
-      justify-content: center;
-      max-width: 1100px;
-    }
-
-    .book-text {
-      flex: 1 1 300px;
-      max-width: 600px;
-      background-color: #e0e0e0;
-      padding: 20px;
-      border-radius: 8px;
-      transition: transform 0.3s ease;
-    }
-
-    .book-text:hover {
-      transform: translateY(-5px);
-    }
-
-    .book-text p {
-      margin-bottom: 20px;
-      font-size: 16px;
-      color: #666;
-    }
-
-    .buy-button {
-      padding: 10px 30px;
-      background-color: #333;
-      border: none;
-      border-radius: 5px;
-      font-weight: 600;
-      color: #fff;
-      transition: all 0.3s ease;
-    }
-
-    .buy-button:hover {
-      background-color: #007bff;
-      transform: translateY(-3px);
-    }
-
-    .book-image {
-      flex: 0 0 250px;
-      height: 400px;
+    .book-bg {
       background-image: url('./Assets/being_lawful.jpg');
       background-size: cover;
       background-position: center;
-      background-color: #ccc;
-      border-radius: 20px;
-      transition: transform 0.3s ease;
     }
 
-    .book-image:hover {
-      transform: scale(1.05);
-    }
-
-    @media (max-width: 768px) {
-      .book-title {
-        font-size: 24px;
-      }
-
-      .book-content {
-        flex-direction: column;
-      }
-
-      .book-image {
-        width: 100%;
-        height: 300px;
-      }
-    }
-
-    /* Activities Section */
-    .activities-section {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 60px 20px;
-      text-align: center;
-      background-color: #fff;
-    }
-
-    .activities-title {
-      font-weight: 700;
-      font-size: 32px;
-      margin-bottom: 40px;
-      color: #333;
-    }
-
-    .activities-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      max-width: 900px;
-      width: 100%;
-    }
-
-    .activity-box {
-      background-color: #e0e0e0;
-      border-radius: 20px;
-      height: 150px;
-      transition: transform 0.3s ease;
-    }
-
-    .activity-box:hover {
-      transform: translateY(-5px);
-    }
-
-    .activity-box-large {
-      grid-row: span 2;
-      height: 320px;
-    }
-
-    @media (max-width: 768px) {
-      .activities-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-
-      .activity-box-large {
-        grid-row: span 1;
-        height: 150px;
-      }
-    }
-
-    @media (max-width: 576px) {
-      .activities-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .activity-box,
-      .activity-box-large {
-        height: 120px;
-      }
-
-      .activities-title {
-        font-size: 24px;
-      }
-    }
-
-    /* Author Note Section */
-    .author-section {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 60px 20px;
-      text-align: center;
-      background-color: tan;
-    }
-
-    .author-title {
-      font-weight: 700;
-      font-size: 32px;
-      margin-bottom: 40px;
-      color: #333;
-    }
-
-    .author-content {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 30px;
-      align-items: center;
-      justify-content: center;
-      max-width: 900px;
-      width: 100%;
-    }
-
-    .author-photo {
-      flex: 0 0 300px;
-      height: 300px;
+    .author-bg {
       background-image: url('./Assets/vibhawaribhidwe.jpg');
       background-size: cover;
       background-position: center;
-      background-color: #e0e0e0;
-      border-radius: 50%;
-      transition: transform 0.3s ease;
     }
 
-    .author-photo:hover {
-      transform: scale(1.05);
-    }
-
-    .author-text {
-      flex: 1 1 300px;
-      background-color: #e0e0e0;
-      padding: 20px;
-      border-radius: 20px;
-      height: 300px;
-      transition: transform 0.3s ease;
-    }
-
-    .author-text:hover {
-      transform: translateY(-5px);
-    }
-
-    @media (max-width: 768px) {
-      .author-content {
-        flex-direction: column;
-      }
-
-      .author-photo,
-      .author-text {
-        width: 100%;
-        height: 250px;
-      }
-
-      .author-title {
-        font-size: 24px;
-      }
-    }
-
-    @media (max-width: 576px) {
-      .author-photo,
-      .author-text {
-        height: 200px;
-      }
-    }
-
-    /* Samvidhan Hero Section */
-    .samvidhan-hero-section {
+    .samvidhan-bg {
       background-image: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('./Assets/samvidhan.png');
       background-size: cover;
       background-position: center;
-      height: 100vh;
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      padding-left: 50px;
     }
 
-    .samvidhan-hero-content {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      text-align: left;
-    }
-
-    .samvidhan-hero-title {
-      color: #fff;
-      font-size: 48px;
-      font-weight: 700;
-      margin-bottom: 10px;
-    }
-
-    .samvidhan-hero-subtitle {
-      color: #fff;
-      font-size: 24px;
-      font-weight: 400;
-      margin-bottom: 20px;
-    }
-
-    .samvidhan-hero-button {
-      background-color: transparent;
-      border: 2px solid #fff;
-      padding: 10px 20px;
-      font-weight: bold;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-      transition: all 0.3s ease;
-      border-radius: 5px;
-    }
-
-    .samvidhan-hero-button a {
-      color: #fff;
-      text-decoration: none;
-      font-size: 16px;
-    }
-
-    .samvidhan-hero-button:hover {
-      background-color: #fff;
-      transform: translateY(-3px);
-      box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    }
-
-    .samvidhan-hero-button:hover a {
-      color: #000;
-    }
-
-    @media (max-width: 768px) {
-      .samvidhan-hero-section {
-        padding-left: 20px;
-      }
-
-      .samvidhan-hero-title {
-        font-size: 36px;
-      }
-
-      .samvidhan-hero-subtitle {
-        font-size: 18px;
-      }
-    }
-
-    /* Our Partners Section */
-    .partners-section {
-      min-height: 50vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      padding: 60px 20px;
-      text-align: center;
-      background-color: #fff;
-    }
-
-    .partners-title {
-      font-weight: 700;
-      font-size: 32px;
-      margin-bottom: 40px;
-      color: #333;
-    }
-
-    .partners-grid {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 20px;
-      justify-content: center;
-      max-width: 900px;
-      width: 100%;
-    }
-
-    .partner-logo {
-      width: 150px;
-      height: 150px;
-      background-color: #000;
-      border-radius: 50%;
-      transition: transform 0.3s ease;
-    }
-
-    .partner-logo:hover {
-      transform: scale(1.1);
-    }
-
-    @media (max-width: 768px) {
-      .partners-grid {
-        gap: 15px;
-      }
-
-      .partner-logo {
-        width: 120px;
-        height: 120px;
-      }
-
-      .partners-title {
-        font-size: 24px;
-      }
-    }
-
-    @media (max-width: 576px) {
-      .partner-logo {
-        width: 100px;
-        height: 100px;
-      }
-    }
-
-    /* Footer Section */
-    .footer-section {
-      background-color: #333;
-      padding: 60px 20px;
-      text-align: center;
-      color: #fff;
-    }
-
-    .footer-content {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 40px;
-      max-width: 900px;
-      margin: 0 auto;
-      margin-bottom: 20px;
-    }
-
-    .footer-column {
-      flex: 1 1 200px;
-      text-align: left;
-    }
-
-    .footer-column h5 {
-      font-weight: 700;
-      font-size: 18px;
-      margin-bottom: 15px;
-      color: #fff;
-    }
-
-    .footer-column ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .footer-column ul li {
-      margin-bottom: 10px;
-    }
-
-    .footer-column ul li a {
-      color: #ccc;
-      text-decoration: none;
-      transition: color 0.3s ease;
-    }
-
-    .footer-column ul li a:hover {
-      color: #007bff;
-    }
-
-    .footer-bottom {
-      margin-top: 20px;
-      font-size: 14px;
-      color: #ccc;
-    }
-
-    @media (max-width: 768px) {
-        .footer-column {
-        text-align: center;
-      }
-    }
-
-    @media (max-width: 576px) {
-      .footer-column h5 {
-        font-size: 16px;
-      }
-
-      .footer-bottom {
-        font-size: 12px;
-      }
+    .tan-bg {
+      background-color: #d2b48c;
     }
   </style>
 </head>
-<body>
+<body class="font-sans text-gray-800">
 
 <!-- Navbar -->
-<nav class="navbar navbar-expand-lg bg-light fixed-top" data-aos="fade-down" data-aos-duration="800">
-  <div class="container">
-    <a class="navbar-brand" href="#hero"> Being lawful</a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
-      <span class="navbar-toggler-icon"></span>
+<nav class="navbar fixed-top py-4 px-4 md:px-8 lg:px-12" data-aos="fade-down" data-aos-duration="800">
+  <div class="flex justify-between items-center w-full max-w-7xl mx-auto">
+    <a class="font-bold text-xl md:text-2xl text-yellow-500 font-comic-sans" href="#hero">Being lawful</a>
+    <button class="md:hidden focus:outline-none" onclick="document.getElementById('navbarContent').classList.toggle('hidden')">
+      <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+      </svg>
     </button>
-    <div class="collapse navbar-collapse justify-content-end" id="navbarContent">
-      <ul class="navbar-nav align-items-center">
-        <li class="nav-item"><a class="nav-link" href="#Home">Home</a></li>
-        <li class="nav-item"><a class="nav-link" href="#vision">About</a></li>
-        <li class="nav-item"><a class="nav-link" href="#book">Book</a></li>
-        <li class="nav-item"><a class="nav-link" href="#activities">Activities</a></li>
-        <li class="nav-item"><a class="nav-link" href="/login">Login</a></li>
-      </ul>
+    <div class="hidden md:flex md:items-center md:space-x-6" id="navbarContent">
+      <a class="text-gray-700 hover:text-blue-600 font-medium relative transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:w-0 after:h-0.5 after:bg-blue-600 after:bottom-0 after:left-0 after:transition-all" href="#Home">Home</a>
+      <a class="text-gray-700 hover:text-blue-600 font-medium relative transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:w-0 after:h-0.5 after:bg-blue-600 after:bottom-0 after:left-0 after:transition-all" href="#vision">About</a>
+      <a class="text-gray-700 hover:text-blue-600 font-medium relative transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:w-0 after:h-0.5 after:bg-blue-600 after:bottom-0 after:left-0 after:transition-all" href="#book">Book</a>
+      <a class="text-gray-700 hover:text-blue-600 font-medium relative transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:w-0 after:h-0.5 after:bg-blue-600 after:bottom-0 after:left-0 after:transition-all" href="#activities">Activities</a>
+      <a class="text-gray-700 hover:text-blue-600 font-medium relative transition-colors duration-300 hover:after:w-full after:content-[''] after:absolute after:w-0 after:h-0.5 after:bg-blue-600 after:bottom-0 after:left-0 after:transition-all" href="/login">Login</a>
     </div>
+  </div>
+  <div class="md:hidden hidden flex-col space-y-2 mt-4" id="navbarContent">
+    <a class="text-gray-700 hover:text-blue-600 font-medium" href="#Home">Home</a>
+    <a class="text-gray-700 hover:text-blue-600 font-medium" href="#vision">About</a>
+    <a class="text-gray-700 hover:text-blue-600 font-medium" href="#book">Book</a>
+    <a class="text-gray-700 hover:text-blue-600 font-medium" href="#activities">Activities</a>
+    <a class="text-gray-700 hover:text-blue-600 font-medium" href="/login">Login</a>
   </div>
 </nav>
 
 <!-- Hero Section -->
-<div class="hero-section" id="Home" data-aos="fade-up" data-aos-duration="1000">
-  <div class="hero-content">
-    <div class="hero-text" data-aos="fade-right" data-aos-delay="200">
-      <p>
+<section class="hero-bg min-h-screen flex items-center justify-center pt-20 md:pt-24 px-4 py-16" id="Home" data-aos="fade-up" data-aos-duration="1000">
+  <div class="flex flex-col md:flex-row items-center max-w-6xl w-full gap-8">
+    <div class="flex-1 text-center md:text-left" data-aos="fade-right" data-aos-delay="200">
+      <p class="text-gray-700 text-sm md:text-base lg:text-lg leading-relaxed">
         As India commemorates the 75th anniversary of its Constitution in 2025, it becomes imperative to engage the younger generation in understanding and embodying the foundational values that have shaped our nation. The "Being Lawful" workshop is designed for students from 9th to 12th standard, with an aim to help them recognize the Constitution's relevance in their daily conduct. This initiative aspires to transform the topic of Constitution from a mere academic subject into a lived experience for students, fostering a generation that upholds and cherishes democratic principles.
       </p>
-      <button class="hero-button" data-aos="zoom-in" data-aos-delay="300" data-bs-toggle="modal" data-bs-target="#participateModal">Participate Now</button>
+      <button class="mt-6 px-6 py-3 border-2 border-gray-800 text-gray-800 font-semibold rounded-md shadow-md hover:bg-gray-800 hover:text-white hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300" data-aos="zoom-in" data-aos-delay="300" onclick="document.getElementById('participateModal').classList.remove('hidden')">Participate Now</button>
     </div>
-    <div class="hero-circle" data-aos="fade-left" data-aos-delay="200">
-      <div class="hero-circle-text">BEING<br>LAWFUL</div>
+    <div class="relative w-40 h-40 md:w-48 md:h-48 lg:w-64 lg:h-64 bg-yellow-500 rounded-full flex items-center justify-center shadow-lg" data-aos="fade-left" data-aos-delay="200">
+      <div class="circle-bg"></div>
+      <div class="text-white text-2xl md:text-3xl lg:text-4xl font-bold text-center leading-tight z-10">BEING<br>LAWFUL</div>
     </div>
   </div>
-</div>
+</section>
 
 <!-- Modal for Participation Options -->
-<div class="modal fade" id="participateModal" tabindex="-1" aria-labelledby="participateModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title" id="participateModalLabel">Select Participant Type</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body text-center">
-        <p>Please select your role to participate:</p>
-        <a href="/participation?type=Student" class="btn btn-primary mx-2">Student</a>
-        <a href="/school-participation" class="btn btn-primary mx-2">School</a>
+<div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden" id="participateModal">
+  <div class="bg-white rounded-lg p-6 w-11/12 max-w-md">
+    <div class="flex justify-between items-center mb-4">
+      <h5 class="text-lg font-semibold">Select Participant Type</h5>
+      <button class="text-gray-600 hover:text-gray-800" onclick="document.getElementById('participateModal').classList.add('hidden')">×</button>
+    </div>
+    <div class="text-center">
+      <p class="mb-4">Please select your role to participate:</p>
+      <div class="flex justify-center gap-4">
+        <a href="/participation?type=Student" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">Student</a>
+        <a href="/school-participation" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">School</a>
       </div>
     </div>
   </div>
 </div>
 
 <!-- Vision Section -->
-<div class="vision-wrapper" id="vision" data-aos="fade-up" data-aos-duration="1000">
-  <div class="vision-title" data-aos="fade-up" data-aos-delay="200">Celebrating 75 years of Samvidhan. <br>
-  Hamara Samvidhan, Hamara Swabhiman </div>
-  <div class="card-container">
-    <div class="card-box" data-aos="fade-right" data-aos-delay="300">
-      <h5>Being Lawful </h5>
-      <h5>Vision and Mission</h5>
-      <p><strong>Vision:</strong> Celebrate the spirit of constitution and instill a sense of pride and respect for it.</p>
-      <p><strong>Mission:</strong> Promote ethical conduct and empower GenZ as catalysts for positive change.</p>
+<section class="vision-bg min-h-screen flex flex-col items-center justify-center py-16 px-4" id="vision" data-aos="fade-up" data-aos-duration="1000">
+  <h2 class="text-xl md:text-2xl lg:text-3xl font-bold text-center mb-10" data-aos="fade-up" data-aos-delay="200">
+    Celebrating 75 years of Samvidhan.<br>Hamara Samvidhan, Hamara Swabhiman
+  </h2>
+  <div class="flex flex-col md:flex-row gap-6 max-w-3xl w-full">
+    <div class="bg-gray-200 p-6 rounded-xl flex-1 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-right" data-aos-delay="300">
+      <h5 class="font-semibold text-lg">Being Lawful</h5>
+      <h5 class="font-semibold text-lg">Vision and Mission</h5>
+      <p class="text-sm md:text-base"><strong>Vision:</strong> Celebrate the spirit of constitution and instill a sense of pride and respect for it.</p>
+      <p class="text-sm md:text-base"><strong>Mission:</strong> Promote ethical conduct and empower GenZ as catalysts for positive change.</p>
     </div>
-    <div class="card-box" data-aos="fade-left" data-aos-delay="400">
-      <h5>Activities in Being Lawful</h5>
-      <ul>
+    <div class="bg-gray-200 p-6 rounded-xl flex-1 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-left" data-aos-delay="400">
+      <h5 class="font-semibold text-lg">Activities in Being Lawful</h5>
+      <ul class="list-disc list-inside text-sm md:text-base">
         <li>Interactive workshop for highschool students</li>
         <li>Civic Awareness</li>
         <li>Fun quiz and games</li>
@@ -759,113 +147,112 @@
       </ul>
     </div>
   </div>
-</div>
+</section>
 
-<!-- Book Overview Centered Section -->
-<div class="book-section" id="book" data-aos="fade-up" data-aos-duration="1000">
-  <div class="book-title" data-aos="fade-up" data-aos-delay="200">Being lawful book overview</div>
-  <div class="book-content">
-    <div class="book-text" data-aos="fade-right" data-aos-delay="300">
-      <p>
+<!-- Book Overview Section -->
+<section class="tan-bg min-h-screen flex flex-col items-center justify-center py-16 px-4" id="book" data-aos="fade-up" data-aos-duration="1000">
+  <h2 class="text-xl md:text-2xl lg:text-3xl font-bold text-center mb-10" data-aos="fade-up" data-aos-delay="200">Being lawful book overview</h2>
+  <div class="flex flex-col md:flex-row gap-6 max-w-4xl w-full items-center">
+    <div class="bg-gray-200 p-6 rounded-xl flex-1 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-right" data-aos-delay="300">
+      <p class="text-gray-600 mb-4 text-sm md:text-base">
         In their vulnerability, children need protection from life's injustices. This book serves as a guide, imparting knowledge about their rights, safety measures, and remedies in challenging situations. Additionally, as they grow, they must comprehend their responsibilities, respect others' rights, and grasp the significance of 'Being Lawful', the central theme of this book.
       </p>
-      <p>
+      <p class="text-gray-600 mb-4 text-sm md:text-base">
         As empowered citizens, children have the ability to shape the future of India. The book encourages them to expand their focus beyond self-interest to encompass society, our country, and the entire world. Embracing the philosophy of Vasudhaiva Kutumbakam—the global family—is what the world needs today.
       </p>
-      <p>
+      <p class="text-gray-600 mb-4 text-sm md:text-base">
         May this book provide a fresh perspective on this journey, proving valuable not only to children but also to their parents and teachers.
       </p>
-      <button class="buy-button" data-aos="zoom-in" data-aos-delay="400">Buy Now</button>
+      <button class="px-6 py-2 bg-gray-800 text-white rounded-md hover:bg-blue-600 transform hover:-translate-y-1 transition-all duration-300" data-aos="zoom-in" data-aos-delay="400">Buy Now</button>
     </div>
-    <div class="book-image" data-aos="fade-left" data-aos-delay="300"></div>
+    <div class="book-bg w-full md:w-60 h-96 rounded-xl transform hover:scale-105 transition-all duration-300" data-aos="fade-left" data-aos-delay="300"></div>
   </div>
-</div>
+</section>
 
 <!-- Activities Section -->
-<div class="activities-section" id="activities" data-aos="fade-up" data-aos-duration="1000">
-  <div class="activities-title" data-aos="fade-up" data-aos-delay="200">Activities</div>
-  <div class="activities-grid">
-    <div class="activity-box" data-aos="fade-up" data-aos-delay="300"></div>
-    <div class="activity-box" data-aos="fade-up" data-aos-delay="400"></div>
-    <div class="activity-box activity-box-large" data-aos="fade-up" data-aos-delay="500"></div>
-    <div class="activity-box" data-aos="fade-up" data-aos-delay="600"></div>
-    <div class="activity-box" data-aos="fade-up" data-aos-delay="700"></div>
+<section class="bg-white min-h-screen flex flex-col items-center justify-center py-16 px-4" id="activities" data-aos="fade-up" data-aos-duration="1000">
+  <h2 class="text-xl md:text-2xl lg:text-3xl font-bold text-center mb-10" data-aos="fade-up" data-aos-delay="200">Activities</h2>
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-3xl w-full">
+    <div class="bg-gray-200 rounded-xl h-32 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-up" data-aos-delay="300"></div>
+    <div class="bg-gray-200 rounded-xl h-32 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-up" data-aos-delay="400"></div>
+    <div class="bg-gray-200 rounded-xl h-32 md:h-64 md:row-span-2 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-up" data-aos-delay="500"></div>
+    <div class="bg-gray-200 rounded-xl h-32 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-up" data-aos-delay="600"></div>
+    <div class="bg-gray-200 rounded-xl h-32 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-up" data-aos-delay="700"></div>
   </div>
-</div>
+</section>
 
 <!-- Author Note Section -->
-<div class="author-section" id="author" data-aos="fade-up" data-aos-duration="1000">
-  <div class="author-title" data-aos="fade-up" data-aos-delay="200">Author Note</div>
-  <div class="author-content">
-    <div class="author-photo" data-aos="fade-right" data-aos-delay="300"></div>
-    <div class="author-text" data-aos="fade-left" data-aos-delay="300">
-      <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia aliquam corporis ut esse beatae eum quis excepturi quia provident error voluptate est dolore qui quisquam modi accusantium officiis, tempora ullam?
-      Tempore dolorum animi quaerat. Recusandae suscipit consequuntur corporis, vero iusto id rerum culpa magnam numquam maxime corrupti. Hic fugiat molestiae temporibus unde iste quasi voluptate, nobis odit! Neque, ipsa in!
-      Impedit exercitationem earum dolores dignissimos officiis veniam, molestiae consequatur totam laborum nisi, eius consectetur, repellendus magni iusto atque sit veritatis in quae dolor fugiat sapiente voluptate? Quis, quasi iure. Placeat.</p>
+<section class="tan-bg min-h-screen flex flex-col items-center justify-center py-16 px-4" id="author" data-aos="fade-up" data-aos-duration="1000">
+  <h2 class="text-xl md:text-2xl lg:text-3xl font-bold text-center mb-10" data-aos="fade-up" data-aos-delay="200">Author Note</h2>
+  <div class="flex flex-col md:flex-row gap-6 max-w-3xl w-full items-center">
+    <div class="author-bg w-52 h-52 md:w-60 md:h-60 rounded-full transform hover:scale-105 transition-all duration-300" data-aos="fade-right" data-aos-delay="300"></div>
+    <div class="bg-gray-200 p-6 rounded-xl flex-1 h-60 overflow-y-auto transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-left" data-aos-delay="300">
+      <p class="text-gray-600 text-sm md:text-base">
+        Lorem ipsum dolor sit amet consectetur adipisicing elit. Officia aliquam corporis ut esse beatae eum quis excepturi quia provident error voluptate est dolore qui quisquam modi accusantium officiis, tempora ullam?
+        Tempore dolorum animi quaerat. Recusandae suscipit consequuntur corporis, vero iusto id rerum culpa magnam numquam maxime corrupti. Hic fugiat molestiae temporibus unde iste quasi voluptate, nobis odit! Neque, ipsa in!
+        Impedit exercitationem earum dolores dignissimos officiis veniam, molestiae consequatur totam laborum nisi, eius consectetur, repellendus magni iusto atque sit veritatis in quae dolor fugiat sapiente voluptate? Quis, quasi iure. Placeat.
+      </p>
     </div>
   </div>
-</div>
+</section>
 
 <!-- Samvidhan Hero Section -->
-<div class="samvidhan-hero-section" id="samvidhan" data-aos="fade-up" data-aos-duration="1000">
-  <div class="samvidhan-hero-content">
-    <div class="samvidhan-hero-title" data-aos="fade-up" data-aos-delay="200">
-      Visit Constitution75.com
-    </div>
-    <div class="samvidhan-hero-subtitle" data-aos="fade-up" data-aos-delay="200">
-      Celebrating 75 years of Samvidhan
-    </div>
-    <button class="samvidhan-hero-button" data-aos="zoom-in" data-aos-delay="300"><a href="https://constitution75.com/">Visit Now</a></button>
+<section class="samvidhan-bg min-h-screen flex items-center px-6 py-16" id="samvidhan" data-aos="fade-up" data-aos-duration="1000">
+  <div class="text-left">
+    <h2 class="text-white text-2xl md:text-3xl lg:text-5xl font-bold mb-4" data-aos="fade-up" data-aos-delay="200">Visit Constitution75.com</h2>
+    <p class="text-white text-base md:text-lg lg:text-2xl mb-6" data-aos="fade-up" data-aos-delay="200">Celebrating 75 years of Samvidhan</p>
+    <button class="px-6 py-3 border-2 border-white text-white font-semibold rounded-md hover:bg-white hover:text-black transform hover:-translate-y-1 transition-all duration-300" data-aos="zoom-in" data-aos-delay="300">
+      <a href="https://constitution75.com/">Visit Now</a>
+    </button>
   </div>
-</div>
+</section>
 
 <!-- Our Partners Section -->
-<div class="partners-section" id="partners" data-aos="fade-up" data-aos-duration="1000">
-  <div class="partners-title" data-aos="fade-up" data-aos-delay="200">Our Partners</div>
-  <div class="partners-grid">
-    <div class="partner-logo" data-aos="fade-up" data-aos-delay="300"></div>
-    <div class="partner-logo" data-aos="fade-up" data-aos-delay="400"></div>
-    <div class="partner-logo" data-aos="fade-up" data-aos-delay="500"></div>
-    <div class="partner-logo" data-aos="fade-up" data-aos-delay="600"></div>
+<section class="bg-white min-h-[50vh] flex flex-col items-center justify-center py-16 px-4" id="partners" data-aos="fade-up" data-aos-duration="1000">
+  <h2 class="text-xl md:text-2xl lg:text-3xl font-bold text-center mb-10" data-aos="fade-up" data-aos-delay="200">Our Partners</h2>
+  <div class="flex flex-wrap gap-6 justify-center max-w-3xl w-full">
+    <div class="w-20 h-20 md:w-24 md:h-24 bg-black rounded-full transform hover:scale-110 transition-all duration-300" data-aos="fade-up" data-aos-delay="300"></div>
+    <div class="w-20 h-20 md:w-24 md:h-24 bg-black rounded-full transform hover:scale-110 transition-all duration-300" data-aos="fade-up" data-aos-delay="400"></div>
+    <div class="w-20 h-20 md:w-24 md:h-24 bg-black rounded-full transform hover:scale-110 transition-all duration-300" data-aos="fade-up" data-aos-delay="500"></div>
+    <div class="w-20 h-20 md:w-24 md:h-24 bg-black rounded-full transform hover:scale-110 transition-all duration-300" data-aos="fade-up" data-aos-delay="600"></div>
   </div>
-</div>
+</section>
 
 <!-- Footer Section -->
-<footer class="footer-section" id="footer" data-aos="fade-up" data-aos-duration="1000">
-  <div class="footer-content">
-    <div class="footer-column" data-aos="fade-up" data-aos-delay="200">
-      <h5>Quick Links</h5>
-      <ul>
-        <li><a href="#hero">Home</a></li>
-        <li><a href="#vision">About</a></li>
-        <li><a href="#book">Book</a></li>
-        <li><a href="#activities">Activities</a></li>
+<footer class="bg-gray-800 text-white py-16 px-4" id="footer" data-aos="fade-up" data-aos-duration="1000">
+  <div class="flex flex-col md:flex-row gap-10 justify-center max-w-3xl mx-auto mb-6">
+    <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="200">
+      <h5 class="font-semibold text-lg mb-4">Quick Links</h5>
+      <ul class="space-y-2">
+        <li><a href="#hero" class="text-gray-400 hover:text-blue-400">Home</a></li>
+        <li><a href="#vision" class="text-gray-400 hover:text-blue-400">About</a></li>
+        <li><a href="#book" class="text-gray-400 hover:text-blue-400">Book</a></li>
+        <li><a href="#activities" class="text-gray-400 hover:text-blue-400">Activities</a></li>
       </ul>
     </div>
-    <div class="footer-column" data-aos="fade-up" data-aos-delay="300">
-      <h5>Contact Us</h5>
-      <ul>
+    <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="300">
+      <h5 class="font-semibold text-lg mb-4">Contact Us</h5>
+      <ul class="space-y-2">
         <li>Email: info@beinglawful.in</li>
         <li>Phone: +91 123-456-7890</li>
         <li>Address: 123 Lawful Street, India</li>
       </ul>
     </div>
-    <div class="footer-column" data-aos="fade-up" data-aos-delay="400">
-      <h5>Follow Us</h5>
-      <ul>
-        <li><a href="#">Facebook</a></li>
-        <li><a href="#">Twitter</a></li>
-        <li><a href="#">Instagram</a></li>
-        <li><a href="#">LinkedIn</a></li>
+    <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="400">
+      <h5 class="font-semibold text-lg mb-4">Follow Us</h5>
+      <ul class="space-y-2">
+        <li><a href="#" class="text-gray-400 hover:text-blue-400">Facebook</a></li>
+        <li><a href="#" class="text-gray-400 hover:text-blue-400">Twitter</a></li>
+        <li><a href="#" class="text-gray-400 hover:text-blue-400">Instagram</a></li>
+        <li><a href="#" class="text-gray-400 hover:text-blue-400">LinkedIn</a></li>
       </ul>
     </div>
   </div>
-  <div class="footer-bottom" data-aos="fade-up" data-aos-delay="500">
+  <div class="text-center text-gray-400 text-sm" data-aos="fade-up" data-aos-delay="500">
     <p>© 2025 Being Lawful. All Rights Reserved.</p>
   </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
 <script>
   AOS.init({

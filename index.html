@@ -18,8 +18,8 @@
       box-sizing: border-box;
     }
        
-        ::-webkit-scrollbar {
-        display: none;
+    ::-webkit-scrollbar {
+      display: none;
     }
 
     *, *:before, *:after {
@@ -299,6 +299,28 @@
         font-size: 1.75rem;
       }
     }
+
+    /* Style for partner logos */
+    .partner-logo {
+      width: 56px !important; /* Matches w-14 */
+      height: 56px !important; /* Matches h-14 */
+      object-fit: contain !important; /* Ensure the entire logo is visible */
+      border-radius: 50% !important; /* Maintain circular shape */
+    }
+
+    .partner-logo-container {
+      width: 56px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: transform 0.3s ease;
+    }
+
+    .partner-logo-container:hover {
+      transform: scale(1.1);
+    }
   </style>
 </head>
 <body class="font-sans text-gray-800">
@@ -452,10 +474,15 @@
 <section class="bg-white min-h-[50vh] flex flex-col items-center justify-center py-8 px-4" id="partners" data-aos="fade-up">
   <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-6" data-aos="fade-up" data-aos-delay="200">Our Partners</h2>
   <div class="flex flex-wrap gap-4 justify-center max-w-3xl w-full px-2">
-    <div class="w-14 h-14 bg-black rounded-full transform hover:scale-110 transition-all duration-300" data-aos="fade-up" data-aos-delay="300"></div>
-    <div class="w-14 h-14 bg-black rounded-full transform hover:scale-110 transition-all duration-300" data-aos="fade-up" data-aos-delay="400"></div>
-    <div class="w-14 h-14 bg-black rounded-full transform hover:scale-110 transition-all duration-300" data-aos="fade-up" data-aos-delay="500"></div>
-    <div class="w-14 h-14 bg-black rounded-full transform hover:scale-110 transition-all duration-300" data-aos="fade-up" data-aos-delay="600"></div>
+    <div class="partner-logo-container" data-aos="fade-up" data-aos-delay="300">
+      <img src="./Assets/MHKC.png" alt="MHKC Logo" class="partner-logo">
+    </div>
+    <div class="partner-logo-container" data-aos="fade-up" data-aos-delay="400">
+      <img src="./Assets/shodhsetu.png" alt="Shodhsetu Logo" class="partner-logo">
+    </div>
+    <div class="partner-logo-container" data-aos="fade-up" data-aos-delay="500">
+      <img src="./Assets/vayuveg.png" alt="Vayuveg Logo" class="partner-logo">
+    </div>
   </div>
 </section>
 

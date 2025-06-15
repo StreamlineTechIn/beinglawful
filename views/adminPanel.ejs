@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Panel - Being Lawful</title>
+    <!-- Include Chart.js for visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -18,11 +20,73 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
         }
         .container h2 {
             text-align: center;
             color: #333;
+            margin: 0;
         }
+        /* Logout Button */
+        .logout {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        .logout a {
+            padding: 8px 16px;
+            background-color: #f44336;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .logout a:hover {
+            background-color: #d32f2f;
+        }
+        /* Tab Styles */
+        .tab-container {
+            margin-top: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background-color: #f1f1f1;
+            color: #555;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .tab-button:hover {
+            background-color: #e0e0e0;
+        }
+        .tab-button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* Section Styles */
         .section {
             margin-bottom: 30px;
         }
@@ -60,156 +124,383 @@
         .action-form button:hover {
             background-color: #45a049;
         }
-        .logout {
-            text-align: center;
-            margin-top: 20px;
-        }
-        .logout a {
-            padding: 10px 20px;
-            background-color: #f44336;
-            color: white;
-            text-decoration: none;
+        .action-form select {
+            padding: 5px;
+            border: 1px solid #ddd;
             border-radius: 4px;
+            margin-right: 5px;
         }
-        .logout a:hover {
-            background-color: #d32f2f;
+        .filter-container {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .filter-container input, .filter-container select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        /* Visualization Styles */
+        .chart-container {
+            margin: 20px 0;
+            max-width: 600px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h2>Admin Panel</h2>
-
-        <div class="section">
-            <h3>Pending Schools</h3>
-            <% if (pendingSchools.length > 0) { %>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>School Name</th>
-                            <th>City</th>
-                            <th>School Email</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% pendingSchools.forEach(school => { %>
-                            <tr>
-                                <td><%= school.schoolName %></td>
-                                <td><%= school.city %></td>
-                                <td><%= school.schoolEmail %></td>
-                                <td>
-                                    <form class="action-form" action="/admin/approve-school/<%= school.id %>" method="POST">
-                                        <button type="submit">Approve</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-            <% } else { %>
-                <p>No pending schools.</p>
-            <% } %>
+        <div class="header">
+            <h2>Admin Panel</h2>
+            <div class="logout">
+                <a href="/admin/logout">Logout</a>
+            </div>
         </div>
 
-        <div class="section">
-            <h3>Approved Schools (Not Scheduled)</h3>
-            <% if (approvedSchools.length > 0) { %>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>School Name</th>
-                            <th>City</th>
-                            <th>School Email</th>
-                            <th>Assign Event Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% approvedSchools.forEach(school => { %>
-                            <tr>
-                                <td><%= school.schoolName %></td>
-                                <td><%= school.city %></td>
-                                <td><%= school.schoolEmail %></td>
-                                <td>
-                                    <form class="action-form" action="/admin/assign-event-date/<%= school.id %>" method="POST">
-                                        <input type="date" name="eventDate" required>
-                                        <button type="submit">Assign</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-            <% } else { %>
-                <p>No approved schools awaiting scheduling.</p>
-            <% } %>
-        </div>
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="openTab('visualization')">Visualization</button>
+                <button class="tab-button" onclick="openTab('pending-schools')">Pending Schools</button>
+                <button class="tab-button" onclick="openTab('scheduled-schools')">Scheduled Schools</button>
+                <button class="tab-button" onclick="openTab('participants')">School Participants</button>
+            </div>
 
-        <div class="section">
-            <h3>Scheduled Schools</h3>
-            <% if (scheduledSchools.length > 0) { %>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>School Name</th>
-                            <th>City</th>
-                            <th>School Email</th>
-                            <th>Event Date</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% scheduledSchools.forEach(school => { %>
-                            <tr>
-                                <td><%= school.schoolName %></td>
-                                <td><%= school.city %></td>
-                                <td><%= school.schoolEmail %></td>
-                                <td><%= school.eventDate %></td>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-            <% } else { %>
-                <p>No scheduled schools.</p>
-            <% } %>
-        </div>
+            <!-- Visualization Tab -->
+            <div id="visualization" class="tab-content active">
+                <div class="section">
+                    <h3>Data Visualization</h3>
+                    <!-- School Status Chart -->
+                    <div class="chart-container">
+                        <h4>School Status</h4>
+                        <canvas id="schoolStatusChart"></canvas>
+                    </div>
+                    <!-- Participants per School Chart -->
+                    <div class="chart-container">
+                        <h4>Participants per School</h4>
+                        <canvas id="participantsPerSchoolChart"></canvas>
+                    </div>
+                    <!-- Average Scores Chart -->
+                    <div class="chart-container">
+                        <h4>Average Scores</h4>
+                        <canvas id="avgScoresChart"></canvas>
+                    </div>
+                </div>
+            </div>
 
-        <div class="section">
-            <h3>Participants</h3>
-            <% if (participants.length > 0) { %>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Student Name</th>
-                            <th>Parent Mobile</th>
-                            <th>School Name</th>
-                            <th>Trial 1 (%)</th>
-                            <th>Trial 2 (%)</th>
-                            <th>MCQ Score</th>
-                            <th>MCQ Percentage</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% participants.forEach(participant => { %>
-                            <tr>
-                                <td><%= participant.studentName %></td>
-                                <td><%= participant.parentMobile1 %></td>
-                                <td><%= participant.schoolNameDropdown %></td>
-                                <td><%= participant.trial1Percentage %></td>
-                                <td><%= participant.trial2Percentage %></td>
-                                <td><%= participant.score %> / <%= participant.totalQuestions %></td>
-                                <td><%= participant.percentage %>%</td>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-            <% } else { %>
-                <p>No participants found.</p>
-            <% } %>
-        </div>
+            <!-- Pending Schools Tab -->
+            <div id="pending-schools" class="tab-content">
+                <div class="section">
+                    <h3>Pending Schools</h3>
+                    <div class="filter-container">
+                        <input type="text" id="pendingSchoolNameFilter" placeholder="Filter by School Name">
+                        <input type="text" id="pendingCityFilter" placeholder="Filter by City">
+                        <input type="text" id="pendingEmailFilter" placeholder="Filter by Email">
+                    </div>
+                    <% if (pendingSchools.length > 0) { %>
+                        <table id="pendingSchoolsTable">
+                            <thead>
+                                <tr>
+                                    <th>School Name</th>
+                                    <th>City</th>
+                                    <th>School Email</th>
+                                    <th>Proposed Dates</th>
+                                    <th>Requirements</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% pendingSchools.forEach(school => { %>
+                                    <tr>
+                                        <td><%= school.schoolName %></td>
+                                        <td><%= school.city %></td>
+                                        <td><%= school.schoolEmail %></td>
+                                        <td><%= school.eventDates.join(', ') %></td>
+                                        <td><%= school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'Not specified' %></td>
+                                        <td>
+                                            <form class="action-form" action="/admin/approve-and-schedule/<%= school.id %>" method="POST">
+                                                <select name="eventDate" required>
+                                                    <option value="" disabled selected>Select a date</option>
+                                                    <% school.eventDates.forEach(date => { %>
+                                                        <option value="<%= date %>"><%= date %></option>
+                                                    <% }) %>
+                                                </select>
+                                                <button type="submit">Approve & Schedule</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } else { %>
+                        <p>No pending schools.</p>
+                    <% } %>
+                </div>
+            </div>
 
-        <div class="logout">
-            <a href="/admin/logout">Logout</a>
+            <!-- Scheduled Schools Tab -->
+            <div id="scheduled-schools" class="tab-content">
+                <div class="section">
+                    <h3>Scheduled Schools</h3>
+                    <div class="filter-container">
+                        <input type="text" id="scheduledSchoolNameFilter" placeholder="Filter by School Name">
+                        <input type="text" id="scheduledCityFilter" placeholder="Filter by City">
+                        <input type="text" id="scheduledEmailFilter" placeholder="Filter by Email">
+                        <input type="date" id="scheduledEventDateFilter" placeholder="Filter by Event Date">
+                    </div>
+                    <% if (scheduledSchools.length > 0) { %>
+                        <table id="scheduledSchoolsTable">
+                            <thead>
+                                <tr>
+                                    <th>School Name</th>
+                                    <th>City</th>
+                                    <th>School Email</th>
+                                    <th>Event Date</th>
+                                    <th>Requirements</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% scheduledSchools.forEach(school => { %>
+                                    <tr>
+                                        <td><%= school.schoolName %></td>
+                                        <td><%= school.city %></td>
+                                        <td><%= school.schoolEmail %></td>
+                                        <td><%= school.eventDate %></td>
+                                        <td><%= school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'Not specified' %></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } else { %>
+                        <p>No scheduled schools.</p>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- School Participants Tab -->
+            <div id="participants" class="tab-content">
+                <div class="section">
+                    <h3>Participants</h3>
+                    <div class="filter-container">
+                        <input type="text" id="participantNameFilter" placeholder="Filter by Student Name">
+                        <input type="text" id="participantMobileFilter" placeholder="Filter by Parent Mobile">
+                        <input type="text" id="participantSchoolFilter" placeholder="Filter by School Name">
+                        <input type="number" id="participantTrial1Filter" placeholder="Filter by Trial 1 (%)" min="0" max="100">
+                        <input type="number" id="participantTrial2Filter" placeholder="Filter by Trial 2 (%)" min="0" max="100">
+                        <input type="number" id="participantMCQFilter" placeholder="Filter by MCQ Percentage" min="0" max="100">
+                    </div>
+                    <% if (participants.length > 0) { %>
+                        <table id="participantsTable">
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Parent Mobile</th>
+                                    <th>School Name</th>
+                                    <th>Trial 1 (%)</th>
+                                    <th>Trial 2 (%)</th>
+                                    <th>MCQ Score</th>
+                                    <th>MCQ Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% participants.forEach(participant => { %>
+                                    <tr>
+                                        <td><%= participant.studentName %></td>
+                                        <td><%= participant.parentMobile1 %></td>
+                                        <td><%= participant.schoolNameDropdown %></td>
+                                        <td><%= participant.trial1Percentage %></td>
+                                        <td><%= participant.trial2Percentage %></td>
+                                        <td><%= participant.score %> / <%= participant.totalQuestions %></td>
+                                        <td><%= participant.percentage %>%</td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    <% } else { %>
+                        <p>No participants found.</p>
+                    <% } %>
+                </div>
+            </div>
         </div>
     </div>
+
+    <script>
+        // Tab switching function
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.getElementById(tabId).classList.add('active');
+            document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`).classList.add('active');
+        }
+
+        // Generic filter function for tables
+        function filterTable(tableId, filters) {
+            const table = document.getElementById(tableId);
+            const rows = table ? table.querySelectorAll('tbody tr') : [];
+
+            rows.forEach(row => {
+                let showRow = true;
+                filters.forEach(({ inputId, columnIndex, type = 'text' }) => {
+                    const input = document.getElementById(inputId);
+                    const value = input.value.trim().toLowerCase();
+                    if (value) {
+                        const cellText = row.cells[columnIndex].textContent.trim().toLowerCase();
+                        if (type === 'text' && !cellText.includes(value)) {
+                            showRow = false;
+                        } else if (type === 'number' && value !== '') {
+                            const cellValue = parseFloat(cellText.replace('%', '')) || 0;
+                            if (cellValue < parseFloat(value)) {
+                                showRow = false;
+                            }
+                        } else if (type === 'date' && value !== '') {
+                            if (cellText !== value) {
+                                showRow = false;
+                            }
+                        }
+                    }
+                });
+                row.style.display = showRow ? '' : 'none';
+            });
+        }
+
+        // Pending Schools Filter
+        const pendingFilters = [
+            { inputId: 'pendingSchoolNameFilter', columnIndex: 0 },
+            { inputId: 'pendingCityFilter', columnIndex: 1 },
+            { inputId: 'pendingEmailFilter', columnIndex: 2 }
+        ];
+        pendingFilters.forEach(filter => {
+            document.getElementById(filter.inputId).addEventListener('input', () => {
+                filterTable('pendingSchoolsTable', pendingFilters);
+            });
+        });
+
+        // Scheduled Schools Filter
+        const scheduledFilters = [
+            { inputId: 'scheduledSchoolNameFilter', columnIndex: 0 },
+            { inputId: 'scheduledCityFilter', columnIndex: 1 },
+            { inputId: 'scheduledEmailFilter', columnIndex: 2 },
+            { inputId: 'scheduledEventDateFilter', columnIndex: 3, type: 'date' }
+        ];
+        scheduledFilters.forEach(filter => {
+            document.getElementById(filter.inputId).addEventListener('input', () => {
+                filterTable('scheduledSchoolsTable', scheduledFilters);
+            });
+        });
+
+        // Participants Filter
+        const participantFilters = [
+            { inputId: 'participantNameFilter', columnIndex: 0 },
+            { inputId: 'participantMobileFilter', columnIndex: 1 },
+            { inputId: 'participantSchoolFilter', columnIndex: 2 },
+            { inputId: 'participantTrial1Filter', columnIndex: 3, type: 'number' },
+            { inputId: 'participantTrial2Filter', columnIndex: 4, type: 'number' },
+            { inputId: 'participantMCQFilter', columnIndex: 6, type: 'number' }
+        ];
+        participantFilters.forEach(filter => {
+            document.getElementById(filter.inputId).addEventListener('input', () => {
+                filterTable('participantsTable', participantFilters);
+            });
+        });
+
+        // Visualization Charts
+        // School Status Chart
+        const schoolStatusCtx = document.getElementById('schoolStatusChart').getContext('2d');
+        new Chart(schoolStatusCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Pending', 'Approved', 'Scheduled'],
+                datasets: [{
+                    label: 'Number of Schools',
+                    data: [
+                        <%= schoolStatusData.pending %>,
+                        <%= schoolStatusData.approved %>,
+                        <%= schoolStatusData.scheduled %>
+                    ],
+                    backgroundColor: ['#f44336', '#4CAF50', '#2196F3']
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Count'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Participants per School Chart
+        const participantsPerSchoolCtx = document.getElementById('participantsPerSchoolChart').getContext('2d');
+        new Chart(participantsPerSchoolCtx, {
+            type: 'bar',
+            data: {
+                labels: <%- JSON.stringify(participantsPerSchoolLabels) %>,
+                datasets: [{
+                    label: 'Number of Participants',
+                    data: <%- JSON.stringify(participantsPerSchoolValues) %>,
+                    backgroundColor: '#4CAF50'
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Participants'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'School'
+                        }
+                    }
+                }
+            }
+        });
+
+        // Average Scores Chart
+        const avgScoresCtx = document.getElementById('avgScoresChart').getContext('2d');
+        new Chart(avgScoresCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Trial 1', 'Trial 2', 'MCQ'],
+                datasets: [{
+                    label: 'Average Percentage',
+                    data: [
+                        <%= avgScoresData.trial1 %>,
+                        <%= avgScoresData.trial2 %>,
+                        <%= avgScoresData.mcq %>
+                    ],
+                    backgroundColor: ['#FF9800', '#9C27B0', '#2196F3']
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        title: {
+                            display: true,
+                            text: 'Percentage (%)'
+                        }
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>

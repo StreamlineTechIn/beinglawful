@@ -3,475 +3,258 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Dashboard - Being Lawful</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet"/>
+    <title>Student Dashboard</title>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
             margin: 0;
             padding: 0;
+            background-color: #f4f4f4;
             display: flex;
-            height: 100vh;
-            overflow: hidden;
         }
-
         .sidebar {
             width: 250px;
-            background-color: #28a745;
+            background: #2c3e50;
             color: #fff;
             height: 100vh;
             position: fixed;
-            top: 0;
-            left: 0;
-            padding: 20px;
-            border-top-right-radius: 20px;
-            border-bottom-right-radius: 20px;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+            padding-top: 20px;
         }
-        .sidebar h4 {
+        .sidebar h2 {
             text-align: center;
             margin-bottom: 30px;
-            font-size: 1.5rem;
+            font-size: 1.5em;
         }
-        .sidebar .nav-link {
-            color: #fff;
-            padding: 10px 15px;
-            margin: 5px 0;
-            border-radius: 5px;
+        .sidebar a {
             display: block;
+            color: #fff;
+            padding: 15px 20px;
             text-decoration: none;
-            font-size: 1.1rem;
+            font-size: 1.1em;
         }
-        .sidebar .nav-link:hover {
-            background-color: #218838;
+        .sidebar a:hover {
+            background: #3498db;
         }
-        .sidebar .nav-link.active {
-            background-color: #1e7e34;
+        .sidebar .note {
+            font-size: 0.9em;
+            padding: 10px 20px;
+            color: #ecf0f1;
         }
-
+        .sidebar .note.missing {
+            color: #e74c3c;
+            font-style: italic;
+        }
         .main-content {
             margin-left: 250px;
-            flex: 1;
             padding: 20px;
-            overflow-y: auto;
-            height: 100vh;
+            width: calc(100% - 250px);
         }
-        .dashboard-container {
-            max-width: 900px;
+        .container {
+            max-width: 800px;
             margin: 0 auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-            min-height: 90vh;
-        }
-        .dashboard-container h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #2c3e50;
-            font-size: 2rem;
-        }
-
-        .section {
-            margin-bottom: 40px;
+            background: #fff;
             padding: 20px;
-            border: 1px solid #e9ecef;
             border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        .section h3 {
-            color: #28a745;
+        h1, h3 {
+            color: #333;
+        }
+        .section {
             margin-bottom: 20px;
-            font-size: 1.5rem;
         }
-
-        .btn-custom {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background-color: #28a745;
-            color: #fff;
-            border: none;
-            border-radius: 5px;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-            text-decoration: none;
-            font-size: 1.1rem;
-        }
-        .btn-custom:hover {
-            background-color: #218838;
-        }
-        .btn-custom:disabled {
-            background-color: #6c757d;
-            cursor: not-allowed;
-        }
-
-        .btn-completed {
-            background-color: #6c757d;
-            cursor: not-allowed;
-        }
-
-        .exam-instructions {
-            background-color: #e9ecef;
+        .summary-card {
+            background: #ecf0f1;
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
         }
-        .exam-instructions h4 {
-            margin-bottom: 10px;
-            font-size: 1.2rem;
-            color: #2c3e50;
+        .summary-item {
+            margin: 10px 0;
+            font-size: 1em;
         }
-        .exam-instructions ul {
-            margin: 0;
-            padding-left: 20px;
-            font-size: 1rem;
-        }
-
-        .mcq-question {
-            margin-bottom: 20px;
-        }
-        .mcq-question p {
-            font-weight: 500;
-            margin-bottom: 10px;
-            color: #2c3e50;
-        }
-        .mcq-question label {
-            margin-left: 10px;
-            font-size: 1rem;
-        }
-
-        .score-message {
-            color: #28a745;
-            text-align: center;
-            font-size: 1.4rem;
-            margin-bottom: 20px;
+        .summary-item span {
             font-weight: bold;
         }
-        .status-message {
-            text-align: center;
-            font-size: 1.1rem;
-            color: #6c757d;
-        }
-        .result-message {
-            color: #dc3545;
-            text-align: center;
-            margin-top: 10px;
-            font-size: 1rem;
-        }
-
         .results-card {
-            background-color: #f8f9fa;
-            border: 2px solid #28a745;
-            border-radius: 10px;
-            padding: 20px;
-            text-align: center;
+            background: #e8f4f8;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
         }
-
-        .result-stats {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-        }
-
-        .stat-item {
-            text-align: center;
-        }
-
-        .stat-number {
-            font-size: 2rem;
+        .score-message {
+            font-size: 1.2em;
             font-weight: bold;
-            color: #28a745;
+            color: #2c3e50;
         }
-
-        .stat-label {
-            font-size: 0.9rem;
-            color: #6c757d;
+        .test-form {
+            margin-top: 10px;
         }
-
-        .progress-section {
-            margin-bottom: 30px;
+        .test-form p {
+            font-weight: bold;
         }
-
-        .progress-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
+        .test-form label {
+            margin-right: 10px;
+        }
+        .test-form button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background: #3498db;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .test-form button:hover {
+            background: #2980b9;
+        }
+        .debug {
+            background: #f8e1e1;
             padding: 10px;
             border-radius: 5px;
-            background-color: #f8f9fa;
-        }
-
-        .progress-icon {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            font-weight: bold;
-        }
-
-        .progress-icon.completed {
-            background-color: #28a745;
-            color: white;
-        }
-
-        .progress-icon.pending {
-            background-color: #ffc107;
-            color: white;
-        }
-
-        .progress-icon.disabled {
-            background-color: #6c757d;
-            color: white;
-        }
-
-        .warning-message {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background-color: #dc3545;
-            color: #fff;
-            text-align: center;
-            padding: 10px;
-            z-index: 1000;
-            display: none;
-            font-size: 1rem;
+            margin-top: 20px;
+            font-size: 0.9em;
         }
     </style>
 </head>
 <body>
+    <!-- Left Sidebar -->
     <div class="sidebar">
-        <h4>Student Panel</h4>
-        <a href="#" class="nav-link active">Dashboard</a>
-        <a href="/" class="nav-link">Home</a>
-        <a href="/login" class="nav-link">Logout</a>
+        <h2>Student Portal</h2>
+        <a href="#" class="active">Dashboard</a>
+        <% if (hasCompletedMCQ) { %>
+            <a href="/gamezone/<%= parentMobile1 %>">Game Zone</a>
+            <a href="/certificate/<%= parentMobile1 %>">Certificate</a>
+            <div class="note <%= eventDateMissing ? 'missing' : '' %>">
+                <% if (eventDateMissing) { %>
+                    Event date yet to decide.
+                <% } else if (isOnOrAfterEventDate) { %>
+                    Game Zone and Certificate are now available (since event date: <%= eventDate %>).
+                <% } else { %>
+                    Game Zone and Certificate will be available on or after the event date: <%= eventDate %>.
+                <% } %>
+            </div>
+        <% } %>
+        <a href="/login">Logout</a>
     </div>
 
+    <!-- Main Content -->
     <div class="main-content">
-        <div id="warning-message" class="warning-message">
-            Warning: Tab switching detected! Please stay on this page during the exam.
-        </div>
+        <div class="container">
+            <h1>Welcome, <%= studentName %></h1>
+            <p>Parent Mobile: <%= parentMobile1 %></p>
 
-        <div class="dashboard-container">
-            <h2>Welcome, <%= studentName %>!</h2>
-
-            <!-- Progress Overview Section -->
+            <!-- Test Summary -->
             <div class="section">
-                <h3>Test Progress</h3>
-                <div class="progress-section">
-                    <div class="progress-item">
-                        <div class="progress-icon <%= hasCompletedTrial1 ? 'completed' : 'pending' %>">
-                            <%= hasCompletedTrial1 ? '✓' : '1' %>
-                        </div>
-                        <div>
-                            <strong>Trial Test 1</strong><br>
-                            <small><%= hasCompletedTrial1 ? 'Completed' : 'Pending' %></small>
-                        </div>
+                <h3>Test Summary</h3>
+                <div class="summary-card">
+                    <div class="summary-item">
+                        <span>Trial Test 1:</span> <%= hasCompletedTrial1 ? 'Completed' : 'Not Completed' %>
                     </div>
-                    <div class="progress-item">
-                        <div class="progress-icon <%= hasCompletedTrial2 ? 'completed' : (hasCompletedTrial1 ? 'pending' : 'disabled') %>">
-                            <%= hasCompletedTrial2 ? '✓' : '2' %>
-                        </div>
-                        <div>
-                            <strong>Trial Test 2</strong><br>
-                            <small><%= hasCompletedTrial2 ? 'Completed' : (hasCompletedTrial1 ? 'Available' : 'Locked') %></small>
-                        </div>
+                    <div class="summary-item">
+                        <span>Trial Test 2:</span> <%= hasCompletedTrial2 ? 'Completed' : 'Not Completed' %>
                     </div>
-                    <div class="progress-item">
-                        <div class="progress-icon <%= hasCompletedMCQ ? 'completed' : ((hasCompletedTrial1 && hasCompletedTrial2) ? 'pending' : 'disabled') %>">
-                            <%= hasCompletedMCQ ? '✓' : '3' %>
-                        </div>
-                        <div>
-                            <strong>Main Exam</strong><br>
-                            <small><%= hasCompletedMCQ ? 'Completed' : ((hasCompletedTrial1 && hasCompletedTrial2) ? 'Available' : 'Locked') %></small>
-                        </div>
+                    <div class="summary-item">
+                        <span>Main Exam:</span> <%= hasCompletedMCQ ? 'Completed' : 'Not Started' %>
                     </div>
+                    <% if (hasCompletedMCQ) { %>
+                        <div class="summary-item">
+                            <span>Main Exam Score:</span> <%= score %>/<%= totalQuestions %> (<%= percentage %>%)
+                        </div>
+                    <% } %>
                 </div>
             </div>
+
+            <!-- Trial Test 1 -->
+            <% if (!hasCompletedTrial1) { %>
+                <div class="section">
+                    <h3>Trial Test 1</h3>
+                    <form class="test-form" action="/submit-trial1" method="POST">
+                        <input type="hidden" name="parentMobile1" value="<%= parentMobile1 %>">
+                        <% trial1.forEach((mcq, index) => { %>
+                            <p><%= mcq.question %></p>
+                            <% mcq.options.forEach(option => { %>
+                                <label>
+                                    <input type="radio" name="q<%= index %>" value="<%= option %>" required>
+                                    <%= option %>
+                                </label>
+                            <% }); %>
+                            <br>
+                        <% }); %>
+                        <button type="submit">Submit Trial 1</button>
+                    </form>
+                </div>
+            <% } else { %>
+                <div class="section">
+                    <h3>Trial Test 1</h3>
+                    <p>You have completed Trial Test 1.</p>
+                </div>
+            <% } %>
+
+            <!-- Trial Test 2 -->
+            <% if (!hasCompletedTrial2) { %>
+                <div class="section">
+                    <h3>Trial Test 2</h3>
+                    <form class="test-form" action="/submit-trial2" method="POST">
+                        <input type="hidden" name="parentMobile1" value="<%= parentMobile1 %>">
+                        <% trial2.forEach((mcq, index) => { %>
+                            <p><%= mcq.question %></p>
+                            <% mcq.options.forEach(option => { %>
+                                <label>
+                                    <input type="radio" name="q<%= index %>" value="<%= option %>" required>
+                                    <%= option %>
+                                </label>
+                            <% }); %>
+                            <br>
+                        <% }); %>
+                        <button type="submit">Submit Trial 2</button>
+                    </form>
+                </div>
+            <% } else { %>
+                <div class="section">
+                    <h3>Trial Test 2</h3>
+                    <p>You have completed Trial Test 2.</p>
+                </div>
+            <% } %>
+
+            <!-- Main Exam -->
+            <% if (hasCompletedTrial1 && hasCompletedTrial2 && !hasCompletedMCQ) { %>
+                <div class="section">
+                    <h3>Main Exam</h3>
+                    <p>You have <%= mcqs.length %> questions to complete.</p>
+                    <a href="/mcq-test/<%= parentMobile1 %>" style="padding: 10px 20px; background: #3498db; color: #fff; text-decoration: none; border-radius: 5px;">Start Main Exam</a>
+                </div>
+            <% } %>
 
             <!-- Exam Results Section -->
             <% if (showResults && hasCompletedMCQ) { %>
-            <div class="section">
-                <h3>Main Exam Results</h3>
-                <div class="results-card">
-                    <div class="score-message">
-                        Your Score: <%= score %>/<%= totalQuestions %> (<%= percentage %>%)
-                    </div>
-                    <div class="result-stats">
-                        <div class="stat-item">
-                            <div class="stat-number"><%= correctAnswers %></div>
-                            <div class="stat-label">Correct Answers</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number"><%= wrongAnswers %></div>
-                            <div class="stat-label">Wrong Answers</div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-number"><%= percentage %>%</div>
-                            <div class="stat-label">Percentage</div>
+                <div class="section">
+                    <h3>Main Exam Results</h3>
+                    <div class="results-card">
+                        <div class="score-message">
+                            Your Score: <%= score %>/<%= totalQuestions %> (<%= percentage %>%)
                         </div>
                     </div>
                 </div>
-            </div>
             <% } %>
 
-            <!-- Trial Test 1 Section -->
-            <% if (!hasCompletedTrial1) { %>
-            <div class="section">
-                <h3>Trial Test 1</h3>
-                <div class="exam-instructions">
-                    <h4>Instructions</h4>
-                    <ul>
-                        <li>This is a practice test to familiarize you with the interface.</li>
-                        <li>Complete all questions and submit.</li>
-                        <li>You must complete this to unlock Trial Test 2.</li>
-                    </ul>
+            <!-- Event Date Notification -->
+            <% if (isEventDate) { %>
+                <div class="section">
+                    <p style="color: #e74c3c; font-weight: bold;">Today is the event date!</p>
                 </div>
-                <form action="/submit-trial1" method="POST" id="trial1-form">
-                    <% trial1.forEach((mcq, index) => { %>
-                        <div class="mcq-question">
-                            <p>Question <%= index + 1 %>: <%= mcq.question %></p>
-                            <% mcq.options.forEach((option, optIndex) => { %>
-                                <div>
-                                    <input type="radio" id="t1-q<%= index %>-<%= optIndex %>" name="q<%= index %>" value="<%= option %>" required>
-                                    <label for="t1-q<%= index %>-<%= optIndex %>"><%= option %></label>
-                                </div>
-                            <% }) %>
-                        </div>
-                    <% }) %>
-                    <input type="hidden" name="parentMobile1" value="<%= parentMobile1 %>">
-                    <button type="submit" class="btn-custom">Submit Trial 1</button>
-                </form>
-            </div>
             <% } %>
 
-            <!-- Trial Test 2 Section -->
-            <% if (hasCompletedTrial1 && !hasCompletedTrial2) { %>
-            <div class="section">
-                <h3>Trial Test 2</h3>
-                <div class="exam-instructions">
-                    <h4>Instructions</h4>
-                    <ul>
-                        <li>This is the second practice test.</li>
-                        <li>Complete all questions and submit.</li>
-                        <li>You must complete this to unlock the Main Exam.</li>
-                    </ul>
-                </div>
-                <form action="/submit-trial2" method="POST" id="trial2-form">
-                    <% trial2.forEach((mcq, index) => { %>
-                        <div class="mcq-question">
-                            <p>Question <%= index + 1 %>: <%= mcq.question %></p>
-                            <% mcq.options.forEach((option, optIndex) => { %>
-                                <div>
-                                    <input type="radio" id="t2-q<%= index %>-<%= optIndex %>" name="q<%= index %>" value="<%= option %>" required>
-                                    <label for="t2-q<%= index %>-<%= optIndex %>"><%= option %></label>
-                                </div>
-                            <% }) %>
-                        </div>
-                    <% }) %>
-                    <input type="hidden" name="parentMobile1" value="<%= parentMobile1 %>">
-                    <button type="submit" class="btn-custom">Submit Trial 2</button>
-                </form>
+            <!-- Debug Information -->
+            <div class="debug">
+                <p><strong>Debug Info:</strong></p>
+                <p>hasCompletedMCQ: <%= hasCompletedMCQ %></p>
+                <p>isEventDate: <%= isEventDate %></p>
+                <p>isOnOrAfterEventDate: <%= isOnOrAfterEventDate %></p>
+                <p>eventDateMissing: <%= eventDateMissing %></p>
+                <p>eventDate: <%= eventDate %></p>
             </div>
-            <% } %>
-
-            <!-- Main Exam Section -->
-            <% if (hasCompletedTrial1 && hasCompletedTrial2 && !hasCompletedMCQ) { %>
-            <div class="section">
-                <h3>Main Exam</h3>
-                <div class="exam-instructions">
-                    <h4>Instructions</h4>
-                    <ul>
-                        <li>This is the final exam consisting of <%= mcqs.length %> questions.</li>
-                        <li>Answer all questions carefully - you cannot change answers after submission.</li>
-                        <li>Do not switch tabs or leave the page during the exam.</li>
-                        <li>The exam will open in a new window in fullscreen mode.</li>
-                    </ul>
-                </div>
-                <a href="/mcq-test/<%= parentMobile1 %>" target="_blank" class="btn-custom" onclick="return startMainExam()">Start Main Exam</a>
-            </div>
-            <% } %>
         </div>
     </div>
-
-    <script>
-        // Tab switching detection
-        let tabSwitchCount = 0;
-        let isExamActive = <%= hasCompletedTrial1 && hasCompletedTrial2 && !hasCompletedMCQ ? 'true' : 'false' %>;
-
-        document.addEventListener('visibilitychange', function () {
-            if (isExamActive && document.hidden) {
-                tabSwitchCount++;
-                const warningMessage = document.getElementById('warning-message');
-                warningMessage.style.display = 'block';
-                setTimeout(() => {
-                    warningMessage.style.display = 'none';
-                }, 5000);
-                if (tabSwitchCount >= 3) {
-                    alert('Warning: Multiple tab switches detected. Your exam may be terminated.');
-                    // Optionally redirect or disable exam
-                }
-            }
-        });
-
-        // Prevent right-click during exam
-        document.addEventListener('contextmenu', function (e) {
-            if (isExamActive) {
-                e.preventDefault();
-                alert('Right-click is disabled during the exam.');
-            }
-        });
-
-        // Prevent back/refresh during exam
-        window.addEventListener('beforeunload', function (e) {
-            if (isExamActive) {
-                e.preventDefault();
-                e.returnValue = 'Leaving the page may end your exam session. Are you sure?';
-            }
-        });
-
-        // Start main exam function
-        function startMainExam() {
-            if (!confirm('Are you sure you want to start the main exam?')) {
-                return false;
-            }
-            try {
-                // Attempt to open in fullscreen
-                const examWindow = window.open('/mcq-test/<%= parentMobile1 %>', '_blank');
-                if (examWindow) {
-                    examWindow.document.documentElement.requestFullscreen().catch(err => {
-                        console.error('Fullscreen request failed:', err);
-                    });
-                }
-                return true;
-            } catch (err) {
-                console.error('Error opening exam window:', err);
-                alert('Error starting the exam. Please try again.');
-                return false;
-            }
-        }
-
-        // Form submission validation for trial tests
-        document.getElementById('trial1-form')?.addEventListener('submit', function (e) {
-            const answered = document.querySelectorAll('#trial1-form input[type="radio"]:checked').length;
-            if (answered < <%= trial1.length %>) {
-                e.preventDefault();
-                alert('Please answer all questions before submitting Trial Test 1.');
-            }
-        });
-
-        document.getElementById('trial2-form')?.addEventListener('submit', function (e) {
-            const answered = document.querySelectorAll('#trial2-form input[type="radio"]:checked').length;
-            if (answered < <%= trial2.length %>) {
-                e.preventDefault();
-                alert('Please answer all questions before submitting Trial Test 2.');
-            }
-        });
-    </script>
 </body>
 </html>

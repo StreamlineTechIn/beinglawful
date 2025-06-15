@@ -4,8 +4,14 @@ const bodyParser = require('body-parser');
 const admin = require('firebase-admin');
 const session = require('express-session');
 require('dotenv').config();
+const { body, validationResult } = require('express-validator');
 
 const app = express();
+
+// Set view engine to EJS and specify the views directory
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+console.log('Views directory set to:', app.get('views')); // Debug: Confirm views directory path
 
 // Disable view cache for development
 app.set('view cache', false);
@@ -15,36 +21,25 @@ app.use(session({
     secret: 'your-secret-key',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false }
+    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // Session lasts 24 hours
 }));
 
+// Parse JSON for fetch requests
+app.use(express.json());
+
+// Trial test questions
 const trialTests = {
     trial1: [
-        {
-            question: "What is 1 + 1?",
-            options: ["1", "2", "3", "4"],
-            correctAnswer: "2"
-        },
-        {
-            question: "Which color is the sky on a clear day?",
-            options: ["Red", "Blue", "Green", "Yellow"],
-            correctAnswer: "Blue"
-        }
+        { question: "What is 1 + 1?", options: ["1", "2", "3", "4"], correctAnswer: "2" },
+        { question: "Which color is the sky on a clear day?", options: ["Red", "Blue", "Green", "Yellow"], correctAnswer: "Blue" }
     ],
     trial2: [
-        {
-            question: "What is 3 - 1?",
-            options: ["1", "2", "3", "4"],
-            correctAnswer: "2"
-        },
-        {
-            question: "Which animal is known as man's best friend?",
-            options: ["Cat", "Dog", "Bird", "Fish"],
-            correctAnswer: "Dog"
-        }
+        { question: "What is 3 - 1?", options: ["1", "2", "3", "4"], correctAnswer: "2" },
+        { question: "Which animal is known as man's best friend?", options: ["Cat", "Dog", "Bird", "Fish"], correctAnswer: "Dog" }
     ]
 };
 
+// Validate environment variables for Firebase
 const requiredEnvVars = [
     'FIREBASE_PROJECT_ID',
     'FIREBASE_PRIVATE_KEY_ID',
@@ -59,6 +54,7 @@ if (missingEnvVars.length > 0) {
     process.exit(1);
 }
 
+// Initialize Firebase Admin SDK
 let db;
 try {
     const serviceAccount = {
@@ -85,183 +81,252 @@ try {
     process.exit(1);
 }
 
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+// Set up Express app
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '.')));
 
-// Hardcoded admin credentials (for simplicity; replace with proper auth in production)
+// Hardcoded admin credentials
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'admin123';
 
-// Middleware to check if user is authenticated
-function requireAdmin(req, res, next) {
-    if (req.session.isAdmin) {
-        next();
-    } else {
-        res.redirect('/admin-login');
-    }
-}
+// Utility Functions
 
+// Fetch random questions from Firestore
 async function getRandomQuestions(limit = 30) {
     try {
         const snapshot = await db.collection('mcqs').get();
-        let allQuestions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log(`Total questions fetched from mcqs collection: ${allQuestions.length}`, allQuestions);
+        let questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        // Validate questions
-        allQuestions = allQuestions.filter(mcq => {
-            const isValid =
-                typeof mcq.question === 'string' &&
-                Array.isArray(mcq.options) &&
-                mcq.options.length >= 4 &&
+        // Filter valid questions
+        questions = questions.filter(mcq => {
+            const isValid = 
+                mcq.question && typeof mcq.question === 'string' &&
+                Array.isArray(mcq.options) && mcq.options.length >= 4 &&
                 mcq.options.every(opt => typeof opt === 'string' && opt.trim()) &&
-                typeof mcq.correctAnswer === 'string' &&
-                mcq.correctAnswer.trim() &&
+                mcq.correctAnswer && typeof mcq.correctAnswer === 'string' &&
                 mcq.options.includes(mcq.correctAnswer);
-            if (!isValid) {
-                console.warn(`Invalid MCQ filtered out: ${JSON.stringify(mcq)}`);
-            }
+            if (!isValid) console.warn(`Filtered out invalid MCQ: ${JSON.stringify(mcq)}`);
             return isValid;
         });
 
-        console.log(`Valid questions after filtering: ${allQuestions.length}`, allQuestions);
-
-        // Fallback questions
+        // Fallback questions if not enough valid ones
         const fallbackQuestions = [
             { question: "What is the supreme law of India?", options: ["Parliament", "President", "Supreme Court", "Constitution"], correctAnswer: "Constitution" },
             { question: "When did the Indian Constitution come into effect?", options: ["15 August 1947", "26 January 1950", "2 October 1948", "26 November 1949"], correctAnswer: "26 January 1950" },
-            { question: "Who is known as the father of the Indian Constitution?", options: ["Mahatma Gandhi", "Jawaharlal Nehru", "B. R. Ambedkar", "Rajendra Prasad"], correctAnswer: "B. R. Ambedkar" },
-            { question: "How many fundamental rights are there in the Indian Constitution?", options: ["5", "6", "7", "8"], correctAnswer: "6" },
-            { question: "Which part of the Constitution deals with Fundamental Rights?", options: ["Part I", "Part II", "Part III", "Part IV"], correctAnswer: "Part III" },
-            { question: "Which Article guarantees the Right to Equality?", options: ["Article 12", "Article 14", "Article 16", "Article 19"], correctAnswer: "Article 14" },
-            { question: "Right to Education is a fundamental right under which Article?", options: ["Article 21A", "Article 15", "Article 19", "Article 32"], correctAnswer: "Article 21A" },
-            { question: "Directive Principles of State Policy are in which part of the Constitution?", options: ["Part IV", "Part V", "Part III", "Part VI"], correctAnswer: "Part IV" },
-            { question: "Which Article allows the President to declare Emergency?", options: ["Article 352", "Article 356", "Article 360", "Article 370"], correctAnswer: "Article 352" },
-            { question: "What does the Preamble of the Constitution declare India to be?", options: ["Monarchy", "Dictatorship", "Sovereign Republic", "Colony"], correctAnswer: "Sovereign Republic" },
-            { question: "Which body interprets the Constitution?", options: ["Lok Sabha", "Rajya Sabha", "Supreme Court", "President"], correctAnswer: "Supreme Court" },
-            { question: "What is the minimum age to vote in India?", options: ["16", "18", "21", "25"], correctAnswer: "18" },
-            { question: "Which Article provides Right to Freedom of Religion?", options: ["Article 14", "Article 19", "Article 25", "Article 32"], correctAnswer: "Article 25" },
-            { question: "Who elects the President of India?", options: ["Public", "Rajya Sabha", "Electoral College", "Prime Minister"], correctAnswer: "Electoral College" },
-            { question: "Which Article deals with the abolition of untouchability?", options: ["Article 14", "Article 17", "Article 21", "Article 23"], correctAnswer: "Article 17" },
-            { question: "What is the term of the Lok Sabha?", options: ["4 years", "5 years", "6 years", "7 years"], correctAnswer: "5 years" },
-            { question: "Which is the highest judicial authority in India?", options: ["High Court", "District Court", "Supreme Court", "Cabinet"], correctAnswer: "Supreme Court" },
-            { question: "How many schedules are there in the Indian Constitution?", options: ["10", "12", "8", "11"], correctAnswer: "12" },
-            { question: "Which article ensures cultural and educational rights?", options: ["Article 15", "Article 29", "Article 21", "Article 14"], correctAnswer: "Article 29" },
-            { question: "Which organ of the government makes laws?", options: ["Executive", "Judiciary", "Legislature", "Election Commission"], correctAnswer: "Legislature" },
-            { question: "What is the role of the Election Commission?", options: ["Conducts elections", "Make laws", "Judicial review", "Budget allocation"], correctAnswer: "Conducts elections" },
-            { question: "The Constitution of India was adopted on?", options: ["15 August 1947", "26 January 1950", "26 November 1949", "2 October 1950"], correctAnswer: "26 November 1949" },
-            { question: "How many amendments have been made to the Constitution (as of 2024)?", options: ["80", "90", "100", "105"], correctAnswer: "105" },
-            { question: "Which Article gives the Right to Constitutional Remedies?", options: ["Article 32", "Article 19", "Article 21", "Article 14"], correctAnswer: "Article 32" },
-            { question: "Fundamental Duties were added to the Constitution in which year?", options: ["1950", "1976", "1980", "1992"], correctAnswer: "1976" },
-            { question: "How many Fundamental Duties are listed in the Constitution?", options: ["10", "9", "12", "11"], correctAnswer: "11" },
-            { question: "Who administers the oath to the President of India?", options: ["Prime Minister", "Speaker", "Chief Justice of India", "Vice President"], correctAnswer: "Chief Justice of India" },
-            { question: "What is the meaning of 'Secular' in the Preamble?", options: ["Religious state", "No religion", "Equal respect to all religions", "One religion"], correctAnswer: "Equal respect to all religions" },
-            { question: "The concept of Fundamental Rights is inspired by which country?", options: ["USA", "UK", "France", "Germany"], correctAnswer: "USA" },
-            { question: "Which Article deals with the Right against Exploitation?", options: ["Article 19", "Article 23", "Article 15", "Article 21"], correctAnswer: "Article 23" }
+            { question: "Who is known as the father of the Indian Constitution?", options: ["Mahatma Gandhi", "Jawaharlal Nehru", "B. R. Ambedkar", "Rajendra Prasad"], correctAnswer: "B. R. Ambedkar" }
         ];
 
-        // If fewer than 30 valid questions, supplement with fallback questions
-        if (allQuestions.length < limit) {
-            console.warn(`Only ${allQuestions.length} valid questions available in Firestore. Supplementing with fallback questions.`);
-            const remainingCount = limit - allQuestions.length;
+        if (questions.length < limit) {
+            console.warn(`Only ${questions.length} valid questions available. Using fallback questions.`);
+            const needed = limit - questions.length;
             const shuffledFallbacks = [...fallbackQuestions].sort(() => Math.random() - 0.5);
-            allQuestions = [...allQuestions, ...shuffledFallbacks.slice(0, remainingCount)];
-
-            // If still not enough, duplicate fallback questions to reach exactly 30
-            while (allQuestions.length < limit) {
-                const additionalCount = limit - allQuestions.length;
-                allQuestions = [...allQuestions, ...shuffledFallbacks.slice(0, additionalCount)];
+            questions = [...questions, ...shuffledFallbacks.slice(0, needed)];
+            
+            while (questions.length < limit) {
+                const additional = limit - questions.length;
+                questions = [...questions, ...shuffledFallbacks.slice(0, additional)];
             }
         }
 
-        // Shuffle all questions
-        for (let i = allQuestions.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [allQuestions[i], allQuestions[j]] = [allQuestions[j], allQuestions[i]];
-        }
-
-        // Ensure exactly 30 questions
-        allQuestions = allQuestions.slice(0, limit);
-        console.log(`Final number of questions returned: ${allQuestions.length}`);
-
-        return allQuestions;
+        questions = questions.sort(() => Math.random() - 0.5).slice(0, limit);
+        return questions;
     } catch (error) {
-        console.error('Error fetching questions from Firestore:', error.message, error.stack);
+        console.error('Error fetching random questions:', error.message, error.stack);
         throw error;
     }
 }
 
+// Fetch user by parentMobile1
 async function getUserByParentMobile(parentMobile1) {
-    const snapshot = await db.collection('participants')
-        .where('parentMobile1', '==', parentMobile1)
-        .get();
-    if (snapshot.empty) {
-        throw new Error(`No user found with parentMobile1: ${parentMobile1}`);
+    try {
+        const snapshot = await db.collection('participants')
+            .where('parentMobile1', '==', parentMobile1)
+            .get();
+        if (snapshot.empty) {
+            throw new Error(`No user found with parentMobile1: ${parentMobile1}`);
+        }
+        const user = snapshot.docs[0].data();
+        const userId = snapshot.docs[0].id;
+        return { user, userId };
+    } catch (error) {
+        console.error('Error in getUserByParentMobile:', error.message, error.stack);
+        throw error;
     }
-    const user = snapshot.docs[0].data();
-    const userId = snapshot.docs[0].id;
-    return { user, userId };
 }
 
+// Fetch event date details for a school
+async function getEventDateDetails(schoolName) {
+    try {
+        console.log(`Fetching event date details for schoolName: ${schoolName}`);
+        if (!schoolName) {
+            console.warn('schoolName is empty or undefined');
+            return { isEventDate: false, isOnOrAfterEventDate: false, eventDateMissing: true, eventDate: null };
+        }
+
+        const schoolSnapshot = await db.collection('schools')
+            .where('schoolName', '==', schoolName)
+            .get();
+        
+        if (schoolSnapshot.empty) {
+            console.warn(`No school found with schoolName: ${schoolName}`);
+            return { isEventDate: false, isOnOrAfterEventDate: false, eventDateMissing: true, eventDate: null };
+        }
+
+        const schoolData = schoolSnapshot.docs[0].data();
+        const eventDateRaw = schoolData.eventDate;
+        console.log(`Raw eventDate from Firestore: ${eventDateRaw}, Type: ${typeof eventDateRaw}`);
+
+        if (!eventDateRaw || typeof eventDateRaw.toDate !== 'function') {
+            console.warn('eventDate is null, undefined, or not a Firestore Timestamp:', eventDateRaw);
+            return { isEventDate: false, isOnOrAfterEventDate: false, eventDateMissing: true, eventDate: null };
+        }
+
+        const eventDate = eventDateRaw.toDate();
+        console.log(`Converted eventDate: ${eventDate}`);
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        eventDate.setHours(0, 0, 0, 0);
+
+        console.log(`Today's date (normalized): ${today}`);
+        console.log(`Event date (normalized): ${eventDate}`);
+
+        const isEventDate = eventDate.getTime() === today.getTime();
+        const isOnOrAfterEventDate = today.getTime() >= eventDate.getTime();
+        console.log(`isEventDate result: ${isEventDate}`);
+        console.log(`isOnOrAfterEventDate result: ${isOnOrAfterEventDate}`);
+
+        const formattedEventDate = eventDate.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+
+        return { isEventDate, isOnOrAfterEventDate, eventDateMissing: false, eventDate: formattedEventDate };
+    } catch (error) {
+        console.error('Error calculating event date details:', error.message, error.stack);
+        return { isEventDate: false, isOnOrAfterEventDate: false, eventDateMissing: true, eventDate: null };
+    }
+}
+
+// Determine if today is the event date
+async function calculateIsEventDate(schoolName) {
+    const { isEventDate, eventDateMissing } = await getEventDateDetails(schoolName);
+    return { isEventDate, eventDateMissing };
+}
+
+// Middleware
+
+// Check admin authentication
+function requireAdmin(req, res, next) {
+    if (req.session.isAdmin) {
+        return next();
+    }
+    res.redirect('/admin-login');
+}
+
+// Check student authentication
+function requireStudentAuth(req, res, next) {
+    if (req.session.parentMobile1) {
+        return next();
+    }
+    res.redirect('/login?error=Please%20login%20to%20access%20this%20page');
+}
+
+// Check if it's on or after the event date
+async function checkEventDate(req, res, next) {
+    try {
+        const parentMobile1 = req.session.parentMobile1 || req.params.parentMobile1;
+        const { user } = await getUserByParentMobile(parentMobile1);
+        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(user.schoolNameDropdown || '');
+        res.locals.isEventDate = isEventDate;
+        res.locals.isOnOrAfterEventDate = isOnOrAfterEventDate;
+        res.locals.eventDateMissing = eventDateMissing;
+        res.locals.eventDate = eventDate;
+        res.locals.user = user;
+        next();
+    } catch (error) {
+        console.error('Error in checkEventDate middleware:', error.message, error.stack);
+        res.locals.isEventDate = false;
+        res.locals.isOnOrAfterEventDate = false;
+        res.locals.eventDateMissing = true;
+        res.locals.eventDate = null;
+        next();
+    }
+}
+
+// Routes
+
+// Home route (serves static HTML)
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    res.sendFile(path.join(__dirname, 'index.html')); // Serves index.html
 });
 
+// Login page (renders login.ejs)
 app.get('/login', (req, res) => {
-    res.render('login', { error: null });
+    const error = req.query.error || null;
+    res.render('login', { error });
 });
 
+// Student login (renders login.ejs or dashboard.ejs)
 app.post('/student-login', async (req, res) => {
     const { username, password } = req.body;
     try {
+        if (!username || !password) {
+            return res.render('login', { error: 'Username and password are required.' });
+        }
+
         console.log(`Student login attempt for username: ${username}`);
         const { user, userId } = await getUserByParentMobile(username);
+
+        if (!user.birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(user.birthdate)) {
+            console.error(`Invalid birthdate format for user ${username}: ${user.birthdate}`);
+            return res.render('login', { error: 'Invalid user data. Contact administrator.' });
+        }
+
         const [year, month, day] = user.birthdate.split('-');
         const expectedPassword = `${day}${month}${year}`;
         if (password !== expectedPassword) {
-            console.log(`Invalid password for username: ${username}`);
-            return res.render('login', { error: 'Invalid username or password' });
+            console.log(`Invalid password for username: ${username}. Expected: ${expectedPassword}, Got: ${password}`);
+            return res.render('login', { error: 'Invalid username or password.' });
         }
 
-        let mcqs;
-        // Use a transaction to ensure consistent read/write of currentMcqs
-        await db.runTransaction(async (transaction) => {
-            const userRef = db.collection('participants').doc(userId);
-            const userDoc = await transaction.get(userRef);
-            const userData = userDoc.data();
-            mcqs = userData.currentMcqs || [];
-            if (!userData.hasCompletedMCQ && mcqs.length === 0) {
-                mcqs = await getRandomQuestions(30);
-                transaction.update(userRef, { currentMcqs: mcqs });
-            }
-        });
+        req.session.parentMobile1 = username;
+
+        let mcqs = [];
+        const hasCompletedMCQ = user.hasCompletedMCQ || false;
+        if (!hasCompletedMCQ) {
+            await db.runTransaction(async (transaction) => {
+                const userRef = db.collection('participants').doc(userId);
+                const userDoc = await transaction.get(userRef);
+                const userData = userDoc.data();
+                mcqs = userData.currentMcqs || [];
+                if (mcqs.length === 0) {
+                    mcqs = await getRandomQuestions(30);
+                    transaction.update(userRef, { currentMcqs: mcqs });
+                }
+            });
+        }
+
+        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(user.schoolNameDropdown || '');
 
         res.render('dashboard', {
-            studentName: user.studentName,
+            studentName: user.studentName || 'Unknown Student',
             parentMobile1: username,
-            hasCompletedMCQ: user.hasCompletedMCQ || false,
+            hasCompletedMCQ: hasCompletedMCQ,
             hasCompletedTrial1: user.hasCompletedTrial1 || false,
             hasCompletedTrial2: user.hasCompletedTrial2 || false,
-            trial1Score: user.trial1Score || 0,
-            trial1TotalQuestions: user.trial1TotalQuestions || trialTests.trial1.length,
-            trial1Percentage: user.trial1Percentage || 0,
-            trial1CorrectAnswers: user.trial1CorrectAnswers || 0,
-            trial1WrongAnswers: user.trial1WrongAnswers || 0,
-            trial2Score: user.trial2Score || 0,
-            trial2TotalQuestions: user.trial2TotalQuestions || trialTests.trial2.length,
-            trial2Percentage: user.trial2Percentage || 0,
-            trial2CorrectAnswers: user.trial2CorrectAnswers || 0,
-            trial2WrongAnswers: user.trial2WrongAnswers || 0,
-            score: user.score || 0,
-            totalQuestions: user.totalQuestions || 30,
-            percentage: user.percentage || 0,
-            correctAnswers: user.correctAnswers || 0,
-            wrongAnswers: user.wrongAnswers || 0,
-            mcqs,
+            mcqs: mcqs,
             trial1: trialTests.trial1,
             trial2: trialTests.trial2,
-            showResults: user.hasCompletedMCQ || false
+            isEventDate: isEventDate,
+            isOnOrAfterEventDate: isOnOrAfterEventDate,
+            eventDateMissing: eventDateMissing,
+            eventDate: eventDate,
+            showResults: hasCompletedMCQ,
+            score: user.score || 0,
+            totalQuestions: user.totalQuestions || 30,
+            percentage: user.percentage || 0
         });
     } catch (error) {
         console.error('Error during student login:', error.message, error.stack);
@@ -269,19 +334,66 @@ app.post('/student-login', async (req, res) => {
     }
 });
 
-app.get('/mcq-test/:parentMobile1', async (req, res) => {
+// Dashboard (renders dashboard.ejs)
+app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
-        const parentMobile1 = req.params.parentMobile1;
+        const parentMobile1 = req.session.parentMobile1;
+        const user = res.locals.user;
+        const userId = (await db.collection('participants').where('parentMobile1', '==', parentMobile1).get()).docs[0].id;
+
+        let mcqs = [];
+        const hasCompletedMCQ = user.hasCompletedMCQ || false;
+        if (!hasCompletedMCQ) {
+            await db.runTransaction(async (transaction) => {
+                const userRef = db.collection('participants').doc(userId);
+                const userDoc = await transaction.get(userRef);
+                const userData = userDoc.data();
+                mcqs = userData.currentMcqs || [];
+                if (mcqs.length === 0) {
+                    mcqs = await getRandomQuestions(30);
+                    transaction.update(userRef, { currentMcqs: mcqs });
+                }
+            });
+        }
+
+        res.render('dashboard', {
+            studentName: user.studentName || 'Unknown Student',
+            parentMobile1: parentMobile1,
+            hasCompletedMCQ: hasCompletedMCQ,
+            hasCompletedTrial1: user.hasCompletedTrial1 || false,
+            hasCompletedTrial2: user.hasCompletedTrial2 || false,
+            mcqs: mcqs,
+            trial1: trialTests.trial1,
+            trial2: trialTests.trial2,
+            isEventDate: res.locals.isEventDate,
+            isOnOrAfterEventDate: res.locals.isOnOrAfterEventDate,
+            eventDateMissing: res.locals.eventDateMissing,
+            eventDate: res.locals.eventDate,
+            showResults: hasCompletedMCQ,
+            score: user.score || 0,
+            totalQuestions: user.totalQuestions || 30,
+            percentage: user.percentage || 0
+        });
+    } catch (error) {
+        console.error('Error in dashboard route:', error.message, error.stack);
+        res.redirect('/login?error=Error%20loading%20dashboard');
+    }
+});
+
+// MCQ test (renders mcq.ejs)
+app.get('/mcq-test/:parentMobile1', requireStudentAuth, async (req, res) => {
+    try {
+        const parentMobile1 = req.session.parentMobile1;
         const { user, userId } = await getUserByParentMobile(parentMobile1);
+
         if (user.hasCompletedMCQ) {
             return res.status(400).send('You have already completed the MCQ test.');
         }
-        if (!user.hasCompletedTrial1 || !user.hasCompletedTrial2) {
+        if (!(user.hasCompletedTrial1 || false) || !(user.hasCompletedTrial2 || false)) {
             return res.status(400).send('Please complete both trial tests before starting the main exam.');
         }
 
-        let mcqs;
-        // Use a transaction to ensure consistent read/write of currentMcqs
+        let mcqs = [];
         await db.runTransaction(async (transaction) => {
             const userRef = db.collection('participants').doc(userId);
             const userDoc = await transaction.get(userRef);
@@ -293,47 +405,25 @@ app.get('/mcq-test/:parentMobile1', async (req, res) => {
             }
         });
 
-        // Validate mcqs before rendering
-        mcqs = mcqs.filter(mcq => {
-            const isValid =
-                typeof mcq.question === 'string' &&
-                Array.isArray(mcq.options) &&
-                mcq.options.length >= 4 &&
-                mcq.options.every(opt => typeof opt === 'string' && opt.trim()) &&
-                typeof mcq.correctAnswer === 'string' &&
-                mcq.correctAnswer.trim() &&
-                mcq.options.includes(mcq.correctAnswer);
-            if (!isValid) {
-                console.warn(`Invalid MCQ in currentMcqs filtered out: ${JSON.stringify(mcq)}`);
-            }
-            return isValid;
-        });
-        if (mcqs.length === 0) {
-            console.error('No valid questions available after filtering.');
-            return res.status(400).send('No valid questions available for this test session.');
-        }
         res.render('mcq', { parentMobile1, mcqs });
     } catch (error) {
-        console.error('Error rendering MCQ test:', error.message, error.stack);
-        res.status(error.message.includes('No user found') ? 404 : 500).send(
-            error.message.includes('No user found') ? 'User not found.' : 'Error loading MCQ test.'
-        );
+        console.error('Error in MCQ test route:', error.message, error.stack);
+        res.status(500).send('Error loading MCQ test.');
     }
 });
 
-app.post('/submit-trial1', async (req, res) => {
-    const { parentMobile1, ...answers } = req.body;
+// Submit Trial 1 (renders dashboard.ejs)
+app.post('/submit-trial1', requireStudentAuth, async (req, res) => {
     try {
+        const { parentMobile1, ...answers } = req.body;
         const { user, userId } = await getUserByParentMobile(parentMobile1);
-        let score = 0;
-        let correctAnswers = 0;
-        let wrongAnswers = 0;
+
+        let score = 0, correctAnswers = 0, wrongAnswers = 0;
         const trial1 = trialTests.trial1;
         trial1.forEach((mcq, index) => {
             const userAnswer = answers[`q${index}`]?.trim().toLowerCase();
             const correctAnswer = mcq.correctAnswer?.trim().toLowerCase();
             const isCorrect = userAnswer === correctAnswer;
-            console.log(`Trial 1 Q${index}: User Answer="${userAnswer}", Correct Answer="${correctAnswer}", Is Correct=${isCorrect}`);
             if (isCorrect) {
                 score++;
                 correctAnswers++;
@@ -341,9 +431,11 @@ app.post('/submit-trial1', async (req, res) => {
                 wrongAnswers++;
             }
         });
+
         const totalQuestions = trial1.length;
         const percentage = Math.round((score / totalQuestions) * 100);
         const mcqs = await getRandomQuestions(30);
+
         await db.collection('participants').doc(userId).update({
             hasCompletedTrial1: true,
             trial1Score: score,
@@ -353,52 +445,46 @@ app.post('/submit-trial1', async (req, res) => {
             trial1WrongAnswers: wrongAnswers,
             currentMcqs: mcqs
         });
+
         const updatedUser = (await db.collection('participants').doc(userId).get()).data();
+        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+
         res.render('dashboard', {
-            studentName: updatedUser.studentName,
+            studentName: updatedUser.studentName || 'Unknown Student',
             parentMobile1,
             hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
             hasCompletedTrial1: true,
             hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
-            trial1Score: score,
-            trial1TotalQuestions: totalQuestions,
-            trial1Percentage: percentage,
-            trial1CorrectAnswers: correctAnswers,
-            trial1WrongAnswers: wrongAnswers,
-            trial2Score: updatedUser.trial2Score || 0,
-            trial2TotalQuestions: updatedUser.trial2TotalQuestions || trialTests.trial2.length,
-            trial2Percentage: updatedUser.trial2Percentage || 0,
-            trial2CorrectAnswers: updatedUser.trial2CorrectAnswers || 0,
-            trial2WrongAnswers: updatedUser.trial2WrongAnswers || 0,
-            score: updatedUser.score || 0,
-            totalQuestions: updatedUser.totalQuestions || 30,
-            percentage: updatedUser.percentage || 0,
-            correctAnswers: updatedUser.correctAnswers || 0,
-            wrongAnswers: updatedUser.wrongAnswers || 0,
             mcqs,
             trial1: trialTests.trial1,
             trial2: trialTests.trial2,
-            showResults: updatedUser.hasCompletedMCQ || false
+            isEventDate,
+            isOnOrAfterEventDate,
+            eventDateMissing,
+            eventDate,
+            showResults: updatedUser.hasCompletedMCQ || false,
+            score: updatedUser.score || 0,
+            totalQuestions: updatedUser.totalQuestions || 30,
+            percentage: updatedUser.percentage || 0
         });
     } catch (error) {
-        console.error('Error processing Trial 1:', error.message, error.stack);
+        console.error('Error in submit-trial1 route:', error.message, error.stack);
         res.status(500).send('Error processing trial test.');
     }
 });
 
-app.post('/submit-trial2', async (req, res) => {
-    const { parentMobile1, ...answers } = req.body;
+// Submit Trial 2 (renders dashboard.ejs)
+app.post('/submit-trial2', requireStudentAuth, async (req, res) => {
     try {
+        const { parentMobile1, ...answers } = req.body;
         const { user, userId } = await getUserByParentMobile(parentMobile1);
-        let score = 0;
-        let correctAnswers = 0;
-        let wrongAnswers = 0;
+
+        let score = 0, correctAnswers = 0, wrongAnswers = 0;
         const trial2 = trialTests.trial2;
         trial2.forEach((mcq, index) => {
             const userAnswer = answers[`q${index}`]?.trim().toLowerCase();
             const correctAnswer = mcq.correctAnswer?.trim().toLowerCase();
             const isCorrect = userAnswer === correctAnswer;
-            console.log(`Trial 2 Q${index}: User Answer="${userAnswer}", Correct Answer="${correctAnswer}", Is Correct=${isCorrect}`);
             if (isCorrect) {
                 score++;
                 correctAnswers++;
@@ -406,9 +492,11 @@ app.post('/submit-trial2', async (req, res) => {
                 wrongAnswers++;
             }
         });
+
         const totalQuestions = trial2.length;
         const percentage = Math.round((score / totalQuestions) * 100);
         const mcqs = await getRandomQuestions(30);
+
         await db.collection('participants').doc(userId).update({
             hasCompletedTrial2: true,
             trial2Score: score,
@@ -418,93 +506,63 @@ app.post('/submit-trial2', async (req, res) => {
             trial2WrongAnswers: wrongAnswers,
             currentMcqs: mcqs
         });
+
         const updatedUser = (await db.collection('participants').doc(userId).get()).data();
+        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+
         res.render('dashboard', {
-            studentName: updatedUser.studentName,
+            studentName: updatedUser.studentName || 'Unknown Student',
             parentMobile1,
             hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
             hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
             hasCompletedTrial2: true,
-            trial1Score: updatedUser.trial1Score || 0,
-            trial1TotalQuestions: updatedUser.trial1TotalQuestions || trialTests.trial1.length,
-            trial1Percentage: updatedUser.trial1Percentage || 0,
-            trial1CorrectAnswers: updatedUser.trial1CorrectAnswers || 0,
-            trial1WrongAnswers: updatedUser.trial1WrongAnswers || 0,
-            trial2Score: score,
-            trial2TotalQuestions: totalQuestions,
-            trial2Percentage: percentage,
-            trial2CorrectAnswers: correctAnswers,
-            trial2WrongAnswers: wrongAnswers,
-            score: updatedUser.score || 0,
-            totalQuestions: updatedUser.totalQuestions || 30,
-            percentage: updatedUser.percentage || 0,
-            correctAnswers: updatedUser.correctAnswers || 0,
-            wrongAnswers: updatedUser.wrongAnswers || 0,
             mcqs,
             trial1: trialTests.trial1,
             trial2: trialTests.trial2,
-            showResults: updatedUser.hasCompletedMCQ || false
+            isEventDate,
+            isOnOrAfterEventDate,
+            eventDateMissing,
+            eventDate,
+            showResults: updatedUser.hasCompletedMCQ || false,
+            score: updatedUser.score || 0,
+            totalQuestions: updatedUser.totalQuestions || 30,
+            percentage: updatedUser.percentage || 0
         });
     } catch (error) {
-        console.error('Error processing Trial 2:', error.message, error.stack);
+        console.error('Error in submit-trial2 route:', error.message, error.stack);
         res.status(500).send('Error processing trial test.');
     }
 });
 
-app.post('/submit-mcq', async (req, res) => {
-    const { parentMobile1, ...answers } = req.body;
+// Submit MCQ (renders dashboard.ejs)
+app.post('/submit-mcq', requireStudentAuth, async (req, res) => {
     try {
+        const { parentMobile1, ...answers } = req.body;
         const { user, userId } = await getUserByParentMobile(parentMobile1);
         let mcqs = user.currentMcqs || [];
+
         if (mcqs.length === 0) {
             return res.status(400).send('No questions found for this test session.');
         }
-        // Validate mcqs before scoring
-        mcqs = mcqs.filter(mcq => {
-            const isValid =
-                typeof mcq.question === 'string' &&
-                Array.isArray(mcq.options) &&
-                mcq.options.length >= 4 &&
-                mcq.options.every(opt => typeof opt === 'string' && opt.trim()) &&
-                typeof mcq.correctAnswer === 'string' &&
-                mcq.correctAnswer.trim() &&
-                mcq.options.includes(mcq.correctAnswer);
-            if (!isValid) {
-                console.warn(`Invalid MCQ in submit-mcq filtered out: ${JSON.stringify(mcq)}`);
-            }
-            return isValid;
-        });
-        if (mcqs.length === 0) {
-            console.error('No valid questions available for scoring.');
-            return res.status(400).send('No valid questions available for scoring.');
-        }
-        let score = 0;
-        let correctAnswers = 0;
-        let wrongAnswers = 0;
-        let detailedResults = [];
+
+        let score = 0, correctAnswers = 0, wrongAnswers = 0;
         mcqs.forEach((mcq, index) => {
             const userAnswer = answers[`q${index}`]?.trim().toLowerCase();
             const correctAnswer = mcq.correctAnswer?.trim().toLowerCase();
             const isCorrect = userAnswer === correctAnswer;
-            console.log(`MCQ Q${index}: User Answer="${userAnswer}", Correct Answer="${correctAnswer}", Is Correct=${isCorrect}`);
             if (isCorrect) {
                 score++;
                 correctAnswers++;
             } else {
                 wrongAnswers++;
             }
-            detailedResults.push({
-                questionIndex: index,
-                question: mcq.question,
-                userAnswer: userAnswer || 'Not Answered',
-                correctAnswer: mcq.correctAnswer,
-                isCorrect: isCorrect
-            });
         });
+
         const totalQuestions = mcqs.length;
         const percentage = Math.round((score / totalQuestions) * 100);
         const newMcqs = await getRandomQuestions(30);
-        const updateData = {
+
+        await db.collection('participants').doc(userId).update({
             hasCompletedMCQ: true,
             score,
             totalQuestions,
@@ -512,113 +570,428 @@ app.post('/submit-mcq', async (req, res) => {
             wrongAnswers,
             percentage,
             completedAt: admin.firestore.FieldValue.serverTimestamp(),
-            detailedResults,
             currentMcqs: newMcqs
-        };
-        await db.collection('participants').doc(userId).update(updateData);
+        });
+
         const updatedUser = (await db.collection('participants').doc(userId).get()).data();
+        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+
         res.render('dashboard', {
-            studentName: updatedUser.studentName,
+            studentName: updatedUser.studentName || 'Unknown Student',
             parentMobile1,
             hasCompletedMCQ: true,
             hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
             hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
-            trial1Score: updatedUser.trial1Score || 0,
-            trial1TotalQuestions: updatedUser.trial1TotalQuestions || trialTests.trial1.length,
-            trial1Percentage: updatedUser.trial1Percentage || 0,
-            trial1CorrectAnswers: updatedUser.trial1CorrectAnswers || 0,
-            trial1WrongAnswers: updatedUser.trial1WrongAnswers || 0,
-            trial2Score: updatedUser.trial2Score || 0,
-            trial2TotalQuestions: updatedUser.trial2TotalQuestions || trialTests.trial2.length,
-            trial2Percentage: updatedUser.trial2Percentage || 0,
-            trial2CorrectAnswers: updatedUser.trial2CorrectAnswers || 0,
-            trial2WrongAnswers: updatedUser.trial2WrongAnswers || 0,
-            score,
-            totalQuestions,
-            percentage,
-            correctAnswers,
-            wrongAnswers,
             mcqs: newMcqs,
             trial1: trialTests.trial1,
             trial2: trialTests.trial2,
-            showResults: true
+            isEventDate,
+            isOnOrAfterEventDate,
+            eventDateMissing,
+            eventDate,
+            showResults: true,
+            score,
+            totalQuestions,
+            percentage
         });
     } catch (error) {
-        console.error('Error processing MCQ submission:', error.message, error.stack);
-        res.status(500).render('error', {
-            message: 'Error processing your exam submission. Please contact administrator.',
-            error: error.message
-        });
+        console.error('Error in submit-mcq route:', error.message, error.stack);
+        res.status(500).send('Error processing your exam submission.');
     }
 });
 
-app.get('/school-dashboard', async (req, res) => {
-    let schoolName = 'Unknown'; // Default value in case of error
-    let students = [];
-    let error = null;
-
+// Game Zone (renders gamezone.ejs)
+app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
-        // Fetch the school email from the query (passed after login)
-        const schoolEmail = req.query.username;
-        if (!schoolEmail) {
-            error = 'Please login first';
-            return res.render('schoolDashboard', { schoolName, students, error, trialTests });
+        const parentMobile1 = req.session.parentMobile1;
+        const user = res.locals.user;
+
+        if (!(user.hasCompletedMCQ || false)) {
+            return res.status(400).send('Please complete the main exam to access the Game Zone.');
+        }
+        if (res.locals.eventDateMissing) {
+            return res.status(400).send('Event date yet to decide.');
+        }
+        if (!res.locals.isOnOrAfterEventDate) {
+            return res.status(400).send(`Game Zone is only available on or after the event date: ${res.locals.eventDate}.`);
         }
 
-        // Fetch the school to get the school name
+        res.render('gamezone', { studentName: user.studentName || 'Unknown Student', parentMobile1 });
+    } catch (error) {
+        console.error('Error in gamezone route:', error.message, error.stack);
+        res.status(500).send('Error loading Game Zone.');
+    }
+});
+
+// Certificate (renders certificate.ejs)
+app.get('/certificate/:parentMobile1', requireStudentAuth, async (req, res) => {
+    try {
+        const parentMobile1 = req.session.parentMobile1;
+        const { user } = await getUserByParentMobile(parentMobile1);
+
+        if (!(user.hasCompletedMCQ || false)) {
+            return res.status(400).send('Please complete the main exam to access the certificate.');
+        }
+
+        const schoolSnapshot = await db.collection('schools')
+            .where('schoolName', '==', user.schoolNameDropdown || '')
+            .get();
+        const schoolName = schoolSnapshot.empty ? 'N/A' : schoolSnapshot.docs[0].data().schoolName;
+
+        res.render('certificate', {
+            studentName: user.studentName || 'Unknown Student',
+            schoolName,
+            percentage: user.percentage || 0,
+            completedAt: user.completedAt ? user.completedAt.toDate().toLocaleDateString() : 'N/A',
+            parentMobile1
+        });
+    } catch (error) {
+        console.error('Error in certificate route:', error.message, error.stack);
+        res.status(500).send('Error loading certificate.');
+    }
+});
+
+// School dashboard (renders schoolDashboard.ejs)
+app.get('/school-dashboard', async (req, res) => {
+    try {
+        const schoolEmail = req.query.username;
+        if (!schoolEmail) {
+            return res.render('schoolDashboard', {
+                schoolName: 'Unknown',
+                schoolEmail: '',
+                city: '',
+                district: '',
+                pincode: '',
+                schoolPhoneNumber: '',
+                principalNumber: '',
+                principalEmail: '',
+                civicsTeacherNumber: '',
+                civicsTeacherEmail: '',
+                students: [],
+                eventDate: null,
+                eventDateMissing: true,
+                resourcesConfirmed: false,
+                selectedResources: [],
+                error: 'Please login first',
+                trialTests
+            });
+        }
+
         const schoolSnapshot = await db.collection('schools')
             .where('schoolEmail', '==', schoolEmail)
             .get();
         if (schoolSnapshot.empty) {
-            error = 'School not found';
-            return res.render('schoolDashboard', { schoolName, students, error, trialTests });
+            return res.render('schoolDashboard', {
+                schoolName: 'Unknown',
+                schoolEmail: '',
+                city: '',
+                district: '',
+                pincode: '',
+                schoolPhoneNumber: '',
+                principalNumber: '',
+                principalEmail: '',
+                civicsTeacherNumber: '',
+                civicsTeacherEmail: '',
+                students: [],
+                eventDate: null,
+                eventDateMissing: true,
+                resourcesConfirmed: false,
+                selectedResources: [],
+                error: 'School not found',
+                trialTests
+            });
         }
-        schoolName = schoolSnapshot.docs[0].data().schoolName;
 
-        // Fetch all students from the participants collection for this school
+        const schoolData = schoolSnapshot.docs[0].data();
+        const schoolId = schoolSnapshot.docs[0].id;
+        const schoolName = schoolData.schoolName;
+
+        let eventDate = null;
+        let eventDateMissing = true;
+        if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
+            eventDate = schoolData.eventDate.toDate().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            eventDateMissing = false;
+        }
+
         const studentsSnapshot = await db.collection('participants')
             .where('schoolNameDropdown', '==', schoolName)
             .get();
         
-        students = studentsSnapshot.docs.map(doc => {
+        const students = studentsSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 studentName: data.studentName || 'N/A',
                 studentClass: data.studentClass || 'N/A',
                 hasCompletedMCQ: data.hasCompletedMCQ || false,
+                trial1Percentage: data.trial1Percentage || 'N/A',
+                trial2Percentage: data.trial2Percentage || 'N/A',
                 score: data.score || 0,
-                totalQuestions: data.totalQuestions || 30,
+                totalQuestions: data.totalQuestions || 0,
                 percentage: data.percentage || 0,
-                trial1Score: data.trial1Score || 0,
-                trial1Percentage: data.trial1Percentage || 0,
-                trial2Score: data.trial2Score || 0,
-                trial2Percentage: data.trial2Percentage || 0,
-                completedAt: data.completedAt ? data.completedAt.toDate().toLocaleString() : 'Not Completed'
+                completedAt: data.completedAt ? data.completedAt.toDate().toLocaleDateString() : 'N/A'
             };
         });
 
-        res.render('schoolDashboard', { schoolName, students, error, trialTests });
-    } catch (err) {
-        console.error('Error loading school dashboard:', err.message, err.stack);
-        error = 'Error loading student data.';
-        res.render('schoolDashboard', { schoolName, students, error, trialTests });
+        res.render('schoolDashboard', {
+            schoolName,
+            schoolEmail: schoolData.schoolEmail || '',
+            city: schoolData.city || '',
+            district: schoolData.district || '',
+            pincode: schoolData.pincode || '',
+            schoolPhoneNumber: schoolData.schoolPhoneNumber || '',
+            principalNumber: schoolData.principalNumber || '',
+            principalEmail: schoolData.principalEmail || '',
+            civicsTeacherNumber: schoolData.civicsTeacherNumber || '',
+            civicsTeacherEmail: schoolData.civicsTeacherEmail || '',
+            students,
+            eventDate,
+            eventDateMissing,
+            resourcesConfirmed: schoolData.resourcesConfirmed || false,
+            selectedResources: schoolData.selectedResources || [],
+            error: null,
+            trialTests
+        });
+    } catch (error) {
+        console.error('Error in school-dashboard route:', error.message, error.stack);
+        res.render('schoolDashboard', {
+            schoolName: 'Unknown',
+            schoolEmail: '',
+            city: '',
+            district: '',
+            pincode: '',
+            schoolPhoneNumber: '',
+            principalNumber: '',
+            principalEmail: '',
+            civicsTeacherNumber: '',
+            civicsTeacherEmail: '',
+            students: [],
+            eventDate: null,
+            eventDateMissing: true,
+            resourcesConfirmed: false,
+            selectedResources: [],
+            error: 'Error loading student data.',
+            trialTests
+        });
     }
 });
 
+// Update school information
+app.post('/school-dashboard/update', [
+    body('city').trim().notEmpty().withMessage('City is required'),
+    body('district').trim().notEmpty().withMessage('District is required'),
+    body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
+    body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
+    body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
+    body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
+    body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
+    body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const schoolEmail = req.body.schoolEmail;
+            return res.status(400).render('schoolDashboard', {
+                schoolName: 'Unknown',
+                schoolEmail,
+                city: req.body.city,
+                district: req.body.district,
+                pincode: req.body.pincode,
+                schoolPhoneNumber: req.body.schoolPhoneNumber,
+                principalNumber: req.body.principalNumber,
+                principalEmail: req.body.principalEmail,
+                civicsTeacherNumber: req.body.civicsTeacherNumber,
+                civicsTeacherEmail: req.body.civicsTeacherEmail,
+                students: [],
+                eventDate: null,
+                eventDateMissing: true,
+                resourcesConfirmed: false,
+                selectedResources: [],
+                error: errors.array()[0].msg,
+                trialTests
+            });
+        }
+
+        const {
+            schoolEmail,
+            city,
+            district,
+            pincode,
+            schoolPhoneNumber,
+            principalNumber,
+            principalEmail,
+            civicsTeacherNumber,
+            civicsTeacherEmail
+        } = req.body;
+
+        const schoolSnapshot = await db.collection('schools')
+            .where('schoolEmail', '==', schoolEmail)
+            .get();
+        if (schoolSnapshot.empty) {
+            return res.status(404).render('schoolDashboard', {
+                schoolName: 'Unknown',
+                schoolEmail,
+                city,
+                district,
+                pincode,
+                schoolPhoneNumber,
+                principalNumber,
+                principalEmail,
+                civicsTeacherNumber,
+                civicsTeacherEmail,
+                students: [],
+                eventDate: null,
+                eventDateMissing: true,
+                resourcesConfirmed: false,
+                selectedResources: [],
+                error: 'School not found',
+                trialTests
+            });
+        }
+
+        const schoolId = schoolSnapshot.docs[0].id;
+        await db.collection('schools').doc(schoolId).update({
+            city,
+            district,
+            pincode,
+            schoolPhoneNumber,
+            principalNumber,
+            principalEmail,
+            civicsTeacherNumber,
+            civicsTeacherEmail
+        });
+
+        res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}`);
+    } catch (error) {
+        console.error('Error in school-dashboard/update route:', error.message, error.stack);
+        res.status(500).render('schoolDashboard', {
+            schoolName: 'Unknown',
+            schoolEmail: req.body.schoolEmail,
+            city: req.body.city,
+            district: req.body.district,
+            pincode: req.body.pincode,
+            schoolPhoneNumber: req.body.schoolPhoneNumber,
+            principalNumber: req.body.principalNumber,
+            principalEmail: req.body.principalEmail,
+            civicsTeacherNumber: req.body.civicsTeacherNumber,
+            civicsTeacherEmail: req.body.civicsTeacherEmail,
+            students: [],
+            eventDate: null,
+            eventDateMissing: true,
+            resourcesConfirmed: false,
+            selectedResources: [],
+            error: 'Error updating school information',
+            trialTests
+        });
+    }
+});
+
+// Submit resource arrangement
+app.post('/school-dashboard/submit-resources', async (req, res) => {
+    try {
+        const { schoolEmail, resources } = req.body;
+        if (!schoolEmail) {
+            return res.status(400).render('schoolDashboard', {
+                schoolName: 'Unknown',
+                schoolEmail: '',
+                city: '',
+                district: '',
+                pincode: '',
+                schoolPhoneNumber: '',
+                principalNumber: '',
+                principalEmail: '',
+                civicsTeacherNumber: '',
+                civicsTeacherEmail: '',
+                students: [],
+                eventDate: null,
+                eventDateMissing: true,
+                resourcesConfirmed: false,
+                selectedResources: [],
+                error: 'School email is required',
+                trialTests
+            });
+        }
+
+        const schoolSnapshot = await db.collection('schools')
+            .where('schoolEmail', '==', schoolEmail)
+            .get();
+        if (schoolSnapshot.empty) {
+            return res.status(404).render('schoolDashboard', {
+                schoolName: 'Unknown',
+                schoolEmail,
+                city: '',
+                district: '',
+                pincode: '',
+                schoolPhoneNumber: '',
+                principalNumber: '',
+                principalEmail: '',
+                civicsTeacherNumber: '',
+                civicsTeacherEmail: '',
+                students: [],
+                eventDate: null,
+                eventDateMissing: true,
+                resourcesConfirmed: false,
+                selectedResources: [],
+                error: 'School not found',
+                trialTests
+            });
+        }
+
+        const schoolId = schoolSnapshot.docs[0].id;
+        const selectedResources = Array.isArray(resources) ? resources : [resources];
+        await db.collection('schools').doc(schoolId).update({
+            resourcesConfirmed: true,
+            selectedResources: selectedResources
+        });
+
+        res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}`);
+    } catch (error) {
+        console.error('Error in school-dashboard/submit-resources route:', error.message, error.stack);
+        res.status(500).render('schoolDashboard', {
+            schoolName: 'Unknown',
+            schoolEmail: req.body.schoolEmail,
+            city: '',
+            district: '',
+            pincode: '',
+            schoolPhoneNumber: '',
+            principalNumber: '',
+            principalEmail: '',
+            civicsTeacherNumber: '',
+            civicsTeacherEmail: '',
+            students: [],
+            eventDate: null,
+            eventDateMissing: true,
+            resourcesConfirmed: false,
+            selectedResources: [],
+            error: 'Error submitting resource arrangement',
+            trialTests
+        });
+    }
+});
+
+// School login (renders login.ejs)
 app.post('/school-login', async (req, res) => {
     const { username, password } = req.body;
     try {
+        if (!username || !password) {
+            return res.render('login', { error: 'Username and password are required.' });
+        }
+
         const snapshot = await db.collection('schools')
             .where('schoolEmail', '==', username)
             .get();
         if (snapshot.empty) {
-            return res.render('login', { error: 'Invalid username or password' });
+            return res.render('login', { error: 'Invalid username or password.' });
         }
+
         const school = snapshot.docs[0].data();
         if (password !== school.principalNumber) {
-            return res.render('login', { error: 'Invalid username or password' });
+            return res.render('login', { error: 'Invalid username or password.' });
         }
-        // Redirect to school dashboard with username (schoolEmail) as query param
+
         res.redirect(`/school-dashboard?username=${encodeURIComponent(username)}`);
     } catch (error) {
         console.error('Error during school login:', error.message, error.stack);
@@ -626,138 +999,195 @@ app.post('/school-login', async (req, res) => {
     }
 });
 
+// Participation form (renders participation.ejs)
 app.get('/participation', async (req, res) => {
     try {
         const type = req.query.type || 'Student';
-        // Fetch only approved schools
         const snapshot = await db.collection('schools')
             .where('isApproved', '==', true)
             .get();
         const schoolNames = snapshot.docs.map(doc => doc.data().schoolName);
         res.render('participation', { type, schoolNames });
     } catch (error) {
-        console.error('Error fetching approved school names:', error.message, error.stack);
+        console.error('Error in participation route:', error.message, error.stack);
         res.status(500).send('Error loading participation form.');
     }
 });
 
+// Submit participation (renders studentConfirmation.ejs)
 app.post('/participate', async (req, res) => {
-    const participant = {
-        studentName: req.body.studentName,
-        schoolNameDropdown: req.body.schoolNameDropdown,
-        birthdate: req.body.birthdate,
-        studentClass: req.body.studentClass,
-        parentMobile1: req.body.parentMobile1,
-        parentMobile2: req.body.parentMobile2,
-        parentEmail: req.body.parentEmail,
-        address: req.body.address,
-        city: req.body.city,
-        pincode: req.body.pincode,
-        type: req.body.type,
-        hasCompletedTrial1: false,
-        hasCompletedTrial2: false,
-        hasCompletedMCQ: false,
-        score: 0
-    };
-    if (!participant.studentName || !participant.birthdate || !participant.studentClass ||
-        !participant.parentMobile1 || !participant.parentEmail || !participant.address ||
-        !participant.city || !participant.pincode || !participant.type || !participant.schoolNameDropdown) {
-        return res.status(400).send('All required fields must be filled.');
-    }
-    if (!/^\d{6}$/.test(participant.pincode)) {
-        return res.status(400).send('Pincode must be a 6-digit number.');
-    }
-    if (!/^\d{10}$/.test(participant.parentMobile1) || (participant.parentMobile2 && !/^\d{10}$/.test(participant.parentMobile2))) {
-        return res.status(400).send('Phone numbers must be 10 digits.');
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(participant.parentEmail)) {
-        return res.status(400).send('Invalid email address.');
-    }
     try {
+        const participant = {
+            studentName: req.body.studentName,
+            schoolNameDropdown: req.body.schoolNameDropdown,
+            birthdate: req.body.birthdate,
+            studentClass: req.body.studentClass,
+            parentMobile1: req.body.parentMobile1,
+            parentMobile2: req.body.parentMobile2,
+            parentEmail: req.body.parentEmail,
+            address: req.body.address,
+            city: req.body.city,
+            pincode: req.body.pincode,
+            type: req.body.type,
+            hasCompletedTrial1: false,
+            hasCompletedTrial2: false,
+            hasCompletedMCQ: false,
+            score: 0
+        };
+
+        const requiredFields = ['studentName', 'schoolNameDropdown', 'birthdate', 'studentClass', 'parentMobile1', 'parentEmail', 'address', 'city', 'pincode', 'type'];
+        for (const field of requiredFields) {
+            if (!participant[field]) {
+                return res.status(400).send('All required fields must be filled.');
+            }
+        }
+
+        if (!/^\d{6}$/.test(participant.pincode)) {
+            return res.status(400).send('Pincode must be a 6-digit number.');
+        }
+        if (!/^\d{10}$/.test(participant.parentMobile1) || (participant.parentMobile2 && !/^\d{10}$/.test(participant.parentMobile2))) {
+            return res.status(400).send('Phone numbers must be 10 digits.');
+        }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(participant.parentEmail)) {
+            return res.status(400).send('Invalid email address.');
+        }
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(participant.birthdate)) {
+            return res.status(400).send('Birthdate must be in YYYY-MM-DD format.');
+        }
+
         await db.collection('participants').add(participant);
         const [year, month, day] = participant.birthdate.split('-');
         const password = `${day}${month}${year}`;
+
         res.render('studentConfirmation', {
             studentName: participant.studentName,
             username: participant.parentMobile1,
             password
         });
     } catch (error) {
-        console.error('Error saving participant:', error.message, error.stack);
+        console.error('Error in participate route:', error.message, error.stack);
         res.status(500).send('Error saving participant data.');
     }
 });
 
+// School participation form (renders schoolParticipation.ejs)
 app.get('/school-participation', async (req, res) => {
     try {
         const snapshot = await db.collection('schools').get();
         const schools = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.render('schoolParticipation', { schools });
+        res.render('schoolParticipation', { schools, errors: null });
     } catch (error) {
-        console.error('Error fetching schools:', error.message, error.stack);
+        console.error('Error in school-participation route:', error.message, error.stack);
         res.status(500).send('Error fetching school data.');
     }
 });
 
-app.post('/school-participate', async (req, res) => {
-    const school = {
-        schoolName: req.body.schoolName,
-        city: req.body.city,
-        district: req.body.district,
-        pincode: req.body.pincode,
-        schoolPhoneNumber: req.body.schoolPhoneNumber,
-        schoolEmail: req.body.schoolEmail,
-        principalNumber: req.body.principalNumber,
-        principalEmail: req.body.principalEmail,
-        civicsTeacherNumber: req.body.civicsTeacherNumber,
-        civicsTeacherEmail: req.body.civicsTeacherEmail,
-        isApproved: false,
-        eventDate: null
-    };
-    if (!school.schoolName || !school.city || !school.district || !school.pincode ||
-        !school.schoolPhoneNumber || !school.schoolEmail || !school.principalNumber ||
-        !school.principalEmail || !school.civicsTeacherNumber || !school.civicsTeacherEmail) {
-        return res.status(400).send('All required fields must be filled.');
-    }
-    if (!/^\d{6}$/.test(school.pincode)) {
-        return res.status(400).send('Pincode must be a 6-digit number.');
-    }
-    if (!/^\d{10}$/.test(school.schoolPhoneNumber) || !/^\d{10}$/.test(school.principalNumber) ||
-        !/^\d{10}$/.test(school.civicsTeacherNumber)) {
-        return res.status(400).send('Phone numbers must be 10 digits.');
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(school.schoolEmail) ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(school.principalEmail) ||
-        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(school.civicsTeacherEmail)) {
-        return res.status(400).send('Invalid email format.');
-    }
+// Submit school participation (renders schoolParticipation.ejs on error, renders confirmation.ejs on success)
+app.post('/school-participate', [
+    body('schoolName').trim().notEmpty().withMessage('School name is required'),
+    body('city').trim().notEmpty().withMessage('City is required'),
+    body('district').trim().notEmpty().withMessage('District is required'),
+    body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
+    body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
+    body('schoolEmail').trim().isEmail().withMessage('Invalid school email address'),
+    body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
+    body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
+    body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
+    body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address'),
+    body('eventDate1').isDate().withMessage('Invalid date format for Event Date 1'),
+    body('eventDate2').isDate().withMessage('Invalid date format for Event Date 2'),
+    body('eventDate3').isDate().withMessage('Invalid date format for Event Date 3'),
+    body('eventDate4').isDate().withMessage('Invalid date format for Event Date 4')
+], async (req, res) => {
     try {
-        await db.collection('schools').add(school);
-        res.render('confirmation');
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const schoolsSnapshot = await db.collection('schools').get();
+            const schools = schoolsSnapshot.docs.map(doc => doc.data());
+            return res.status(400).render('schoolParticipation', { schools, errors: errors.array() });
+        }
+
+        const {
+            schoolName,
+            city,
+            district,
+            pincode,
+            schoolPhoneNumber,
+            schoolEmail,
+            principalNumber,
+            principalEmail,
+            civicsTeacherNumber,
+            civicsTeacherEmail,
+            eventDate1,
+            eventDate2,
+            eventDate3,
+            eventDate4
+        } = req.body;
+
+        await db.collection('schools').add({
+            schoolName,
+            city,
+            district,
+            pincode,
+            schoolPhoneNumber,
+            schoolEmail,
+            principalNumber,
+            principalEmail,
+            civicsTeacherNumber,
+            civicsTeacherEmail,
+            eventDates: [eventDate1, eventDate2, eventDate3, eventDate4],
+            registeredAt: admin.firestore.FieldValue.serverTimestamp(),
+            isApproved: false,
+            resourcesConfirmed: false,
+            selectedResources: []
+        });
+
+        // Render confirmation page with login credentials
+        res.render('confirmation', {
+            schoolEmail: schoolEmail,
+            principalNumber: principalNumber
+        });
     } catch (error) {
-        console.error('Error saving school:', error.message, error.stack);
-        res.status(500).send('Error saving school data.');
+        console.error('Error in school-participate route:', error.message, error.stack);
+        const schoolsSnapshot = await db.collection('schools').get();
+        const schools = schoolsSnapshot.docs.map(doc => doc.data());
+        res.status(500).render('schoolParticipation', {
+            schools,
+            errors: [{ msg: 'Internal server error. Please try again later.' }]
+        });
     }
 });
 
+// Confirmation page (renders confirmation.ejs)
+app.get('/confirmation', (req, res) => {
+    // If accessed directly without credentials, show a generic message
+    res.render('confirmation', {
+        schoolEmail: 'Not provided',
+        principalNumber: 'Not provided'
+    });
+});
+
+// School students (renders schoolStudents.ejs)
 app.get('/school-students', async (req, res) => {
-    const schoolName = req.query.schoolName;
-    if (!schoolName) {
-        return res.status(400).send('School name is required.');
-    }
     try {
+        const schoolName = req.query.schoolName;
+        if (!schoolName) {
+            return res.status(400).send('School name is required.');
+        }
+
         const snapshot = await db.collection('participants')
             .where('schoolName', '==', schoolName)
             .get();
         const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
         res.render('schoolStudents', { schoolName, students });
     } catch (error) {
-        console.error('Error fetching students:', error.message, error.stack);
+        console.error('Error in school-students route:', error.message, error.stack);
         res.status(500).send('Error fetching student data.');
     }
 });
 
-// Admin Routes
+// Admin login page (renders adminLogin.ejs)
 app.get('/admin-login', (req, res) => {
     if (req.session.isAdmin) {
         return res.redirect('/admin');
@@ -765,73 +1195,142 @@ app.get('/admin-login', (req, res) => {
     res.render('adminLogin', { error: null });
 });
 
+// Admin login (renders adminLogin.ejs on error)
 app.post('/admin-login', (req, res) => {
     const { username, password } = req.body;
+    if (!username || !password) {
+        return res.render('adminLogin', { error: 'Username and password are required.' });
+    }
+
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
         req.session.isAdmin = true;
         res.redirect('/admin');
     } else {
-        res.render('adminLogin', { error: 'Invalid username or password' });
+        res.render('adminLogin', { error: 'Invalid username or password.' });
     }
 });
 
+// Admin panel (renders adminPanel.ejs)
 app.get('/admin', requireAdmin, async (req, res) => {
     try {
-        // Fetch all schools
         const schoolsSnapshot = await db.collection('schools').get();
-        const allSchools = schoolsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            eventDate: doc.data().eventDate ? doc.data().eventDate.toDate().toISOString().split('T')[0] : null
-        }));
+        const allSchools = schoolsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                eventDate: data.eventDate ? data.eventDate.toDate().toISOString().split('T')[0] : null,
+                eventDates: data.eventDates || [] // Ensure eventDates is passed
+            };
+        });
 
-        // Split schools into pending, approved, and scheduled
         const pendingSchools = allSchools.filter(school => !school.isApproved);
         const approvedSchools = allSchools.filter(school => school.isApproved && !school.eventDate);
         const scheduledSchools = allSchools.filter(school => school.isApproved && school.eventDate);
 
-        // Fetch all participants
         const participantsSnapshot = await db.collection('participants').get();
-        const participants = participantsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            studentName: doc.data().studentName || 'N/A',
-            parentMobile1: doc.data().parentMobile1 || 'N/A',
-            schoolNameDropdown: doc.data().schoolNameDropdown || 'N/A',
-            score: doc.data().score || 0,
-            totalQuestions: doc.data().totalQuestions || 30,
-            percentage: doc.data().percentage || 0,
-            trial1Score: doc.data().trial1Score || 0,
-            trial1Percentage: doc.data().trial1Percentage || 0,
-            trial2Score: doc.data().trial2Score || 0,
-            trial2Percentage: doc.data().trial2Percentage || 0
-        }));
+        const participants = participantsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                studentName: data.studentName || 'N/A',
+                parentMobile1: data.parentMobile1 || 'N/A',
+                schoolNameDropdown: data.schoolNameDropdown || 'N/A',
+                trial1Percentage: data.trial1Percentage || 'N/A',
+                trial2Percentage: data.trial2Percentage || 'N/A',
+                score: data.score || 0,
+                totalQuestions: data.totalQuestions || 30,
+                percentage: data.percentage || 0
+            };
+        });
+
+        // Prepare data for visualization
+        // 1. School Status Counts
+        const schoolStatusData = {
+            pending: pendingSchools.length,
+            approved: approvedSchools.length,
+            scheduled: scheduledSchools.length
+        };
+
+        // 2. Participants per School
+        const participantsPerSchool = {};
+        participants.forEach(participant => {
+            const schoolName = participant.schoolNameDropdown || 'Unknown';
+            participantsPerSchool[schoolName] = (participantsPerSchool[schoolName] || 0) + 1;
+        });
+        const participantsPerSchoolLabels = Object.keys(participantsPerSchool);
+        const participantsPerSchoolValues = Object.values(participantsPerSchool);
+
+        // 3. Average Scores
+        const completedParticipants = participants.filter(p => p.percentage !== 0); // Only those who completed MCQ
+        const avgTrial1 = completedParticipants.length > 0
+            ? Math.round(completedParticipants.reduce((sum, p) => sum + (parseFloat(p.trial1Percentage) || 0), 0) / completedParticipants.length)
+            : 0;
+        const avgTrial2 = completedParticipants.length > 0
+            ? Math.round(completedParticipants.reduce((sum, p) => sum + (parseFloat(p.trial2Percentage) || 0), 0) / completedParticipants.length)
+            : 0;
+        const avgMCQ = completedParticipants.length > 0
+            ? Math.round(completedParticipants.reduce((sum, p) => sum + (p.percentage || 0), 0) / completedParticipants.length)
+            : 0;
+        const avgScoresData = {
+            trial1: avgTrial1,
+            trial2: avgTrial2,
+            mcq: avgMCQ
+        };
 
         res.render('adminPanel', {
             pendingSchools,
             approvedSchools,
             scheduledSchools,
             participants,
-            trialTests
+            trialTests,
+            schoolStatusData,
+            participantsPerSchoolLabels,
+            participantsPerSchoolValues,
+            avgScoresData
         });
     } catch (error) {
-        console.error('Error loading admin panel:', error.message, error.stack);
+        console.error('Error in admin route:', error.message, error.stack);
         res.status(500).send('Error loading admin panel.');
     }
 });
 
-app.post('/admin/approve-school/:schoolId', requireAdmin, async (req, res) => {
+// Approve and schedule school in one step
+app.post('/admin/approve-and-schedule/:schoolId', requireAdmin, async (req, res) => {
     try {
         const schoolId = req.params.schoolId;
+        const { eventDate } = req.body;
+        if (!eventDate) {
+            return res.status(400).send('Event date is required.');
+        }
+        const parsedDate = new Date(eventDate);
+        if (isNaN(parsedDate.getTime())) {
+            return res.status(400).send('Invalid event date format.');
+        }
         await db.collection('schools').doc(schoolId).update({
-            isApproved: true
+            isApproved: true,
+            eventDate: admin.firestore.Timestamp.fromDate(parsedDate)
         });
         res.redirect('/admin');
     } catch (error) {
-        console.error('Error approving school:', error.message, error.stack);
+        console.error('Error in approve-and-schedule route:', error.message, error.stack);
+        res.status(500).send('Error approving and scheduling school.');
+    }
+});
+
+// Approve school (kept for backward compatibility)
+app.post('/admin/approve-school/:schoolId', requireAdmin, async (req, res) => {
+    try {
+        const schoolId = req.params.schoolId;
+        await db.collection('schools').doc(schoolId).update({ isApproved: true });
+        res.redirect('/admin');
+    } catch (error) {
+        console.error('Error in approve-school route:', error.message, error.stack);
         res.status(500).send('Error approving school.');
     }
 });
 
+// Assign event date (kept for backward compatibility)
 app.post('/admin/assign-event-date/:schoolId', requireAdmin, async (req, res) => {
     try {
         const schoolId = req.params.schoolId;
@@ -839,26 +1338,44 @@ app.post('/admin/assign-event-date/:schoolId', requireAdmin, async (req, res) =>
         if (!eventDate) {
             return res.status(400).send('Event date is required.');
         }
+        const parsedDate = new Date(eventDate);
+        if (isNaN(parsedDate.getTime())) {
+            return res.status(400).send('Invalid event date format.');
+        }
         await db.collection('schools').doc(schoolId).update({
-            eventDate: new Date(eventDate)
+            eventDate: admin.firestore.Timestamp.fromDate(parsedDate)
         });
         res.redirect('/admin');
     } catch (error) {
-        console.error('Error assigning event date:', error.message, error.stack);
+        console.error('Error in assign-event-date route:', error.message, error.stack);
         res.status(500).send('Error assigning event date.');
     }
 });
 
-app.get('/admin/logout', (req, res) => {
+// Admin logout
+app.get('/admin/logout', requireAdmin, (req, res) => {
     req.session.destroy(err => {
         if (err) {
-            console.error('Error during logout:', err);
+            console.error('Error destroying session:', err);
+            return res.status(500).send('Error logging out.');
         }
         res.redirect('/admin-login');
     });
 });
 
+// Student logout
+app.get('/logout', (req, res) => {
+    req.session.destroy(err => {
+        if (err) {
+            console.error('Error destroying session:', err);
+            return res.status(500).send('Error logging out.');
+        }
+        res.redirect('/login');
+    });
+});
+
+// Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });

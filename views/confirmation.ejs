@@ -28,6 +28,10 @@
         .confirmation-container p {
             margin: 10px 0;
         }
+        .confirmation-container .credentials {
+            font-weight: bold;
+            color: #333;
+        }
         .confirmation-container a {
             display: inline-block;
             margin-top: 20px;
@@ -46,7 +50,11 @@
     <div class="confirmation-container">
         <h2>School Registration Successful!</h2>
         <p>Your school has been registered successfully.</p>
+        <p>Please Login and agree to provide workshop requiremnt.</p>
         <p>An admin will review your request and approve it soon.</p>
+        <p class="credentials">Login ID: <%= schoolEmail %></p>
+        <p class="credentials">Password: <%= principalNumber %></p>
+        <p>Please save these credentials for future login.</p>
         <a href="/login">Go to Login</a>
     </div>
 </body>

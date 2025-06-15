@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -12,28 +12,77 @@
             padding: 20px;
         }
         .dashboard-container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             background-color: white;
             padding: 20px;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
         }
         .dashboard-container h2 {
             text-align: center;
             color: #333;
+            margin-bottom: 20px;
+        }
+        .event-date {
+            text-align: center;
+            color: #555;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+        }
+        .event-date.missing {
+            color: #e74c3c;
+            font-style: italic;
         }
         .error {
-            color: red;
+            color: #e74c3c;
             text-align: center;
+            margin-bottom: 20px;
         }
+        /* Tab Styles */
+        .tab-container {
+            margin-top: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-button {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background-color: #f1f1f1;
+            color: #555;
+            cursor: pointer;
+            border: none;
+            border-radius: 4px 4px 0 0;
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .tab-button:hover {
+            background-color: #e0e0e0;
+        }
+        .tab-button.active {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* Student Data Table */
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin-top: 10px;
         }
         table th, table td {
-            padding: 10px;
+            padding: 12px;
             border: 1px solid #ddd;
             text-align: left;
         }
@@ -44,46 +93,221 @@
         table tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+        /* Edit Form */
+        .edit-form label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .edit-form input, .resources-form input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .edit-form input[type="submit"], .resources-form input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 4px;
+            width: auto;
+        }
+        .edit-form input[type="submit"]:hover, .resources-form input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        /* Resources Form */
+        .resources-form .resource-item {
+            margin: 10px 0;
+        }
+        .resources-form input[type="checkbox"] {
+            margin-right: 10px;
+        }
+        .resources-form label {
+            color: #333;
+        }
+        .confirmation-message {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            color: #333;
+        }
+        .confirmation-message ul {
+            margin: 10px 0 0 20px;
+            padding: 0;
+        }
+        .confirmation-message li {
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
         <h2><%= schoolName %> Dashboard</h2>
+        <div class="event-date <%= eventDateMissing ? 'missing' : '' %>">
+            <% if (eventDateMissing) { %>
+                Event date yet to confirm.
+            <% } else { %>
+                Event Date: <%= eventDate %>
+            <% } %>
+        </div>
         <% if (error) { %>
             <div class="error"><%= error %></div>
         <% } %>
-        <% if (students.length > 0) { %>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Student Name</th>
-                        <th>Class</th>
-                        <th>Trial 1 (%)</th>
-                        <th>Trial 2 (%)</th>
-                        <th>MCQ Completed</th>
-                        <th>MCQ Score</th>
-                        <th>MCQ Percentage</th>
-                        <th>Completed At</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% students.forEach(student => { %>
-                        <tr>
-                            <td><%= student.studentName %></td>
-                            <td><%= student.studentClass %></td>
-                            <td><%= student.trial1Percentage %></td>
-                            <td><%= student.trial2Percentage %></td>
-                            <td><%= student.hasCompletedMCQ ? 'Yes' : 'No' %></td>
-                            <td><%= student.score %> / <%= student.totalQuestions %></td>
-                            <td><%= student.percentage %>%</td>
-                            <td><%= student.completedAt %></td>
-                        </tr>
-                    <% }) %>
-                </tbody>
-            </table>
-        <% } else { %>
-            <p>No students found for this school.</p>
-        <% } %>
+
+        <!-- Tab Navigation -->
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" onclick="openTab('resources')">Resource Arrangement</button>
+                <button class="tab-button" onclick="openTab('student-data')">Student Data</button>
+                <button class="tab-button" onclick="openTab('edit-info')">Edit School Information</button>
+            </div>
+
+            <!-- Resource Arrangement Tab -->
+            <div id="resources" class="tab-content active">
+                <% if (resourcesConfirmed) { %>
+                    <div class="confirmation-message">
+                        <p>You have confirmed the arrangement of the following resources:</p>
+                        <ul>
+                            <% selectedResources.forEach(resource => { %>
+                                <li><%= resource %></li>
+                            <% }) %>
+                        </ul>
+                    </div>
+                <% } else { %>
+                    <div class="resources-form">
+                        <form action="/school-dashboard/submit-resources" method="POST">
+                            <input type="hidden" name="schoolEmail" value="<%= schoolEmail %>">
+                            <p>Please confirm the resources you agree to arrange or pay for:</p>
+                            <div class="resource-item">
+                                <input type="checkbox" id="trainerRemediation" name="resources" value="Trainer remediation" checked required>
+                                <label for="trainerRemediation">Trainer remediation</label>
+                            </div>
+                            <div class="resource-item">
+                                <input type="checkbox" id="travelingExpense" name="resources" value="Traveling expense" checked required>
+                                <label for="travelingExpense">Traveling expense</label>
+                            </div>
+                            <div class="resource-item">
+                                <input type="checkbox" id="mic" name="resources" value="Mic" checked required>
+                                <label for="mic">Mic</label>
+                            </div>
+                            <div class="resource-item">
+                                <input type="checkbox" id="cleanEnvironment" name="resources" value="Clean environment" checked required>
+                                <label for="cleanEnvironment">Clean environment</label>
+                            </div>
+                            <div class="resource-item">
+                                <input type="checkbox" id="seatingArrangement" name="resources" value="50 student seating arrangement" checked required>
+                                <label for="seatingArrangement">50 student seating arrangement</label>
+                            </div>
+                            <div class="resource-item">
+                                <input type="checkbox" id="workshopKit" name="resources" value="Rs 5000 workshop kit" checked required>
+                                <label for="workshopKit">Rs 5000 workshop kit</label>
+                            </div>
+                            <div class="resource-item">
+                                <input type="checkbox" id="projector" name="resources" value="Projector" checked required>
+                                <label for="projector">Projector</label>
+                            </div>
+                            <input type="submit" value="Confirm Resources">
+                        </form>
+                    </div>
+                <% } %>
+            </div>
+
+            <!-- Student Data Tab -->
+            <div id="student-data" class="tab-content">
+                <% if (students.length > 0) { %>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Class</th>
+                                <th>Trial 1 (%)</th>
+                                <th>Trial 2 (%)</th>
+                                <th>MCQ Completed</th>
+                                <th>MCQ Score</th>
+                                <th>MCQ Percentage</th>
+                                <th>Completed At</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% students.forEach(student => { %>
+                                <tr>
+                                    <td><%= student.studentName %></td>
+                                    <td><%= student.studentClass %></td>
+                                    <td><%= student.trial1Percentage %></td>
+                                    <td><%= student.trial2Percentage %></td>
+                                    <td><%= student.hasCompletedMCQ ? 'Yes' : 'No' %></td>
+                                    <td><%= student.score %> / <%= student.totalQuestions %></td>
+                                    <td><%= student.percentage %>%</td>
+                                    <td><%= student.completedAt %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                <% } else { %>
+                    <p>No students found for this school.</p>
+                <% } %>
+            </div>
+
+            <!-- Edit School Information Tab -->
+            <div id="edit-info" class="tab-content">
+                <div class="edit-form">
+                    <form action="/school-dashboard/update" method="POST">
+                        <input type="hidden" name="schoolEmail" value="<%= schoolEmail %>">
+                        <label for="city">City:</label>
+                        <input type="text" id="city" name="city" value="<%= city %>" required>
+                        
+                        <label for="district">District:</label>
+                        <input type="text" id="district" name="district" value="<%= district %>" required>
+                        
+                        <label for="pincode">Pincode:</label>
+                        <input type="text" id="pincode" name="pincode" value="<%= pincode %>" pattern="\d{6}" required>
+                        
+                        <label for="schoolPhoneNumber">School Phone Number:</label>
+                        <input type="text" id="schoolPhoneNumber" name="schoolPhoneNumber" value="<%= schoolPhoneNumber %>" pattern="\d{10}" required>
+                        
+                        <label for="schoolEmail">School Email:</label>
+                        <input type="email" id="schoolEmailDisplay" name="schoolEmailDisplay" value="<%= schoolEmail %>" disabled>
+                        
+                        <label for="principalNumber">Principal Phone Number:</label>
+                        <input type="text" id="principalNumber" name="principalNumber" value="<%= principalNumber %>" pattern="\d{10}" required>
+                        
+                        <label for="principalEmail">Principal Email:</label>
+                        <input type="email" id="principalEmail" name="principalEmail" value="<%= principalEmail %>" required>
+                        
+                        <label for="civicsTeacherNumber">Civics Teacher Phone Number:</label>
+                        <input type="text" id="civicsTeacherNumber" name="civicsTeacherNumber" value="<%= civicsTeacherNumber %>" pattern="\d{10}" required>
+                        
+                        <label for="civicsTeacherEmail">Civics Teacher Email:</label>
+                        <input type="email" id="civicsTeacherEmail" name="civicsTeacherEmail" value="<%= civicsTeacherEmail %>" required>
+                        
+                        <input type="submit" value="Update Information">
+                    </form>
+                </div>
+            </div>
+        </div>
     </div>
+
+    <script>
+        function openTab(tabId) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            // Remove active class from all tab buttons
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            // Show the selected tab content
+            document.getElementById(tabId).classList.add('active');
+            // Add active class to the clicked tab button
+            document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`).classList.add('active');
+        }
+    </script>
 </body>
 </html>

@@ -101,9 +101,9 @@ const transporter = nodemailer.createTransport({
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
-     tls: {
-    ciphers: 'SSLv3'
-  },
+    tls: {
+        ciphers: 'SSLv3'
+    },
     debug: true,
     logger: true
 });
@@ -171,6 +171,20 @@ const emailTemplates = {
             `Dear ${studentName},\n\nThis is a reminder that today is the workshop day for Being Lawful.\n\nDate: ${workshopDate}\n\nWe look forward to seeing you there!\n\nBest regards,\nBeing Lawful Team`,
         html: (studentName, workshopDate) => 
             `<p>Dear ${studentName},</p><p>This is a reminder that today is the workshop day for Being Lawful.</p><p><strong>Date:</strong> ${workshopDate}</p><p>We look forward to seeing you there!</p><p>Best regards,<br>Being Lawful Team</p>`
+    },
+    trainerRegistration: {
+        subject: 'Your Trainer Registration - Login Credentials',
+        text: (trainerName, email, password) => 
+            `Dear ${trainerName},\n\nYou have been registered as a trainer with Being Lawful.\n\nLogin Credentials:\nUsername: ${email}\nPassword: ${password}\n\nPlease log in to complete your profile setup.\n\nBest regards,\nBeing Lawful Team`,
+        html: (trainerName, email, password) => 
+            `<p>Dear ${trainerName},</p><p>You have been registered as a trainer with Being Lawful.</p><p><strong>Login Credentials:</strong><br>Username: ${email}<br>Password: ${password}</p><p> <strong> Please log in to complete your profile setup. </strong></p><p>Best regards,<br>Being Lawful Team</p>`
+    },
+    trainerApproval: {
+        subject: 'Trainer Approval Confirmation',
+        text: (trainerName) => 
+            `Dear ${trainerName},\n\nWe are pleased to inform you that your trainer profile has been approved by Being Lawful.\n\nBest regards,\nBeing Lawful Team`,
+        html: (trainerName) => 
+            `<p>Dear ${trainerName},</p><p>We are pleased to inform you that your trainer profile has been approved by Being Lawful.</p><p>Best regards,<br>Being Lawful Team</p>`
     }
 };
 
@@ -415,7 +429,7 @@ function requireStudentAuth(req, res, next) {
     res.redirect('/login?error=Please%20login%20to%20access%20this%20page');
 }
 
-// Check if it's on or after the event date
+// Check if it's on or after the event date for students
 async function checkEventDate(req, res, next) {
     try {
         const parentMobile1 = req.session.parentMobile1 || req.params.parentMobile1;
@@ -1192,6 +1206,234 @@ app.post('/school-login', async (req, res) => {
     }
 });
 
+// Trainer participation form (renders trainerParticipation.ejs)
+app.get('/trainer-participation', async (req, res) => {
+    try {
+        const snapshot = await db.collection('trainers').get();
+        const trainers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.render('trainerParticipation', { trainers, errors: null });
+    } catch (error) {
+        console.error('Error in trainer-participation route:', error.message, error.stack);
+        res.status(500).send('Error fetching trainer data.');
+    }
+});
+
+// Submit trainer participation (renders trainerParticipation.ejs on error, renders trainerConfirmation.ejs on success)
+app.post('/trainer-participate', [
+    body('trainerName').trim().notEmpty().withMessage('Trainer name is required'),
+    body('mobileNumber').trim().matches(/^\d{10}$/).withMessage('Mobile number must be 10 digits'),
+    body('whatsappNumber').trim().matches(/^\d{10}$/).withMessage('WhatsApp number must be 10 digits'),
+    body('email').trim().isEmail().withMessage('Invalid email address'),
+    body('referenceName').trim().notEmpty().withMessage('Reference name is required')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const trainersSnapshot = await db.collection('trainers').get();
+            const trainers = trainersSnapshot.docs.map(doc => doc.data());
+            return res.status(400).render('trainerParticipation', { trainers, errors: errors.array() });
+        }
+
+        const {
+            trainerName,
+            mobileNumber,
+            whatsappNumber,
+            email,
+            referenceName
+        } = req.body;
+
+        await db.collection('trainers').add({
+            trainerName,
+            mobileNumber,
+            whatsappNumber,
+            email,
+            referenceName,
+            registeredAt: admin.firestore.FieldValue.serverTimestamp(),
+            isApproved: false
+        });
+
+        // Send trainer registration email
+        await sendEmail(
+            email,
+            emailTemplates.trainerRegistration.subject,
+            emailTemplates.trainerRegistration.text(trainerName, email, mobileNumber),
+            emailTemplates.trainerRegistration.html(trainerName, email, mobileNumber)
+        );
+
+        res.render('trainerConfirmation', {
+            trainerEmail: email,
+            mobileNumber: mobileNumber
+        });
+    } catch (error) {
+        console.error('Error in trainer-participate route:', error.message, error.stack);
+        const trainersSnapshot = await db.collection('trainers').get();
+        const trainers = trainersSnapshot.docs.map(doc => doc.data());
+        res.status(500).render('trainerParticipation', {
+            trainers,
+            errors: [{ msg: 'Internal server error. Please try again later.' }]
+        });
+    }
+});
+
+// Trainer confirmation page (renders trainerConfirmation.ejs)
+app.get('/trainer-confirmation', (req, res) => {
+    res.render('trainerConfirmation', {
+        trainerEmail: 'Not provided',
+        mobileNumber: 'Not provided'
+    });
+});
+
+// Trainer login (renders login.ejs)
+app.post('/trainer-login', async (req, res) => {
+    const { username, password } = req.body;
+    try {
+        if (!username || !password) {
+            return res.render('login', { error: 'Username and password are required.' });
+        }
+
+        const snapshot = await db.collection('trainers')
+            .where('email', '==', username)
+            .get();
+        if (snapshot.empty) {
+            return res.render('login', { error: 'Invalid username or password.' });
+        }
+
+        const trainer = snapshot.docs[0].data();
+        if (password !== trainer.mobileNumber) {
+            return res.render('login', { error: 'Invalid username or password.' });
+        }
+
+        req.session.trainerEmail = username;
+        res.redirect(`/trainer-dashboard?username=${encodeURIComponent(username)}`);
+    } catch (error) {
+        console.error('Error during trainer login:', error.message, error.stack);
+        res.render('login', { error: 'Login failed. Try again later.' });
+    }
+});
+
+// Trainer dashboard (renders trainerDashboard.ejs)
+app.get('/trainer-dashboard', async (req, res) => {
+    try {
+        const trainerEmail = req.query.username;
+        if (!trainerEmail) {
+            return res.render('trainerDashboard', {
+                trainerName: 'Unknown',
+                trainerEmail: '',
+                mobileNumber: '',
+                whatsappNumber: '',
+                referenceName: '',
+                error: 'Please login first',
+                trialTests
+            });
+        }
+
+        const trainerSnapshot = await db.collection('trainers')
+            .where('email', '==', trainerEmail)
+            .get();
+        if (trainerSnapshot.empty) {
+            return res.render('trainerDashboard', {
+                trainerName: 'Unknown',
+                trainerEmail: '',
+                mobileNumber: '',
+                whatsappNumber: '',
+                referenceName: '',
+                error: 'Trainer not found',
+                trialTests
+            });
+        }
+
+        const trainerData = trainerSnapshot.docs[0].data();
+        const trainerId = trainerSnapshot.docs[0].id;
+        const trainerName = trainerData.trainerName;
+
+        res.render('trainerDashboard', {
+            trainerName,
+            trainerEmail: trainerData.email || '',
+            mobileNumber: trainerData.mobileNumber || '',
+            whatsappNumber: trainerData.whatsappNumber || '',
+            referenceName: trainerData.referenceName || '',
+            error: null,
+            trialTests
+        });
+    } catch (error) {
+        console.error('Error in trainer-dashboard route:', error.message, error.stack);
+        res.render('trainerDashboard', {
+            trainerName: 'Unknown',
+            trainerEmail: '',
+            mobileNumber: '',
+            whatsappNumber: '',
+            referenceName: '',
+            error: 'Error loading trainer data.',
+            trialTests
+        });
+    }
+});
+
+// Update trainer information
+app.post('/trainer-dashboard/update', [
+    body('mobileNumber').trim().matches(/^\d{10}$/).withMessage('Mobile number must be 10 digits'),
+    body('whatsappNumber').trim().matches(/^\d{10}$/).withMessage('WhatsApp number must be 10 digits'),
+    body('referenceName').trim().notEmpty().withMessage('Reference name is required')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            const trainerEmail = req.body.trainerEmail;
+            return res.status(400).render('trainerDashboard', {
+                trainerName: 'Unknown',
+                trainerEmail,
+                mobileNumber: req.body.mobileNumber,
+                whatsappNumber: req.body.whatsappNumber,
+                referenceName: req.body.referenceName,
+                error: errors.array()[0].msg,
+                trialTests
+            });
+        }
+
+        const {
+            trainerEmail,
+            mobileNumber,
+            whatsappNumber,
+            referenceName
+        } = req.body;
+
+        const trainerSnapshot = await db.collection('trainers')
+            .where('email', '==', trainerEmail)
+            .get();
+        if (trainerSnapshot.empty) {
+            return res.status(404).render('trainerDashboard', {
+                trainerName: 'Unknown',
+                trainerEmail,
+                mobileNumber,
+                whatsappNumber,
+                referenceName,
+                error: 'Trainer not found',
+                trialTests
+            });
+        }
+
+        const trainerId = trainerSnapshot.docs[0].id;
+        await db.collection('trainers').doc(trainerId).update({
+            mobileNumber,
+            whatsappNumber,
+            referenceName
+        });
+
+        res.redirect(`/trainer-dashboard?username=${encodeURIComponent(trainerEmail)}`);
+    } catch (error) {
+        console.error('Error in trainer-dashboard/update route:', error.message, error.stack);
+        res.status(500).render('trainerDashboard', {
+            trainerName: 'Unknown',
+            trainerEmail: req.body.trainerEmail,
+            mobileNumber: req.body.mobileNumber,
+            whatsappNumber: req.body.whatsappNumber,
+            referenceName: req.body.referenceName,
+            error: 'Error updating trainer information',
+            trialTests
+        });
+    }
+});
+
 // Participation form (renders participation.ejs)
 app.get('/participation', async (req, res) => {
     try {
@@ -1354,8 +1596,9 @@ app.post('/school-participate', [
         );
 
         res.render('confirmation', {
-            schoolEmail: schoolEmail,
-            principalNumber: principalNumber
+            schoolEmail,
+            schoolName,
+            principalNumber
         });
     } catch (error) {
         console.error('Error in school-participate route:', error.message, error.stack);
@@ -1372,283 +1615,150 @@ app.post('/school-participate', [
 app.get('/confirmation', (req, res) => {
     res.render('confirmation', {
         schoolEmail: 'Not provided',
+        schoolName: 'Not provided',
         principalNumber: 'Not provided'
     });
 });
 
-// School students (renders schoolStudents.ejs)
-app.get('/school-students', async (req, res) => {
-    try {
-        const schoolName = req.query.schoolName;
-        if (!schoolName) {
-            return res.status(400).send('School name is required.');
-        }
-
-        const snapshot = await db.collection('participants')
-            .where('schoolNameDropdown', '==', schoolName)
-            .get();
-        const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        res.render('schoolStudents', { schoolName, students });
-    } catch (error) {
-        console.error('Error in school-students route:', error.message, error.stack);
-        res.status(500).send('Error fetching student data.');
-    }
-});
-
 // Admin login page (renders adminLogin.ejs)
 app.get('/admin-login', (req, res) => {
-    if (req.session.isAdmin) {
-        return res.redirect('/admin');
-    }
     res.render('adminLogin', { error: null });
 });
 
-// Admin login (renders adminLogin.ejs on error)
+// Admin login (renders adminDashboard.ejs)
 app.post('/admin-login', (req, res) => {
     const { username, password } = req.body;
-    if (!username || !password) {
-        return res.render('adminLogin', { error: 'Username and password are required.' });
-    }
-
     if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
         req.session.isAdmin = true;
-        res.redirect('/admin');
+        res.redirect('/admin-dashboard');
     } else {
         res.render('adminLogin', { error: 'Invalid username or password.' });
     }
 });
 
-// Admin panel (renders adminPanel.ejs)
-app.get('/admin', requireAdmin, async (req, res) => {
+// Admin dashboard (renders adminDashboard.ejs)
+app.get('/admin-dashboard', requireAdmin, async (req, res) => {
     try {
         const schoolsSnapshot = await db.collection('schools').get();
-        const allSchools = schoolsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                eventDate: data.eventDate ? data.eventDate.toDate().toISOString().split('T')[0] : null,
-                eventDates: data.eventDates || []
-            };
-        });
+        const schools = schoolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const pendingSchools = allSchools.filter(school => !school.isApproved);
-        const approvedSchools = allSchools.filter(school => school.isApproved && !school.eventDate);
-        const scheduledSchools = allSchools.filter(school => school.isApproved && school.eventDate);
+        const trainersSnapshot = await db.collection('trainers').get();
+        const trainers = trainersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         const participantsSnapshot = await db.collection('participants').get();
-        const participants = participantsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                studentName: data.studentName || 'N/A',
-                parentMobile1: data.parentMobile1 || 'N/A',
-                schoolNameDropdown: data.schoolNameDropdown || 'N/A',
-                trial1Percentage: data.trial1Percentage || 'N/A',
-                trial2Percentage: data.trial2Percentage || 'N/A',
-                score: data.score || 0,
-                totalQuestions: data.totalQuestions || 30,
-                percentage: data.percentage || 0
-            };
-        });
+        const participants = participantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-        const schoolStatusData = {
-            pending: pendingSchools.length,
-            approved: approvedSchools.length,
-            scheduled: scheduledSchools.length
-        };
-
-        const participantsPerSchool = {};
-        participants.forEach(participant => {
-            const schoolName = participant.schoolNameDropdown || 'Unknown';
-            participantsPerSchool[schoolName] = (participantsPerSchool[schoolName] || 0) + 1;
-        });
-        const participantsPerSchoolLabels = Object.keys(participantsPerSchool);
-        const participantsPerSchoolValues = Object.values(participantsPerSchool);
-
-        const completedParticipants = participants.filter(p => p.percentage !== 0);
-        const avgTrial1 = completedParticipants.length > 0
-            ? Math.round(completedParticipants.reduce((sum, p) => sum + (parseFloat(p.trial1Percentage) || 0), 0) / completedParticipants.length)
-            : 0;
-        const avgTrial2 = completedParticipants.length > 0
-            ? Math.round(completedParticipants.reduce((sum, p) => sum + (parseFloat(p.trial2Percentage) || 0), 0) / completedParticipants.length)
-            : 0;
-        const avgMCQ = completedParticipants.length > 0
-            ? Math.round(completedParticipants.reduce((sum, p) => sum + (p.percentage || 0), 0) / completedParticipants.length)
-            : 0;
-        const avgScoresData = {
-            trial1: avgTrial1,
-            trial2: avgTrial2,
-            mcq: avgMCQ
-        };
-
-        res.render('adminPanel', {
-            pendingSchools,
-            approvedSchools,
-            scheduledSchools,
-            participants,
-            trialTests,
-            schoolStatusData,
-            participantsPerSchoolLabels,
-            participantsPerSchoolValues,
-            avgScoresData
-        });
+        res.render('adminDashboard', { schools, trainers, participants, error: null });
     } catch (error) {
-        console.error('Error in admin route:', error.message, error.stack);
-        res.status(500).send('Error loading admin panel.');
+        console.error('Error in admin-dashboard route:', error.message, error.stack);
+        res.render('adminDashboard', { schools: [], trainers: [], participants: [], error: 'Error fetching data.' });
     }
 });
 
-// Approve and schedule school in one step
-app.post('/admin/approve-and-schedule/:schoolId', requireAdmin, async (req, res) => {
+// Approve school (redirects to admin-dashboard)
+app.post('/approve-school/:id', requireAdmin, async (req, res) => {
     try {
-        const schoolId = req.params.schoolId;
-        const { eventDate } = req.body;
-        if (!eventDate) {
-            return res.status(400).send('Event date is required.');
-        }
-        const parsedDate = new Date(eventDate);
-        if (isNaN(parsedDate.getTime())) {
-            return res.status(400).send('Invalid event date format.');
-        }
-
+        const schoolId = req.params.id;
         const schoolRef = db.collection('schools').doc(schoolId);
         const schoolDoc = await schoolRef.get();
+        if (!schoolDoc.exists) {
+            return res.redirect('/admin-dashboard');
+        }
+
         const schoolData = schoolDoc.data();
-        const schoolName = schoolData.schoolName;
-        const schoolEmail = schoolData.schoolEmail;
-
-        await schoolRef.update({
-            isApproved: true,
-            eventDate: admin.firestore.Timestamp.fromDate(parsedDate)
-        });
-
-        await sendEmail(
-            schoolEmail,
-            emailTemplates.schoolApproval.subject,
-            emailTemplates.schoolApproval.text(schoolName),
-            emailTemplates.schoolApproval.html(schoolName)
-        );
-
-        res.redirect('/admin');
-    } catch (error) {
-        console.error('Error in approve-and-schedule route:', error.message, error.stack);
-        res.status(500).send('Error approving and scheduling school.');
-    }
-});
-
-// Approve school (kept for backward compatibility)
-app.post('/admin/approve-school/:schoolId', requireAdmin, async (req, res) => {
-    try {
-        const schoolId = req.params.schoolId;
-        const schoolRef = db.collection('schools').doc(schoolId);
-        const schoolDoc = await schoolRef.get();
-        const schoolData = schoolDoc.data();
-        const schoolName = schoolData.schoolName;
-        const schoolEmail = schoolData.schoolEmail;
-
         await schoolRef.update({ isApproved: true });
 
+        // Send approval email
         await sendEmail(
-            schoolEmail,
+            schoolData.schoolEmail,
             emailTemplates.schoolApproval.subject,
-            emailTemplates.schoolApproval.text(schoolName),
-            emailTemplates.schoolApproval.html(schoolName)
+            emailTemplates.schoolApproval.text(schoolData.schoolName),
+            emailTemplates.schoolApproval.html(schoolData.schoolName)
         );
 
-        res.redirect('/admin');
+        res.redirect('/admin-dashboard');
     } catch (error) {
         console.error('Error in approve-school route:', error.message, error.stack);
-        res.status(500).send('Error approving school.');
+        res.redirect('/admin-dashboard');
     }
 });
 
-// Assign event date (kept for backward compatibility)
-app.post('/admin/assign-event-date/:schoolId', requireAdmin, async (req, res) => {
+// Approve trainer (redirects to admin-dashboard)
+app.post('/approve-trainer/:id', requireAdmin, async (req, res) => {
     try {
-        const schoolId = req.params.schoolId;
-        const { eventDate } = req.body;
-        if (!eventDate) {
-            return res.status(400).send('Event date is required.');
+        const trainerId = req.params.id;
+        const trainerRef = db.collection('trainers').doc(trainerId);
+        const trainerDoc = await trainerRef.get();
+        if (!trainerDoc.exists) {
+            return res.redirect('/admin-dashboard');
         }
-        const parsedDate = new Date(eventDate);
-        if (isNaN(parsedDate.getTime())) {
-            return res.status(400).send('Invalid event date format.');
+
+        const trainerData = trainerDoc.data();
+        await trainerRef.update({ isApproved: true });
+
+        // Send approval email
+        await sendEmail(
+            trainerData.email,
+            emailTemplates.trainerApproval.subject,
+            emailTemplates.trainerApproval.text(trainerData.trainerName),
+            emailTemplates.trainerApproval.html(trainerData.trainerName)
+        );
+
+        res.redirect('/admin-dashboard');
+    } catch (error) {
+        console.error('Error in approve-trainer route:', error.message, error.stack);
+        res.redirect('/admin-dashboard');
+    }
+});
+
+// Assign event date to school (redirects to admin-dashboard)
+app.post('/assign-event-date-school/:id', requireAdmin, async (req, res) => {
+    try {
+        const schoolId = req.params.id;
+        const { eventDate } = req.body;
+
+        if (!eventDate || !/^\d{4}-\d{2}-\d{2}$/.test(eventDate)) {
+            return res.redirect('/admin-dashboard');
+        }
+
+        const eventDateObj = new Date(eventDate);
+        if (isNaN(eventDateObj.getTime())) {
+            return res.redirect('/admin-dashboard');
         }
 
         await db.collection('schools').doc(schoolId).update({
-            eventDate: admin.firestore.Timestamp.fromDate(parsedDate)
+            eventDate: admin.firestore.Timestamp.fromDate(eventDateObj)
         });
 
-        res.redirect('/admin');
+        res.redirect('/admin-dashboard');
     } catch (error) {
-        console.error('Error in assign-event-date route:', error.message, error.stack);
-        res.status(500).send('Error assigning event date.');
+        console.error('Error in assign-event-date-school route:', error.message, error.stack);
+        res.redirect('/admin-dashboard');
     }
 });
 
-// Delete school
-app.post('/admin/delete-school/:schoolId', requireAdmin, async (req, res) => {
-    try {
-        const schoolId = req.params.schoolId;
-        await db.collection('schools').doc(schoolId).delete();
-        res.redirect('/admin');
-    } catch (error) {
-        console.error('Error in delete-school route:', error.message, error.stack);
-        res.status(500).send('Error deleting school.');
-    }
-});
-
-// Delete participant
-app.post('/admin/delete-participant/:participantId', requireAdmin, async (req, res) => {
-    try {
-        const participantId = req.params.participantId;
-        await db.collection('participants').doc(participantId).delete();
-        res.redirect('/admin');
-    } catch (error) {
-        console.error('Error in delete-participant route:', error.message, error.stack);
-        res.status(500).send('Error deleting participant.');
-    }
-});
-
-// Logout (for admin and student)
+// Logout (redirects to /)
 app.get('/logout', (req, res) => {
     req.session.destroy((err) => {
         if (err) {
-            console.error('Error destroying session:', err.message, err.stack);
-            return res.status(500).send('Error logging out.');
+            console.error('Error during logout:', err.message, err.stack);
         }
-        res.redirect('/login');
+        res.redirect('/');
     });
 });
 
-// Test email route
-app.get('/test-email', async (req, res) => {
-    try {
-        const success = await sendEmail(
-            'adityasharma3819@gmail.com',
-            'Test Email from Being Lawful',
-            'This is a test email sent from Being Lawful.',
-            '<p>This is a test email sent from <b>Being Lawful</b>.</p>'
-        );
-        if (success) {
-            res.send('Test email sent successfully.');
-        } else {
-            res.status(500).send('Failed to send test email.');
-        }
-    } catch (error) {
-        console.error('Error in test-email route:', error.message, error.stack);
-        res.status(500).send(`Error sending test email: ${error.message}`);
-    }
+// Schedule daily email reminders at 10:30 PM IST
+const schedule = require('node-schedule');
+const IST_OFFSET = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+const job = schedule.scheduleJob('30 22 * * *', () => {
+    const now = new Date();
+    const istTime = new Date(now.getTime() + IST_OFFSET);
+    console.log(`Running email reminder job at ${istTime.toISOString()} IST`);
+    checkAndSendWorkshopEmails();
 });
 
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
-
-    // Schedule daily email reminders
-    setInterval(checkAndSendWorkshopEmails, 24 * 60 * 60 * 1000); // Run daily
-    checkAndSendWorkshopEmails(); // Run immediately on startup
+    console.log(`Server running on port ${PORT}`);
 });

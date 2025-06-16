@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trainer Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+        <h1 class="text-3xl font-bold text-center mb-6">Trainer Dashboard</h1>
+
+        <% if (error) { %>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                <strong class="font-bold">Error:</strong>
+                <span class="block sm:inline"><%= error %></span>
+            </div>
+        <% } %>
+
+        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+            <h2 class="text-2xl font-bold mb-4">Welcome, <%= trainerName %></h2>
+            <p class="mb-2"><strong>Email:</strong> <%= trainerEmail %></p>
+            <p class="mb-2"><strong>Event Date:</strong> <%= eventDate || 'Not assigned yet' %></p>
+            <% if (eventDateMissing) { %>
+                <p class="text-yellow-600 mb-4">Note: Your event date has not been assigned yet. Please check back later.</p>
+            <% } else { %>
+                <p class="text-green-600 mb-4">Your event date is scheduled. Please prepare accordingly.</p>
+            <% } %>
+
+            <h3 class="text-xl font-bold mt-6 mb-4">Update Your Information</h3>
+            <form action="/trainer-dashboard/update" method="POST" class="mb-6">
+                <input type="hidden" name="trainerEmail" value="<%= trainerEmail %>">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="mobileNumber">
+                        Mobile Number
+                    </label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="mobileNumber" name="mobileNumber" type="text" value="<%= mobileNumber %>" pattern="\d{10}" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="whatsappNumber">
+                        WhatsApp Number
+                    </label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="whatsappNumber" name="whatsappNumber" type="text" value="<%= whatsappNumber %>" pattern="\d{10}" required>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2" for="referenceName">
+                        Reference Name
+                    </label>
+                    <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="referenceName" name="referenceName" type="text" value="<%= referenceName %>" required>
+                </div>
+                <div class="flex items-center justify-between">
+                    <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                        Update Information
+                    </button>
+                    <a href="/logout" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
+                        Logout
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white shadow-md rounded px-8 pt-6 pb-8">
+            <h2 class="text-2xl font-bold mb-4">Trial Tests Preview</h2>
+            <h3 class="text-lg font-semibold mb-2">Trial Test 1</h3>
+            <% trialTests.trial1.forEach((mcq, index) => { %>
+                <div class="mb-4">
+                    <p><strong>Question <%= index + 1 %>:</strong> <%= mcq.question %></p>
+                    <p><strong>Options:</strong> <%= mcq.options.join(', ') %></p>
+                    <p><strong>Correct Answer:</strong> <%= mcq.correctAnswer %></p>
+                </div>
+            <% }) %>
+
+            <h3 class="text-lg font-semibold mb-2 mt-6">Trial Test 2</h3>
+            <% trialTests.trial2.forEach((mcq, index) => { %>
+                <div class="mb-4">
+                    <p><strong>Question <%= index + 1 %>:</strong> <%= mcq.question %></p>
+                    <p><strong>Options:</strong> <%= mcq.options.join(', ') %></p>
+                    <p><strong>Correct Answer:</strong> <%= mcq.correctAnswer %></p>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+</body>
+</html>

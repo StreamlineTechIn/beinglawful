@@ -113,7 +113,34 @@ async function getRandomQuestions(limit = 30) {
         const fallbackQuestions = [
             { question: "What is the supreme law of India?", options: ["Parliament", "President", "Supreme Court", "Constitution"], correctAnswer: "Constitution" },
             { question: "When did the Indian Constitution come into effect?", options: ["15 August 1947", "26 January 1950", "2 October 1948", "26 November 1949"], correctAnswer: "26 January 1950" },
-            { question: "Who is known as the father of the Indian Constitution?", options: ["Mahatma Gandhi", "Jawaharlal Nehru", "B. R. Ambedkar", "Rajendra Prasad"], correctAnswer: "B. R. Ambedkar" }
+            { question: "Who is known as the father of the Indian Constitution?", options: ["Mahatma Gandhi", "Jawaharlal Nehru", "B. R. Ambedkar", "Rajendra Prasad"], correctAnswer: "B. R. Ambedkar" },
+            { question: "How many fundamental rights are there in the Indian Constitution?", options: ["5", "6", "7", "8"], correctAnswer: "6" },
+            { question: "Which part of the Constitution deals with Fundamental Rights?", options: ["Part I", "Part II", "Part III", "Part IV"], correctAnswer: "Part III" },
+            { question: "Which Article guarantees the Right to Equality?", options: ["Article 12", "Article 14", "Article 16", "Article 19"], correctAnswer: "Article 14" },
+            { question: "Right to Education is a fundamental right under which Article?", options: ["Article 21A", "Article 15", "Article 19", "Article 32"], correctAnswer: "Article 21A" },
+            { question: "Directive Principles of State Policy are in which part of the Constitution?", options: ["Part IV", "Part V", "Part III", "Part VI"], correctAnswer: "Part IV" },
+            { question: "Which Article allows the President to declare Emergency?", options: ["Article 352", "Article 356", "Article 360", "Article 370"], correctAnswer: "Article 352" },
+            { question: "What does the Preamble of the Constitution declare India to be?", options: ["Monarchy", "Dictatorship", "Sovereign Republic", "Colony"], correctAnswer: "Sovereign Republic" },
+            { question: "Which body interprets the Constitution?", options: ["Lok Sabha", "Rajya Sabha", "Supreme Court", "President"], correctAnswer: "Supreme Court" },
+            { question: "What is the minimum age to vote in India?", options: ["16", "18", "21", "25"], correctAnswer: "18" },
+            { question: "Which Article provides Right to Freedom of Religion?", options: ["Article 14", "Article 19", "Article 25", "Article 32"], correctAnswer: "Article 25" },
+            { question: "Who elects the President of India?", options: ["Public", "Rajya Sabha", "Electoral College", "Prime Minister"], correctAnswer: "Electoral College" },
+            { question: "Which Article deals with the abolition of untouchability?", options: ["Article 14", "Article 17", "Article 21", "Article 23"], correctAnswer: "Article 17" },
+            { question: "What is the term of the Lok Sabha?", options: ["4 years", "5 years", "6 years", "7 years"], correctAnswer: "5 years" },
+            { question: "Which is the highest judicial authority in India?", options: ["High Court", "District Court", "Supreme Court", "Cabinet"], correctAnswer: "Supreme Court" },
+            { question: "How many schedules are there in the Indian Constitution?", options: ["10", "12", "8", "11"], correctAnswer: "12" },
+            { question: "Which article ensures cultural and educational rights?", options: ["Article 15", "Article 29", "Article 21", "Article 14"], correctAnswer: "Article 29" },
+            { question: "Which organ of the government makes laws?", options: ["Executive", "Judiciary", "Legislature", "Election Commission"], correctAnswer: "Legislature" },
+            { question: "What is the role of the Election Commission?", options: ["Conducts elections", "Make laws", "Judicial review", "Budget allocation"], correctAnswer: "Conducts elections" },
+            { question: "The Constitution of India was adopted on?", options: ["15 August 1947", "26 January 1950", "26 November 1949", "2 October 1950"], correctAnswer: "26 November 1949" },
+            { question: "How many amendments have been made to the Constitution (as of 2024)?", options: ["80", "90", "100", "105"], correctAnswer: "105" },
+            { question: "Which Article gives the Right to Constitutional Remedies?", options: ["Article 32", "Article 19", "Article 21", "Article 14"], correctAnswer: "Article 32" },
+            { question: "Fundamental Duties were added to the Constitution in which year?", options: ["1950", "1976", "1980", "1992"], correctAnswer: "1976" },
+            { question: "How many Fundamental Duties are listed in the Constitution?", options: ["10", "9", "12", "11"], correctAnswer: "11" },
+            { question: "Who administers the oath to the President of India?", options: ["Prime Minister", "Speaker", "Chief Justice of India", "Vice President"], correctAnswer: "Chief Justice of India" },
+            { question: "What is the meaning of 'Secular' in the Preamble?", options: ["Religious state", "No religion", "Equal respect to all religions", "One religion"], correctAnswer: "Equal respect to all religions" },
+            { question: "The concept of Fundamental Rights is inspired by which country?", options: ["USA", "UK", "France", "Germany"], correctAnswer: "USA" },
+            { question: "Which Article deals with the Right against Exploitation?", options: ["Article 19", "Article 23", "Article 15", "Article 21"], correctAnswer: "Article 23" }
         ];
 
         if (questions.length < limit) {

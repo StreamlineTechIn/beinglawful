@@ -47,6 +47,18 @@
                 <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" name="email" type="email" placeholder="Enter email address" required>
             </div>
             <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="city">
+                    City
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="city" name="city" type="text" placeholder="Enter city" required>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2" for="profession">
+                    Profession
+                </label>
+                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="profession" name="profession" type="text" placeholder="Enter profession" required>
+            </div>
+            <div class="mb-4">
                 <label class="block text-gray-700 text-sm font-bold mb-2" for="referenceName">
                     Reference Name
                 </label>
@@ -69,14 +81,16 @@
                     <thead class="bg-gray-200">
                         <tr>
                             <th class="py-2 px-4 border">Trainer Name</th>
-                            <th class="py-2 px-4 border">Reference Name</th>
-                        </tr>
+                            <th class="py-2 px-4 border">City</th>
+                            <th class="py-2 px-4 border">Profession</th>
+                         </tr>
                     </thead>
                     <tbody>
                         <% trainers.forEach(trainer => { %>
                             <tr>
                                 <td class="py-2 px-4 border"><%= trainer.trainerName %></td>
-                                <td class="py-2 px-4 border"><%= trainer.referenceName %></td>
+                                <td class="py-2 px-4 border"><%= trainer.city %></td>
+                                <td class="py-2 px-4 border"><%= trainer.profession %></td>
                             </tr>
                         <% }) %>
                     </tbody>

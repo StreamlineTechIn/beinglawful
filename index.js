@@ -1219,11 +1219,14 @@ app.get('/trainer-participation', async (req, res) => {
 });
 
 // Submit trainer participation (renders trainerParticipation.ejs on error, renders trainerConfirmation.ejs on success)
+// Submit trainer participation (renders trainerParticipation.ejs on error, renders trainerConfirmation.ejs on success)
 app.post('/trainer-participate', [
     body('trainerName').trim().notEmpty().withMessage('Trainer name is required'),
-    body('mobileNumber').trim().matches(/^\d{10}$/).withMessage('Mobile number must be 10 digits'),
-    body('whatsappNumber').trim().matches(/^\d{10}$/).withMessage('WhatsApp number must be 10 digits'),
-    body('email').trim().isEmail().withMessage('Invalid email address'),
+    body('mobileNumber').trim().matches(/^\d{10}$/).notEmpty().withMessage('Mobile number must be 10 digits'),
+    body('whatsappNumber').trim().matches(/^\d{10}$/).notEmpty().withMessage('WhatsApp number must be 10 digits'),
+    body('email').trim().isEmail().notEmpty().withMessage('Invalid email address'),
+    body('city').trim().notEmpty().withMessage('City is required'),
+    body('profession').trim().notEmpty().withMessage('Profession is required'),
     body('referenceName').trim().notEmpty().withMessage('Reference name is required')
 ], async (req, res) => {
     try {
@@ -1239,6 +1242,8 @@ app.post('/trainer-participate', [
             mobileNumber,
             whatsappNumber,
             email,
+            city,
+            profession,
             referenceName
         } = req.body;
 
@@ -1247,6 +1252,8 @@ app.post('/trainer-participate', [
             mobileNumber,
             whatsappNumber,
             email,
+            city,
+            profession,
             referenceName,
             registeredAt: admin.firestore.FieldValue.serverTimestamp(),
             isApproved: false
@@ -1262,7 +1269,9 @@ app.post('/trainer-participate', [
 
         res.render('trainerConfirmation', {
             trainerEmail: email,
-            mobileNumber: mobileNumber
+            mobileNumber: mobileNumber,
+            city: city,
+            profession: profession
         });
     } catch (error) {
         console.error('Error in trainer-participate route:', error.message, error.stack);
@@ -1274,7 +1283,6 @@ app.post('/trainer-participate', [
         });
     }
 });
-
 // Trainer confirmation page (renders trainerConfirmation.ejs)
 app.get('/trainer-confirmation', (req, res) => {
     res.render('trainerConfirmation', {
@@ -1312,6 +1320,7 @@ app.post('/trainer-login', async (req, res) => {
 });
 
 // Trainer dashboard (renders trainerDashboard.ejs)
+// Trainer dashboard (renders trainerDashboard.ejs)
 app.get('/trainer-dashboard', async (req, res) => {
     try {
         const trainerEmail = req.query.username;
@@ -1321,6 +1330,8 @@ app.get('/trainer-dashboard', async (req, res) => {
                 trainerEmail: '',
                 mobileNumber: '',
                 whatsappNumber: '',
+                city: '',
+                profession: '',
                 referenceName: '',
                 error: 'Please login first',
                 trialTests
@@ -1336,6 +1347,8 @@ app.get('/trainer-dashboard', async (req, res) => {
                 trainerEmail: '',
                 mobileNumber: '',
                 whatsappNumber: '',
+                city: '',
+                profession: '',
                 referenceName: '',
                 error: 'Trainer not found',
                 trialTests
@@ -1351,6 +1364,8 @@ app.get('/trainer-dashboard', async (req, res) => {
             trainerEmail: trainerData.email || '',
             mobileNumber: trainerData.mobileNumber || '',
             whatsappNumber: trainerData.whatsappNumber || '',
+            city: trainerData.city || '',
+            profession: trainerData.profession || '',
             referenceName: trainerData.referenceName || '',
             error: null,
             trialTests
@@ -1362,17 +1377,21 @@ app.get('/trainer-dashboard', async (req, res) => {
             trainerEmail: '',
             mobileNumber: '',
             whatsappNumber: '',
+            city: '',
+            profession: '',
             referenceName: '',
             error: 'Error loading trainer data.',
             trialTests
         });
     }
 });
-
+// Update trainer information
 // Update trainer information
 app.post('/trainer-dashboard/update', [
-    body('mobileNumber').trim().matches(/^\d{10}$/).withMessage('Mobile number must be 10 digits'),
-    body('whatsappNumber').trim().matches(/^\d{10}$/).withMessage('WhatsApp number must be 10 digits'),
+    body('mobileNumber').trim().matches(/^\d{10}$/).notEmpty().withMessage('Mobile number must be 10 digits'),
+    body('whatsappNumber').trim().matches(/^\d{10}$/).notEmpty().withMessage('WhatsApp number must be 10 digits'),
+    body('city').trim().notEmpty().withMessage('City is required'),
+    body('profession').trim().notEmpty().withMessage('Profession is required'),
     body('referenceName').trim().notEmpty().withMessage('Reference name is required')
 ], async (req, res) => {
     try {
@@ -1384,6 +1403,8 @@ app.post('/trainer-dashboard/update', [
                 trainerEmail,
                 mobileNumber: req.body.mobileNumber,
                 whatsappNumber: req.body.whatsappNumber,
+                city: req.body.city,
+                profession: req.body.profession,
                 referenceName: req.body.referenceName,
                 error: errors.array()[0].msg,
                 trialTests
@@ -1394,6 +1415,8 @@ app.post('/trainer-dashboard/update', [
             trainerEmail,
             mobileNumber,
             whatsappNumber,
+            city,
+            profession,
             referenceName
         } = req.body;
 
@@ -1406,6 +1429,8 @@ app.post('/trainer-dashboard/update', [
                 trainerEmail,
                 mobileNumber,
                 whatsappNumber,
+                city,
+                profession,
                 referenceName,
                 error: 'Trainer not found',
                 trialTests
@@ -1416,6 +1441,8 @@ app.post('/trainer-dashboard/update', [
         await db.collection('trainers').doc(trainerId).update({
             mobileNumber,
             whatsappNumber,
+            city,
+            profession,
             referenceName
         });
 
@@ -1427,13 +1454,14 @@ app.post('/trainer-dashboard/update', [
             trainerEmail: req.body.trainerEmail,
             mobileNumber: req.body.mobileNumber,
             whatsappNumber: req.body.whatsappNumber,
+            city: req.body.city,
+            profession: req.body.profession,
             referenceName: req.body.referenceName,
             error: 'Error updating trainer information',
             trialTests
         });
     }
 });
-
 // Participation form (renders participation.ejs)
 app.get('/participation', async (req, res) => {
     try {

@@ -5,13 +5,14 @@ const admin = require('firebase-admin');
 const session = require('express-session');
 require('dotenv').config();
 const { body, validationResult } = require('express-validator');
+const nodemailer = require('nodemailer');
 
 const app = express();
 
 // Set view engine to EJS and specify the views directory
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
-console.log('Views directory set to:', app.get('views')); // Debug: Confirm views directory path
+console.log('Views directory set to:', app.get('views'));
 
 // Disable view cache for development
 app.set('view cache', false);
@@ -21,7 +22,7 @@ app.use(session({
     secret: 'your-secret-key',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 } // Session lasts 24 hours
+    cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
 }));
 
 // Parse JSON for fetch requests
@@ -39,14 +40,16 @@ const trialTests = {
     ]
 };
 
-// Validate environment variables for Firebase
+// Validate environment variables for Firebase and SMTP
 const requiredEnvVars = [
     'FIREBASE_PROJECT_ID',
     'FIREBASE_PRIVATE_KEY_ID',
     'FIREBASE_PRIVATE_KEY',
     'FIREBASE_CLIENT_EMAIL',
     'FIREBASE_CLIENT_ID',
-    'FIREBASE_CLIENT_X509_CERT_URL'
+    'FIREBASE_CLIENT_X509_CERT_URL',
+    'EMAIL_USER',
+    'EMAIL_PASS'
 ];
 const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
 if (missingEnvVars.length > 0) {
@@ -88,6 +91,88 @@ app.use(express.static(path.join(__dirname, '.')));
 // Hardcoded admin credentials
 const ADMIN_USERNAME = 'admin';
 const ADMIN_PASSWORD = 'admin123';
+
+// SMTP Setup for GoDaddy with Debugging
+const transporter = nodemailer.createTransport({
+    host: 'smtp-mail.outlook.com',
+    port: 587,
+    secure: false,
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+     tls: {
+    ciphers: 'SSLv3'
+  },
+    debug: true,
+    logger: true
+});
+
+// Function to send emails
+const sendEmail = async (to, subject, text, html) => {
+    try {
+        const mailOptions = {
+            from: `"Being Lawful" <${process.env.EMAIL_USER}>`,
+            to,
+            subject,
+            text,
+            html
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`Email sent: ${info.messageId}`);
+        return true;
+    } catch (error) {
+        console.error(`Error sending email to ${to}: ${error.message}`);
+        return false;
+    }
+};
+
+// Editable Email Message Templates
+const emailTemplates = {
+    schoolRegistration: {
+        subject: 'Your School Registration - Login Credentials',
+        text: (schoolName, email, password) => 
+            `Dear ${schoolName},\n\nYour school has been registered with Being Lawful.\n\nLogin Credentials:\nUsername: ${email}\nPassword: ${password}\n\nPlease log in to complete your profile setup.\n\nBest regards,\nBeing Lawful Team`,
+        html: (schoolName, email, password) => 
+            `<p>Dear ${schoolName},</p><p>Your school has been registered with Being Lawful.</p><p><strong>Login Credentials:</strong><br>Username: ${email}<br>Password: ${password}</p><p> <strong> Please log in to complete your profile setup. </strong></p><p>Best regards,<br>Being Lawful Team</p>`
+    },
+    schoolApproval: {
+        subject: 'School Approval Confirmation',
+        text: (schoolName) => 
+            `Dear ${schoolName},\n\nWe are pleased to inform you that your school has been approved by Being Lawful.\n\nYou can now proceed with the next steps, such as attending the workshop.\n\nBest regards,\nBeing Lawful Team`,
+        html: (schoolName) => 
+            `<p>Dear ${schoolName},</p><p>We are pleased to inform you that your school has been approved by Being Lawful.</p><p>You can now proceed with the next steps, such as attending the workshop.</p><p>Best regards,<br>Being Lawful Team</p>`
+    },
+    schoolWorkshopReminder: {
+        subject: 'Workshop Day Reminder',
+        text: (schoolName, workshopDate) => 
+            `Dear ${schoolName},\n\nThis is a reminder that today is the workshop day for Being Lawful.\n\nDate: ${workshopDate}\n\nWe look forward to seeing you there!\n\nBest regards,\nBeing Lawful Team`,
+        html: (schoolName, workshopDate) => 
+            `<p>Dear ${schoolName},</p><p>This is a reminder that today is the workshop day for Being Lawful.</p><p><strong>Date:</strong> ${workshopDate}</p><p>We look forward to seeing you there!</p><p>Best regards,<br>Being Lawful Team</p>`
+    },
+    studentRegistration: {
+        subject: 'Student Registration - Login Credentials',
+        text: (studentName, username, password) => 
+            `Dear Parent,\n\nYour child, ${studentName}, has been registered with Being Lawful.\n\nLogin Credentials:\nUsername: ${username}\nPassword: ${password}\n\nPlease log in to access the student portal.\n\nBest regards,\nBeing Lawful Team`,
+        html: (studentName, username, password) => 
+            `<p>Dear Parent,</p><p>Your child, ${studentName}, has been registered with Being Lawful.</p><p><strong>Login Credentials:</strong><br>Username: ${username}<br>Password: ${password}</p><p>Please log in to access the student portal.</p><p>Best regards,<br>Being Lawful Team</p>`
+    },
+    studentCertificate: {
+        subject: 'Congratulations - MCQ Completion and Certificate',
+        text: (studentName, username, percentage) => 
+            `Dear ${studentName},\n\nCongratulations on completing the Main Exam with Being Lawful! You scored ${percentage}%.\n\nView and download your certificate here: https://beinglawful.in/certificate/${username}\n\nWe appreciate your participation and look forward to seeing you at the workshop.\n\nBest regards,\nBeing Lawful Team`,
+        html: (studentName, username, percentage) => 
+            `<p>Dear ${studentName},</p><p>Congratulations on completing the Main Exam with Being Lawful! You scored ${percentage}%.</p><p>View and download your certificate <a href="https://beinglawful.in/certificate/${username}">here</a>.</p><p>We appreciate your participation and look forward to seeing you at the workshop.</p><p>Best regards,<br>Being Lawful Team</p>`
+    },
+    studentWorkshopReminder: {
+        subject: 'Workshop Day Reminder',
+        text: (studentName, workshopDate) => 
+            `Dear ${studentName},\n\nThis is a reminder that today is the workshop day for Being Lawful.\n\nDate: ${workshopDate}\n\nWe look forward to seeing you there!\n\nBest regards,\nBeing Lawful Team`,
+        html: (studentName, workshopDate) => 
+            `<p>Dear ${studentName},</p><p>This is a reminder that today is the workshop day for Being Lawful.</p><p><strong>Date:</strong> ${workshopDate}</p><p>We look forward to seeing you there!</p><p>Best regards,<br>Being Lawful Team</p>`
+    }
+};
 
 // Utility Functions
 
@@ -163,7 +248,7 @@ async function getRandomQuestions(limit = 30) {
     }
 }
 
-// Fetch user by parentMobile1
+// Fetch user by parentMobile1 (username for students)
 async function getUserByParentMobile(parentMobile1) {
     try {
         const snapshot = await db.collection('participants')
@@ -242,6 +327,76 @@ async function calculateIsEventDate(schoolName) {
     return { isEventDate, eventDateMissing };
 }
 
+// Send workshop reminder emails (runs daily)
+const checkAndSendWorkshopEmails = async () => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+
+    // Fetch all schools and their event dates
+    const schoolsSnapshot = await db.collection('schools').where('isApproved', '==', true).get();
+    if (!schoolsSnapshot.empty) {
+        for (const doc of schoolsSnapshot.docs) {
+            const school = doc.data();
+            const schoolName = school.schoolName;
+            const schoolEmail = school.schoolEmail;
+
+            if (school.eventDate && typeof school.eventDate.toDate === 'function') {
+                const eventDate = school.eventDate.toDate();
+                const eventDateString = eventDate.toISOString().split('T')[0];
+
+                if (today === eventDateString) {
+                    const formattedEventDate = eventDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                    await sendEmail(
+                        schoolEmail,
+                        emailTemplates.schoolWorkshopReminder.subject,
+                        emailTemplates.schoolWorkshopReminder.text(schoolName, formattedEventDate),
+                        emailTemplates.schoolWorkshopReminder.html(schoolName, formattedEventDate)
+                    );
+                }
+            }
+        }
+    }
+
+    // Fetch all students who completed MCQ
+    const studentsSnapshot = await db.collection('participants').where('hasCompletedMCQ', '==', true).get();
+    if (!studentsSnapshot.empty) {
+        for (const doc of studentsSnapshot.docs) {
+            const student = doc.data();
+            const studentName = student.studentName;
+            const parentEmail = student.parentEmail;
+            const schoolName = student.schoolNameDropdown;
+
+            const schoolSnapshot = await db.collection('schools')
+                .where('schoolName', '==', schoolName)
+                .get();
+            if (schoolSnapshot.empty) continue;
+
+            const schoolData = schoolSnapshot.docs[0].data();
+            if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
+                const eventDate = schoolData.eventDate.toDate();
+                const eventDateString = eventDate.toISOString().split('T')[0];
+
+                if (today === eventDateString && parentEmail) {
+                    const formattedEventDate = eventDate.toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    });
+                    await sendEmail(
+                        parentEmail,
+                        emailTemplates.studentWorkshopReminder.subject,
+                        emailTemplates.studentWorkshopReminder.text(studentName, formattedEventDate),
+                        emailTemplates.studentWorkshopReminder.html(studentName, formattedEventDate)
+                    );
+                }
+            }
+        }
+    }
+};
+
 // Middleware
 
 // Check admin authentication
@@ -286,7 +441,7 @@ async function checkEventDate(req, res, next) {
 
 // Home route (serves static HTML)
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html')); // Serves index.html
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Login page (renders login.ejs)
@@ -601,6 +756,17 @@ app.post('/submit-mcq', requireStudentAuth, async (req, res) => {
         });
 
         const updatedUser = (await db.collection('participants').doc(userId).get()).data();
+
+        // Send certificate and appreciation email
+        if (updatedUser.parentEmail) {
+            await sendEmail(
+                updatedUser.parentEmail,
+                emailTemplates.studentCertificate.subject,
+                emailTemplates.studentCertificate.text(updatedUser.studentName, parentMobile1, percentage),
+                emailTemplates.studentCertificate.html(updatedUser.studentName, parentMobile1, percentage)
+            );
+        }
+
         const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
 
         res.render('dashboard', {
@@ -1086,6 +1252,16 @@ app.post('/participate', async (req, res) => {
         const [year, month, day] = participant.birthdate.split('-');
         const password = `${day}${month}${year}`;
 
+        // Send student registration email
+        if (participant.parentEmail) {
+            await sendEmail(
+                participant.parentEmail,
+                emailTemplates.studentRegistration.subject,
+                emailTemplates.studentRegistration.text(participant.studentName, participant.parentMobile1, password),
+                emailTemplates.studentRegistration.html(participant.studentName, participant.parentMobile1, password)
+            );
+        }
+
         res.render('studentConfirmation', {
             studentName: participant.studentName,
             username: participant.parentMobile1,
@@ -1169,7 +1345,14 @@ app.post('/school-participate', [
             selectedResources: []
         });
 
-        // Render confirmation page with login credentials
+        // Send school registration email
+        await sendEmail(
+            schoolEmail,
+            emailTemplates.schoolRegistration.subject,
+            emailTemplates.schoolRegistration.text(schoolName, schoolEmail, principalNumber),
+            emailTemplates.schoolRegistration.html(schoolName, schoolEmail, principalNumber)
+        );
+
         res.render('confirmation', {
             schoolEmail: schoolEmail,
             principalNumber: principalNumber
@@ -1187,7 +1370,6 @@ app.post('/school-participate', [
 
 // Confirmation page (renders confirmation.ejs)
 app.get('/confirmation', (req, res) => {
-    // If accessed directly without credentials, show a generic message
     res.render('confirmation', {
         schoolEmail: 'Not provided',
         principalNumber: 'Not provided'
@@ -1203,7 +1385,7 @@ app.get('/school-students', async (req, res) => {
         }
 
         const snapshot = await db.collection('participants')
-            .where('schoolName', '==', schoolName)
+            .where('schoolNameDropdown', '==', schoolName)
             .get();
         const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -1247,7 +1429,7 @@ app.get('/admin', requireAdmin, async (req, res) => {
                 id: doc.id,
                 ...data,
                 eventDate: data.eventDate ? data.eventDate.toDate().toISOString().split('T')[0] : null,
-                eventDates: data.eventDates || [] // Ensure eventDates is passed
+                eventDates: data.eventDates || []
             };
         });
 
@@ -1271,15 +1453,12 @@ app.get('/admin', requireAdmin, async (req, res) => {
             };
         });
 
-        // Prepare data for visualization
-        // 1. School Status Counts
         const schoolStatusData = {
             pending: pendingSchools.length,
             approved: approvedSchools.length,
             scheduled: scheduledSchools.length
         };
 
-        // 2. Participants per School
         const participantsPerSchool = {};
         participants.forEach(participant => {
             const schoolName = participant.schoolNameDropdown || 'Unknown';
@@ -1288,8 +1467,7 @@ app.get('/admin', requireAdmin, async (req, res) => {
         const participantsPerSchoolLabels = Object.keys(participantsPerSchool);
         const participantsPerSchoolValues = Object.values(participantsPerSchool);
 
-        // 3. Average Scores
-        const completedParticipants = participants.filter(p => p.percentage !== 0); // Only those who completed MCQ
+        const completedParticipants = participants.filter(p => p.percentage !== 0);
         const avgTrial1 = completedParticipants.length > 0
             ? Math.round(completedParticipants.reduce((sum, p) => sum + (parseFloat(p.trial1Percentage) || 0), 0) / completedParticipants.length)
             : 0;
@@ -1334,10 +1512,25 @@ app.post('/admin/approve-and-schedule/:schoolId', requireAdmin, async (req, res)
         if (isNaN(parsedDate.getTime())) {
             return res.status(400).send('Invalid event date format.');
         }
-        await db.collection('schools').doc(schoolId).update({
+
+        const schoolRef = db.collection('schools').doc(schoolId);
+        const schoolDoc = await schoolRef.get();
+        const schoolData = schoolDoc.data();
+        const schoolName = schoolData.schoolName;
+        const schoolEmail = schoolData.schoolEmail;
+
+        await schoolRef.update({
             isApproved: true,
             eventDate: admin.firestore.Timestamp.fromDate(parsedDate)
         });
+
+        await sendEmail(
+            schoolEmail,
+            emailTemplates.schoolApproval.subject,
+            emailTemplates.schoolApproval.text(schoolName),
+            emailTemplates.schoolApproval.html(schoolName)
+        );
+
         res.redirect('/admin');
     } catch (error) {
         console.error('Error in approve-and-schedule route:', error.message, error.stack);
@@ -1349,7 +1542,21 @@ app.post('/admin/approve-and-schedule/:schoolId', requireAdmin, async (req, res)
 app.post('/admin/approve-school/:schoolId', requireAdmin, async (req, res) => {
     try {
         const schoolId = req.params.schoolId;
-        await db.collection('schools').doc(schoolId).update({ isApproved: true });
+        const schoolRef = db.collection('schools').doc(schoolId);
+        const schoolDoc = await schoolRef.get();
+        const schoolData = schoolDoc.data();
+        const schoolName = schoolData.schoolName;
+        const schoolEmail = schoolData.schoolEmail;
+
+        await schoolRef.update({ isApproved: true });
+
+        await sendEmail(
+            schoolEmail,
+            emailTemplates.schoolApproval.subject,
+            emailTemplates.schoolApproval.text(schoolName),
+            emailTemplates.schoolApproval.html(schoolName)
+        );
+
         res.redirect('/admin');
     } catch (error) {
         console.error('Error in approve-school route:', error.message, error.stack);
@@ -1369,9 +1576,11 @@ app.post('/admin/assign-event-date/:schoolId', requireAdmin, async (req, res) =>
         if (isNaN(parsedDate.getTime())) {
             return res.status(400).send('Invalid event date format.');
         }
+
         await db.collection('schools').doc(schoolId).update({
             eventDate: admin.firestore.Timestamp.fromDate(parsedDate)
         });
+
         res.redirect('/admin');
     } catch (error) {
         console.error('Error in assign-event-date route:', error.message, error.stack);
@@ -1379,30 +1588,67 @@ app.post('/admin/assign-event-date/:schoolId', requireAdmin, async (req, res) =>
     }
 });
 
-// Admin logout
-app.get('/admin/logout', requireAdmin, (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            console.error('Error destroying session:', err);
-            return res.status(500).send('Error logging out.');
-        }
-        res.redirect('/admin-login');
-    });
+// Delete school
+app.post('/admin/delete-school/:schoolId', requireAdmin, async (req, res) => {
+    try {
+        const schoolId = req.params.schoolId;
+        await db.collection('schools').doc(schoolId).delete();
+        res.redirect('/admin');
+    } catch (error) {
+        console.error('Error in delete-school route:', error.message, error.stack);
+        res.status(500).send('Error deleting school.');
+    }
 });
 
-// Student logout
+// Delete participant
+app.post('/admin/delete-participant/:participantId', requireAdmin, async (req, res) => {
+    try {
+        const participantId = req.params.participantId;
+        await db.collection('participants').doc(participantId).delete();
+        res.redirect('/admin');
+    } catch (error) {
+        console.error('Error in delete-participant route:', error.message, error.stack);
+        res.status(500).send('Error deleting participant.');
+    }
+});
+
+// Logout (for admin and student)
 app.get('/logout', (req, res) => {
-    req.session.destroy(err => {
+    req.session.destroy((err) => {
         if (err) {
-            console.error('Error destroying session:', err);
+            console.error('Error destroying session:', err.message, err.stack);
             return res.status(500).send('Error logging out.');
         }
         res.redirect('/login');
     });
 });
 
+// Test email route
+app.get('/test-email', async (req, res) => {
+    try {
+        const success = await sendEmail(
+            'adityasharma3819@gmail.com',
+            'Test Email from Being Lawful',
+            'This is a test email sent from Being Lawful.',
+            '<p>This is a test email sent from <b>Being Lawful</b>.</p>'
+        );
+        if (success) {
+            res.send('Test email sent successfully.');
+        } else {
+            res.status(500).send('Failed to send test email.');
+        }
+    } catch (error) {
+        console.error('Error in test-email route:', error.message, error.stack);
+        res.status(500).send(`Error sending test email: ${error.message}`);
+    }
+});
+
 // Start the server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
+
+    // Schedule daily email reminders
+    setInterval(checkAndSendWorkshopEmails, 24 * 60 * 60 * 1000); // Run daily
+    checkAndSendWorkshopEmails(); // Run immediately on startup
 });

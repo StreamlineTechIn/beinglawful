@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certificate</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -44,42 +44,41 @@
             padding: 20px;
             width: calc(100% - 250px);
         }
-        .container {
-            max-width: 800px;
+        .certificate {
+            max-width: 600px; /* Adjust based on your image size */
             margin: 0 auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
             text-align: center;
         }
-        h1 {
-            color: #333;
+        .certificate img {
+            width: 100%;
+            height: auto;
+            display: block;
         }
-        .certificate {
-            border: 2px solid #3498db;
-            padding: 20px;
-            margin-top: 20px;
-            border-radius: 5px;
+        .certificate-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #000;
+            pointer-events: none; /* Ensure content doesn't interfere with download */
         }
-        .certificate h2 {
-            color: #2c3e50;
-            font-size: 2em;
-            margin-bottom: 10px;
+        .certificate-content p {
+            margin: 5px 0;
+            font-size: 1.5em;
         }
-        .certificate p {
-            font-size: 1.1em;
-            color: #555;
-            margin: 10px 0;
-        }
-        .certificate .score {
+        .certificate-content .name {
             font-weight: bold;
-            color: #3498db;
-            font-size: 1.2em;
+            font-size: 1.5em;
         }
-        .certificate .date {
-            font-style: italic;
-            color: #777;
+        .certificate-content .marks {
+
+            font-size: 1em;
         }
         .download-btn {
             margin-top: 20px;
@@ -97,7 +96,6 @@
     </style>
 </head>
 <body>
-    <!-- Left Sidebar -->
     <div class="sidebar">
         <h2>Student Portal</h2>
         <a href="/dashboard/<%= parentMobile1 %>">Dashboard</a>
@@ -106,18 +104,16 @@
         <a href="/logout">Logout</a>
     </div>
 
-    <!-- Main Content -->
     <div class="main-content">
-        <div class="container" id="certificate-container">
-            <h1>Your Certificate</h1>
+        <div id="certificate-container">
             <div class="certificate">
-                <h2>Certificate of Achievement</h2>
-                <p>This is to certify that</p>
-                <p><strong><%= studentName %></strong></p>
-                <p>from <strong><%= schoolName %></strong></p>
-                <p>has successfully completed the Main Exam</p>
-                <p>with a score of <span class="score"><%= percentage %>%</span></p>
-                <p class="date">Completed on: <%= completedAt %></p>
+                <img src="../Assets/Certificate.png" alt="Certificate Image">
+                <div class="certificate-content">
+                    <br><br><br><br><br>
+                    <p class="name"><strong><%= studentName %></strong></p>
+                    <br>
+                    <p class="marks"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  <%= percentage %> % </p>
+                </div>
             </div>
             <a class="download-btn" onclick="downloadCertificate()">Download Certificate</a>
         </div>
@@ -125,15 +121,17 @@
 
     <script>
         function downloadCertificate() {
-            const element = document.getElementById('certificate-container');
-            const options = {
-                margin: 0.5,
-                filename: `Certificate_${'<%= studentName %>'}.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2 },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-            html2pdf().from(element).set(options).save();
+            const element = document.querySelector('.certificate');
+            html2canvas(element, { 
+                scale: 2,
+                useCORS: true,
+                backgroundColor: null // Remove white background
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Certificate_${'<%= studentName %>'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
         }
     </script>
 </body>

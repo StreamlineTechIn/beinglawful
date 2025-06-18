@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script>
+        function openTab(tabName) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.add('hidden'));
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('bg-blue-600', 'text-white');
+                tab.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            document.getElementById(tabName).classList.remove('hidden');
+            const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
+            activeTab.classList.remove('bg-gray-200', 'text-gray-700');
+            activeTab.classList.add('bg-blue-600', 'text-white');
+        }
+
+        function applyFilters(tableId) {
+            const table = document.getElementById(tableId);
+            const rows = table.querySelectorAll('tbody tr');
+            const filters = {};
+
+            // Collect filter values
+            table.querySelectorAll('.filter-select').forEach(select => {
+                filters[select.dataset.column] = select.value.trim();
+            });
+
+            // Reset all rows to visible
+            rows.forEach(row => {
+                row.style.display = '';
+            });
+
+            // Apply filters
+            rows.forEach(row => {
+                let show = true;
+                for (const [column, value] of Object.entries(filters)) {
+                    if (value && value !== 'All' && value !== '') {
+                        const cell = row.querySelector(`td[data-column="${column}"]`);
+                        if (cell) {
+                            let cellText = cell.textContent.trim();
+                            if (cellText !== value) {
+                                show = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        function initializeFilters(tableId) {
+            const table = document.getElementById(tableId);
+            const headers = table.querySelectorAll('th[data-filter]');
+            const rows = table.querySelectorAll('tbody tr');
+
+            headers.forEach(header => {
+                const column = header.dataset.filter;
+                const select = header.querySelector('.filter-select');
+                
+                // Collect unique values for this column
+                const values = new Set(['All']);
+                rows.forEach(row => {
+                    const cell = row.querySelector(`td[data-column="${column}"]`);
+                    if (cell) {
+                        let cellText = cell.textContent.trim();
+                        if (cellText && !values.has(cellText)) {
+                            values.add(cellText);
+                        }
+                    }
+                });
+
+                // Populate dropdown and set "All" as default
+                select.innerHTML = '';
+                let isAllSet = false;
+                [...values].sort().forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    if (value === 'All' && !isAllSet) {
+                        option.selected = true;
+                        isAllSet = true;
+                    }
+                    select.appendChild(option);
+                });
+
+                // Add event listener for filter change
+                select.addEventListener('change', () => applyFilters(tableId));
+            });
+        }
+
+        window.onload = function() {
+            openTab('visualization');
+
+            // Initialize filters for all tables
+            ['not-approved', 'approved-no-date', 'approved-with-date', 'trainers', 'students'].forEach(tableId => {
+                initializeFilters(tableId);
+            });
+
+            // District-wise chart
+            const districtData = <%- JSON.stringify(
+                schools ? schools.reduce((acc, school) => {
+                    acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
+                    acc[school.district].schools += 1;
+                    acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
+                    acc[school.district].trainers += (school.assignedTrainerId ? 1 : 0);
+                    return acc;
+                }, {}) : {}
+            ) %>;
+            const districtChart = new Chart(document.getElementById('districtChart'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(districtData),
+                    datasets: [
+                        {
+                            label: 'Schools',
+                            data: Object.values(districtData).map(d => d.schools),
+                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        },
+                        {
+                            label: 'Students',
+                            data: Object.values(districtData).map(d => d.students),
+                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+                        },
+                        {
+                            label: 'Trainers',
+                            data: Object.values(districtData).map(d => d.trainers),
+                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+                        }
+                    ]
+                },
+                options: {
+                    scales: {
+                        y: { beginAtZero: true },
+                        x: { stacked: false }
+                    }
+                }
+            });
+
+            // Profession-wise trainer pie chart
+            const professionData = <%- JSON.stringify(
+                trainers ? trainers.reduce((acc, trainer) => {
+                    acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
+                    return acc;
+                }, {}) : {}
+            ) %>;
+            const professionChart = new Chart(document.getElementById('professionChart'), {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(professionData),
+                    datasets: [{
+                        data: Object.values(professionData),
+                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { position: 'top' } }
+                }
+            });
+        };
+    </script>
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="container mx-auto p-6">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Admin Dashboard</h1>
+
+        <% if (error) { %>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
+                <strong class="font-bold">Error:</strong>
+                <span class="block sm:inline"><%= error %></span>
+            </div>
+        <% } %>
+
+        <div class="flex border-b border-gray-300 mb-6 overflow-x-auto">
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('visualization')">Visualization</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('schools')">Schools</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('trainers')">Trainers</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('students')">Students</button>
+        </div>
+
+        <div id="visualization" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Overview</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600">Total Schools</h3>
+                    <p class="text-2xl font-bold text-blue-600"><%= schools ? schools.length : 0 %></p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600">Total Trainers</h3>
+                    <p class="text-2xl font-bold text-blue-600"><%= trainers ? trainers.length : 0 %></p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600">Total Students</h3>
+                    <p class="text-2xl font-bold text-blue-600"><%= participants ? participants.length : 0 %></p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600">Approved Schools</h3>
+                    <p class="text-2xl font-bold text-blue-600"><%= schools ? schools.filter(s => s.isApproved).length : 0 %></p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600">Students Participated</h3>
+                    <p class="text-2xl font-bold text-blue-600"><%= participants ? participants.length : 0 %></p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600">Students Appeared for Exam</h3>
+                    <p class="text-2xl font-bold text-blue-600"><%= participants ? participants.filter(p => p.hasCompletedMCQ).length : 0 %></p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600">Average Score</h3>
+                    <p class="text-2xl font-bold text-blue-600">
+                        <%= participants && participants.filter(p => p.hasCompletedMCQ).length > 0
+                            ? (participants.filter(p => p.hasCompletedMCQ).reduce((sum, p) => sum + (p.score || 0), 0) / participants.filter(p => p.hasCompletedMCQ).length).toFixed(2)
+                            : 'N/A' %>
+                    </p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600 mb-2">District-wise Distribution</h3>
+                    <canvas id="districtChart"></canvas>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600 mb-2">Profession-wise Trainers</h3>
+                    <canvas id="professionChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="schools" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Schools</h2>
+
+            <% if (schools && schools.length > 0) { %>
+                <!-- Table 1: Schools Not Approved -->
+                <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Not Approved</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table id="not-approved" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Assigned Trainer ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% schools.filter(school => !school.isApproved).forEach(school => { %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">
+                                        <%= school.eventDate ? new Date(school.eventDate).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">No</td>
+                                    <td class="py-2 px-4 border-b">
+                                        <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+                                            <form action="/approve-school/<%= school.id %>" method="POST" class="inline">
+                                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded">Approve</button>
+                                            </form>
+                                            <form action="/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
+                                                <select name="eventDate" required class="border rounded py-1 px-2 mr-2 text-gray-700">
+                                                    <option value="">Select Event Date</option>
+                                                    <% if (school.eventDates && school.eventDates.length > 0) { %>
+                                                        <% school.eventDates.forEach(date => { %>
+                                                            <% let validDate = new Date(date); %>
+                                                            <% if (!isNaN(validDate.getTime())) { %>
+                                                                <% let eventDateStr = school.eventDate ? (new Date(school.eventDate).toISOString().split('T')[0]) : null; %>
+                                                                <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>><%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></option>
+                                                            <% } %>
+                                                        <% }) %>
+                                                    <% } else { %>
+                                                        <option value="" disabled>No dates available</option>
+                                                    <% } %>
+                                                </select>
+                                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
+                                            </form>
+                                            <form action="/assign-trainer/<%= school.id %>" method="POST" class="inline">
+                                                <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700">
+                                                    <option value="">Select Trainer</option>
+                                                    <% trainers.forEach(trainer => { %>
+                                                        <% if (trainer.isApproved) { %>
+                                                            <option value="<%= trainer.id %>" <%= school.assignedTrainerId === trainer.id ? 'selected' : '' %>><%= trainer.trainerName %> (<%= trainer.city %>)</option>
+                                                        <% } %>
+                                                    <% }) %>
+                                                </select>
+                                                <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Trainer</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= school.registeredAt ? new Date(school.registeredAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.assignedTrainerId || 'None' %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Table 2: Schools Approved but No Date Assigned -->
+                <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved, No Event Date</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table id="approved-no-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Assigned Trainer ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% schools.filter(school => school.isApproved && !school.eventDate).forEach(school => { %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">Not assigned</td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
+                                    <td class="py-2 px-4 border-b">
+                                        <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+                                            <form action="/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
+                                                <select name="eventDate" required class="border rounded py-1 px-2 mr-2 text-gray-700">
+                                                    <option value="">Select Event Date</option>
+                                                    <% if (school.eventDates && school.eventDates.length > 0) { %>
+                                                        <% school.eventDates.forEach(date => { %>
+                                                            <% let validDate = new Date(date); %>
+                                                            <% if (!isNaN(validDate.getTime())) { %>
+                                                                <% let eventDateStr = school.eventDate ? (new Date(school.eventDate).toISOString().split('T')[0]) : null; %>
+                                                                <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>><%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></option>
+                                                            <% } %>
+                                                        <% }) %>
+                                                    <% } else { %>
+                                                        <option value="" disabled>No dates available</option>
+                                                    <% } %>
+                                                </select>
+                                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
+                                            </form>
+                                            <form action="/assign-trainer/<%= school.id %>" method="POST" class="inline">
+                                                <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700">
+                                                    <option value="">Select Trainer</option>
+                                                    <% trainers.forEach(trainer => { %>
+                                                        <% if (trainer.isApproved) { %>
+                                                            <option value="<%= trainer.id %>" <%= school.assignedTrainerId === trainer.id ? 'selected' : '' %>><%= trainer.trainerName %> (<%= trainer.city %>)</option>
+                                                        <% } %>
+                                                    <% }) %>
+                                                </select>
+                                                <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Trainer</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= school.registeredAt ? new Date(school.registeredAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.assignedTrainerId || 'None' %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Table 3: Schools Approved and Date Assigned -->
+                <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved and Event Date Assigned</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table id="approved-with-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Assigned Trainer ID</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% schools.filter(school => school.isApproved && school.eventDate).forEach(school => { %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">
+                                        <%= school.eventDate ? new Date(school.eventDate).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
+                                    <td class="py-2 px-4 border-b">
+                                        <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+                                            <form action="/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
+                                                <select name="eventDate" required class="border rounded py-1 px-2 mr-2 text-gray-700">
+                                                    <option value="">Select Event Date</option>
+                                                    <% if (school.eventDates && school.eventDates.length > 0) { %>
+                                                        <% school.eventDates.forEach(date => { %>
+                                                            <% let validDate = new Date(date); %>
+                                                            <% if (!isNaN(validDate.getTime())) { %>
+                                                                <% let eventDateStr = school.eventDate ? (new Date(school.eventDate).toISOString().split('T')[0]) : null; %>
+                                                                <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>><%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></option>
+                                                            <% } %>
+                                                        <% }) %>
+                                                    <% } else { %>
+                                                        <option value="" disabled>No dates available</option>
+                                                    <% } %>
+                                                </select>
+                                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
+                                            </form>
+                                            <form action="/assign-trainer/<%= school.id %>" method="POST" class="inline">
+                                                <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700">
+                                                    <option value="">Select Trainer</option>
+                                                    <% trainers.forEach(trainer => { %>
+                                                        <% if (trainer.isApproved) { %>
+                                                            <option value="<%= trainer.id %>" <%= school.assignedTrainerId === trainer.id ? 'selected' : '' %>><%= trainer.trainerName %> (<%= trainer.city %>)</option>
+                                                        <% } %>
+                                                    <% }) %>
+                                                </select>
+                                                <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Trainer</button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= school.registeredAt ? new Date(school.registeredAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.assignedTrainerId || 'None' %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <p class="text-gray-700">No schools registered yet.</p>
+            <% } %>
+        </div>
+
+        <div id="trainers" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Trainers</h2>
+            <% if (trainers && trainers.length > 0) { %>
+                <div class="overflow-x-auto">
+                    <table id="trainers" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainerName">Name<br><select class="filter-select text-sm w-full" data-column="trainerName"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="email">Email<br><select class="filter-select text-sm w-full" data-column="email"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="profession">Profession<br><select class="filter-select text-sm w-full" data-column="profession"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Mobile Number</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">WhatsApp Number</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Reference Name</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% trainers.forEach(trainer => { %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= trainer.id %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainerName"><%= trainer.trainerName %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="email"><%= trainer.email %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= trainer.city %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="profession"><%= trainer.profession %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= trainer.mobileNumber || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= trainer.whatsappNumber || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= trainer.referenceName || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= trainer.registeredAt ? new Date(trainer.registeredAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">
+                                        <%= trainer.isApproved ? 'Yes' : 'No' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b">
+                                        <% if (!trainer.isApproved) { %>
+                                            <form action="/approve-trainer/<%= trainer.id %>" method="POST" class="inline">
+                                                <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded">Approve</button>
+                                            </form>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <p class="text-gray-700">No trainers registered yet.</p>
+            <% } %>
+        </div>
+
+        <div id="students" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Students</h2>
+            <% if (participants && participants.length > 0) { %>
+                <div class="overflow-x-auto">
+                    <table id="students" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">Name<br><select class="filter-select text-sm w-full" data-column="studentName"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolNameDropdown">School<br><select class="filter-select text-sm w-full" data-column="schoolNameDropdown"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentClass">Class<br><select class="filter-select text-sm w-full" data-column="studentClass"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="parentEmail">Parent Email<br><select class="filter-select text-sm w-full" data-column="parentEmail"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 1</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 2</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Address</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Pincode</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Birthdate</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="hasCompletedMCQ">MCQ Completed<br><select class="filter-select text-sm w-full" data-column="hasCompletedMCQ"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Score</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Total Questions</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Percentage</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Completed At</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Completed</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Completed</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Correct Answers</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Wrong Answers</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Score</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Total</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 %</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Correct</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Wrong</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Score</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Total</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 %</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Correct</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Wrong</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% participants.forEach(participant => { %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= participant.id %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="studentName"><%= participant.studentName %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolNameDropdown"><%= participant.schoolNameDropdown %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="studentClass"><%= participant.studentClass %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="parentEmail"><%= participant.parentEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile1 || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile2 || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.address || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= participant.city || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.pincode || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.birthdate ? new Date(participant.birthdate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' }) : 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="hasCompletedMCQ">
+                                        <%= participant.hasCompletedMCQ ? 'Yes' : 'No' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= participant.hasCompletedMCQ ? `${participant.score}/${participant.totalQuestions}` : 'N/A' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= participant.totalQuestions || 'N/A' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= participant.percentage ? `${participant.percentage}%` : 'N/A' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= participant.completedAt ? new Date(participant.completedAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= participant.hasCompletedTrial1 ? 'Yes' : 'No' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= participant.hasCompletedTrial2 ? 'Yes' : 'No' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.correctAnswers || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.wrongAnswers || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1Score || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1TotalQuestions || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1Percentage ? `${participant.trial1Percentage}%` : 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1CorrectAnswers || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1WrongAnswers || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2Score || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2TotalQuestions || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2Percentage ? `${participant.trial2Percentage}%` : 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2CorrectAnswers || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2WrongAnswers || 'N/A' %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <p class="text-gray-700">No students registered yet.</p>
+            <% } %>
+        </div>
+
+        <div class="flex justify-center mt-6">
+            <a href="/admin-logout" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-6 rounded shadow-md focus:outline-none focus:shadow-outline">
+                Logout
+            </a>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -92,6 +92,14 @@
         }
         table tr:nth-child(even) {
             background-color: #f9f9f9;
+        }
+        /* Filter Styles */
+        .filter-select {
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
         }
         /* Edit Form */
         .edit-form label {
@@ -221,30 +229,30 @@
             <!-- Student Data Tab -->
             <div id="student-data" class="tab-content">
                 <% if (students.length > 0) { %>
-                    <table>
+                    <table id="studentTable">
                         <thead>
                             <tr>
-                                <th>Student Name</th>
-                                <th>Class</th>
-                                <th>Trial 1 (%)</th>
-                                <th>Trial 2 (%)</th>
-                                <th>MCQ Completed</th>
-                                <th>MCQ Score</th>
-                                <th>MCQ Percentage</th>
-                                <th>Completed At</th>
+                                <th data-filter="studentName">Student Name<br><select class="filter-select" data-column="studentName" onchange="applyFilters('studentTable')"></select></th>
+                                <th data-filter="studentClass">Class<br><select class="filter-select" data-column="studentClass" onchange="applyFilters('studentTable')"></select></th>
+                                <th data-filter="trial1Percentage">Trial 1 (%)<br><select class="filter-select" data-column="trial1Percentage" onchange="applyFilters('studentTable')"></select></th>
+                                <th data-filter="trial2Percentage">Trial 2 (%)<br><select class="filter-select" data-column="trial2Percentage" onchange="applyFilters('studentTable')"></select></th>
+                                <th data-filter="hasCompletedMCQ">MCQ Completed<br><select class="filter-select" data-column="hasCompletedMCQ" onchange="applyFilters('studentTable')"></select></th>
+                                <th data-filter="score">MCQ Score<br><select class="filter-select" data-column="score" onchange="applyFilters('studentTable')"></select></th>
+                                <th data-filter="percentage">MCQ Percentage<br><select class="filter-select" data-column="percentage" onchange="applyFilters('studentTable')"></select></th>
+                                <th data-filter="completedAt">Completed At<br><select class="filter-select" data-column="completedAt" onchange="applyFilters('studentTable')"></select></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <% students.forEach(student => { %>
+                            <% students.sort((a, b) => (b.score || 0) - (a.score || 0)).forEach(student => { %>
                                 <tr>
-                                    <td><%= student.studentName %></td>
-                                    <td><%= student.studentClass %></td>
-                                    <td><%= student.trial1Percentage %></td>
-                                    <td><%= student.trial2Percentage %></td>
-                                    <td><%= student.hasCompletedMCQ ? 'Yes' : 'No' %></td>
-                                    <td><%= student.score %> / <%= student.totalQuestions %></td>
-                                    <td><%= student.percentage %>%</td>
-                                    <td><%= student.completedAt %></td>
+                                    <td data-column="studentName"><%= student.studentName %></td>
+                                    <td data-column="studentClass"><%= student.studentClass %></td>
+                                    <td data-column="trial1Percentage"><%= student.trial1Percentage %></td>
+                                    <td data-column="trial2Percentage"><%= student.trial2Percentage %></td>
+                                    <td data-column="hasCompletedMCQ"><%= student.hasCompletedMCQ ? 'Yes' : 'No' %></td>
+                                    <td data-column="score"><%= student.score %> / <%= student.totalQuestions %></td>
+                                    <td data-column="percentage"><%= student.percentage %>%</td>
+                                    <td data-column="completedAt"><%= student.completedAt %></td>
                                 </tr>
                             <% }) %>
                         </tbody>
@@ -307,6 +315,82 @@
             document.getElementById(tabId).classList.add('active');
             // Add active class to the clicked tab button
             document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`).classList.add('active');
+
+            // Initialize filters when student-data tab is opened
+            if (tabId === 'student-data') {
+                initializeFilters('studentTable');
+            }
+        }
+
+        function initializeFilters(tableId) {
+            const table = document.getElementById(tableId);
+            const headers = table.querySelectorAll('th[data-filter]');
+            const rows = table.querySelectorAll('tbody tr');
+
+            headers.forEach(header => {
+                const column = header.dataset.filter;
+                const select = header.querySelector('.filter-select');
+                
+                // Collect unique values for this column
+                const values = new Set(['All']);
+                rows.forEach(row => {
+                    const cell = row.querySelector(`td[data-column="${column}"]`);
+                    if (cell) {
+                        let cellText = cell.textContent.trim();
+                        if (cellText && !values.has(cellText)) {
+                            values.add(cellText);
+                        }
+                    }
+                });
+
+                // Populate dropdown and set "All" as default
+                select.innerHTML = '';
+                let isAllSet = false;
+                [...values].sort().forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    if (value === 'All' && !isAllSet) {
+                        option.selected = true;
+                        isAllSet = true;
+                    }
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function applyFilters(tableId) {
+            const table = document.getElementById(tableId);
+            const rows = table.querySelectorAll('tbody tr');
+            const filters = {};
+
+            // Collect filter values
+            table.querySelectorAll('.filter-select').forEach(select => {
+                filters[select.dataset.column] = select.value.trim();
+            });
+
+            // Reset all rows to visible
+            rows.forEach(row => {
+                row.style.display = '';
+            });
+
+            // Apply filters
+            rows.forEach(row => {
+                let show = true;
+                for (const [column, value] of Object.entries(filters)) {
+                    if (value && value !== 'All' && value !== '') {
+                        const cell = row.querySelector(`td[data-column="${column}"]`);
+                        if (cell) {
+                            let cellText = cell.textContent.trim();
+                            if (cellText !== value) {
+                                show = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                row.style.display = show ? '' : 'none';
+            });
         }
     </script>
 </body>

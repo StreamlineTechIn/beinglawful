@@ -98,13 +98,14 @@ const ADMIN_PASSWORD = 'admin123';
 
 // Email setup
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp-mail.outlook.com', // As per the image
+    port: 587,                    // Matches the image's SMTP port
+    secure: false,                // false for STARTTLS on port 587
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     }
 });
-
 // Email templates
 const emailTemplates = {
     schoolRegistration: {

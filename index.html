@@ -678,91 +678,91 @@
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="300">
       <img src="./Assets/Activities/Activity1.jpg" alt="Activity 1" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 1</span>
+        <span class="gallery-title">Being Lawful's First Workshop</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="350">
       <img src="./Assets/Activities/Activity2.jpg" alt="Activity 2" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 2</span>
+        <span class="gallery-title">Students Writing About Local Issues</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="400">
       <img src="./Assets/Activities/Activity3.jpg" alt="Activity 3" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 3</span>
+        <span class="gallery-title">Being Lawful Workshop Activity</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="450">
       <img src="./Assets/Activities/Activity4.jpg" alt="Activity 4" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 4</span>
+        <span class="gallery-title">Workshop Conducted by the Author</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="500">
       <img src="./Assets/Activities/Activity5.jpg" alt="Activity 5" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 5</span>
+        <span class="gallery-title">Workshop Group Activity</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="550">
       <img src="./Assets/Activities/Activity6.jpg" alt="Activity 6" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 6</span>
+        <span class="gallery-title">Workshop Setup and Arrangements</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="600">
       <img src="./Assets/Activities/Activity7.jpg" alt="Activity 7" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 7</span>
+        <span class="gallery-title">Being Lawful Book Display</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="650">
       <img src="./Assets/Activities/Activity8.jpg" alt="Activity 8" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 8</span>
+        <span class="gallery-title">Workshop Kit Arrangement</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="700">
       <img src="./Assets/Activities/Activity9.jpg" alt="Activity 9" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 9</span>
+        <span class="gallery-title">Student Gift Crafting Activity</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="750">
       <img src="./Assets/Activities/Activity10.jpg" alt="Activity 10" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 10</span>
+        <span class="gallery-title">Gifts for Being Lawful Champions</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="800">
       <img src="./Assets/Activities/Activity11.jpg" alt="Activity 11" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 11</span>
+        <span class="gallery-title">Author with Principal of Lord Ganesha School</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="850">
       <img src="./Assets/Activities/Activity12.jpg" alt="Activity 12" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 12</span>
+        <span class="gallery-title">Being Lawful Group Activity</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="900">
       <img src="./Assets/Activities/Activity13.jpg" alt="Activity 13" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 13</span>
+        <span class="gallery-title">Students Participating in Being Lawful</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="950">
       <img src="./Assets/Activities/Activity14.jpg" alt="Activity 14" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 14</span>
+        <span class="gallery-title">Online Trainer Orientation Session</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
       <img src="./Assets/Activities/Activity15.jpg" alt="Activity 15" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Activity 15</span>
+        <span class="gallery-title">Being Lawful Online Game in School Computer Lab</span>
       </div>
     </div>
   </div>
@@ -882,7 +882,6 @@
   function disableDevTools(event) {
     if (event.key === 'F12' || event.key === 'f12' || (event.ctrlKey && event.shiftKey && event.key === 'I') || (event.ctrlKey && event.key === 'U')) {
       event.preventDefault();
-      alert('Developer tools are disabled on this website.');
       return false;
     }
   }
@@ -890,13 +889,12 @@
   // Disable screenshot (basic prevention, note limitations)
   document.addEventListener('visibilitychange', function() {
     if (document.hidden) {
-      alert('Screenshot capture is disabled on this website.');
+      // Removed alert
     }
   });
 
   // Modal functions
   function openModal(imgElement) {
-    alert('Image clicked: ' + imgElement.src); // Debug: Confirm click
     const modal = document.getElementById('imageModal');
     const modalImg = document.getElementById('modalImage');
     modalImg.src = imgElement.src;
@@ -904,12 +902,11 @@
     modal.classList.add('active');
 
     modalImg.onload = function() {
-      alert('Image loaded: ' + modalImg.src); // Debug: Confirm load
       modal.style.display = 'flex';
     };
 
     modalImg.onerror = function() {
-      alert('Failed to load image: ' + imgElement.src); // Debug: Image load failure
+      // Removed alert
     };
   }
 

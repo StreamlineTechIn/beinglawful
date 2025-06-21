@@ -1439,8 +1439,8 @@ app.get('/admin', requireAdmin, async (req, res) => {
 // Admin dashboard (renders adminDashboard.ejs)
 app.get('/admin-dashboard', requireAdmin, async (req, res) => {
     try {
-        const today = new Date('2025-06-18'); // Set to current date: June 18, 2025
-        today.setHours(0, 0, 0, 0); // Normalize to start of day
+        const today = new Date('2025-06-18');
+        today.setHours(0, 0, 0, 0);
 
         const [schoolsSnapshot, trainersSnapshot, participantsSnapshot] = await Promise.all([
             db.collection('schools').get(),
@@ -1448,7 +1448,6 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             db.collection('participants').get(),
         ]);
 
-        // Filter and map schools
         const schools = schoolsSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
@@ -1475,12 +1474,10 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             };
         });
 
-        // Separate schools with valid event dates
         const schoolsWithEventDate = schools.filter(school => 
             school.eventDate && !isNaN(school.eventDate.getTime())
         );
 
-        // Filter and map trainers
         const trainers = trainersSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
@@ -1497,7 +1494,6 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             };
         });
 
-        // Filter and map participants, calculate students who completed exams today
         const participants = participantsSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
@@ -1532,7 +1528,6 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             };
         });
 
-        // Students who completed exams today (excluding N/A)
         const studentsToday = participants.filter(p => 
             p.completedAt && 
             p.completedAt.toDateString() === today.toDateString() && 
@@ -1544,7 +1539,6 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             ? Math.round(studentsToday.reduce((sum, p) => sum + p.score, 0) / studentsToday.length) 
             : 0;
 
-        // Filter options from query parameters
         const filters = {
             schoolApproved: req.query.schoolApproved || '',
             schoolCity: req.query.schoolCity || '',
@@ -1554,7 +1548,6 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             studentCity: req.query.studentCity || '',
         };
 
-        // Pass data to template
         res.render('adminDashboard', {
             schools,
             schoolsWithEventDate,
@@ -1563,7 +1556,8 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             studentsTodayCount,
             averageScore,
             filters,
-            error: null,
+            error: req.query.error || null,
+            success: req.query.success || null,
         });
     } catch (error) {
         console.error('Error in admin-dashboard route:', error.message, error.stack);
@@ -1575,7 +1569,8 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             studentsTodayCount: 0,
             averageScore: 0,
             filters: {},
-            error: 'Error loading admin dashboard data.',
+            error: req.query.error || 'Error loading admin dashboard data.',
+            success: null,
         });
     }
 });
@@ -2097,6 +2092,34 @@ app.post('/assign-trainer/:schoolId', requireAdmin, async (req, res) => {
     } catch (error) {
         console.error('Error in assign-trainer route:', error.message, error.stack);
         res.status(500).send('Error assigning trainer.');
+    }
+});
+
+app.post('/delete-trainer/:id', requireAdmin, async (req, res) => {
+    try {
+        const trainerId = req.params.id;
+
+        // Check if trainer exists
+        const trainerSnapshot = await db.collection('trainers').doc(trainerId).get();
+        if (!trainerSnapshot.exists) {
+            return res.redirect('/admin-dashboard?error=Trainer%20not%20found');
+        }
+
+        // Check if trainer is assigned to any schools
+        const schoolsSnapshot = await db.collection('schools')
+            .where('assignedTrainerId', '==', trainerId)
+            .get();
+        
+        if (!schoolsSnapshot.empty) {
+            return res.redirect('/admin-dashboard?error=Cannot%20delete%20trainer:%20They%20are%20assigned%20to%20one%20or%20more%20schools');
+        }
+
+        // Delete the trainer
+        await db.collection('trainers').doc(trainerId).delete();
+        res.redirect('/admin-dashboard?success=Trainer%20deleted%20successfully');
+    } catch (error) {
+        console.error('Error in delete-trainer route:', error.message, error.stack);
+        res.redirect('/admin-dashboard?error=Error%20deleting%20trainer');
     }
 });
 

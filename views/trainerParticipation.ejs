@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trainer Participation Frm</title>
+    <title>Trainer Participation Form</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
 <body class="bg-gray-100">
@@ -21,7 +21,7 @@
             </div>
         <% } %>
 
-        <form action="/trainer-participate" method="POST" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <form action="/trainer-participate" method="POST" id="trainerForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
             <div class="mb-4">
                 <label class="block text-gray-700 text-sm font-bold mb-2" for="trainerName">
                     Trainer Name
@@ -65,7 +65,7 @@
                 <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="referenceName" name="referenceName" type="text" placeholder="Enter reference name" required>
             </div>
             <div class="flex items-center justify-between">
-                <button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                <button id="submitBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
                     Submit
                 </button>
                 <a href="/" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
@@ -83,7 +83,7 @@
                             <th class="py-2 px-4 border">Trainer Name</th>
                             <th class="py-2 px-4 border">City</th>
                             <th class="py-2 px-4 border">Profession</th>
-                         </tr>
+                        </tr>
                     </thead>
                     <tbody>
                         <% trainers.forEach(trainer => { %>
@@ -100,5 +100,48 @@
             <p class="text-gray-700">No trainers registered yet.</p>
         <% } %>
     </div>
+
+    <script>
+        document.getElementById('trainerForm').addEventListener('submit', function(event) {
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            submitBtn.classList.remove('hover:bg-blue-700');
+
+            // Optional: Simulate server response for testing (remove in production)
+            setTimeout(() => {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.add('hover:bg-blue-700');
+                alert('Form submission simulated for testing.');
+            }, 2000);
+
+            // In a real scenario, re-enable the button based on server response
+            // Example with Fetch API (uncomment and adjust for your server):
+            /*
+            fetch('/trainer-participate', {
+                method: 'POST',
+                body: new FormData(this)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    submitBtn.classList.add('hover:bg-blue-700');
+                } else {
+                    submitBtn.disabled = false;
+                    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    submitBtn.classList.add('hover:bg-blue-700');
+                }
+            })
+            .catch(error => {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitBtn.classList.add('hover:bg-blue-700');
+            });
+            */
+        });
+    </script>
 </body>
 </html>

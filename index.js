@@ -1616,7 +1616,7 @@ app.post('/admin-dashboard', requireAdmin, async (req, res) => {
                 eventDate: data.eventDate instanceof admin.firestore.Timestamp ? data.eventDate.toDate() : (data.eventDate && !isNaN(new Date(data.eventDate).getTime()) ? new Date(data.eventDate) : null),
                 eventDates: (data.eventDates || []).map(date => 
                     date instanceof admin.firestore.Timestamp ? date.toDate().toISOString().split('T')[0] : date
-                ),
+               ),
                 isApproved: data.isApproved || false,
                 principalNumber: data.principalNumber || 'N/A',
                 civicsTeacherNumber: data.civicsTeacherNumber || 'N/A',
@@ -1990,44 +1990,58 @@ app.post('/trainer-login', async (req, res) => {
 app.get('/trainer-dashboard', async (req, res) => {
     try {
         const trainerEmail = req.query.username;
+        const successMessage = req.query.success || null;
+
         if (!trainerEmail) {
             return res.render('trainerDashboard', {
                 trainerName: 'Unknown',
                 email: '',
                 city: '',
+                district: '',
                 profession: '',
                 assignedSchools: [],
-                error: 'Please login first'
+                availableDates: [],
+                schoolsInDistrict: [],
+                error: 'Please login first',
+                success: null,
+                trainerData: {}
             });
         }
 
         const trainerSnapshot = await db.collection('trainers')
             .where('email', '==', trainerEmail)
             .get();
+
         if (trainerSnapshot.empty) {
             return res.render('trainerDashboard', {
                 trainerName: 'Unknown',
                 email: '',
                 city: '',
+                district: '',
                 profession: '',
                 assignedSchools: [],
-                error: 'Trainer not found'
+                availableDates: [],
+                schoolsInDistrict: [],
+                error: 'Trainer not found',
+                success: null,
+                trainerData: {}
             });
         }
 
         const trainerData = trainerSnapshot.docs[0].data();
         const trainerId = trainerSnapshot.docs[0].id;
+        const trainerDistrict = trainerData.district || trainerData.city;
 
-        // Fetch schools assigned to this trainer
         const schoolsSnapshot = await db.collection('schools')
             .where('assignedTrainerId', '==', trainerId)
             .get();
-        
+
         const assignedSchools = schoolsSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 schoolName: data.schoolName || 'N/A',
                 city: data.city || 'N/A',
+                district: data.district || data.city || 'N/A',
                 eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
                     year: 'numeric',
                     month: 'long',
@@ -2038,13 +2052,46 @@ app.get('/trainer-dashboard', async (req, res) => {
             };
         });
 
+        const schoolsInDistrictSnapshot = await db.collection('schools')
+            .where('district', '==', trainerDistrict)
+            .where('isApproved', '==', true)
+            .get();
+
+        const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                schoolName: data.schoolName || 'N/A',
+                schoolEmail: data.schoolEmail || 'N/A',
+                city: data.city || 'N/A',
+                district: data.district || 'N/A',
+                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : 'Not assigned',
+                assignedTrainerId: data.assignedTrainerId || null
+            };
+        });
+
+        const availableDates = (trainerData.availableDates || []).map(date => 
+            date instanceof admin.firestore.Timestamp 
+                ? date.toDate().toISOString().split('T')[0]
+                : date
+        );
+
         res.render('trainerDashboard', {
             trainerName: trainerData.trainerName || 'Unknown',
             email: trainerData.email || '',
             city: trainerData.city || '',
+            district: trainerDistrict || '',
             profession: trainerData.profession || '',
             assignedSchools,
-            error: null
+            availableDates,
+            schoolsInDistrict,
+            error: null,
+            success: successMessage,
+            trainerData: trainerData || {}
         });
     } catch (error) {
         console.error('Error in trainer-dashboard route:', error.message, error.stack);
@@ -2052,13 +2099,128 @@ app.get('/trainer-dashboard', async (req, res) => {
             trainerName: 'Unknown',
             email: '',
             city: '',
+            district: '',
             profession: '',
             assignedSchools: [],
-            error: 'Error loading trainer dashboard.'
+            availableDates: [],
+            schoolsInDistrict: [],
+            error: 'Error loading trainer dashboard.',
+            success: null,
+            trainerData: {}
         });
     }
 });
 
+app.post('/trainer-dashboard/delete-date', async (req, res) => {
+    try {
+        const trainerEmail = req.query.username;
+        const dateToDelete = req.body.dateToDelete;
+
+        if (!trainerEmail || !dateToDelete) {
+            return res.redirect(`/trainer-dashboard?username=${trainerEmail}&error=Invalid request`);
+        }
+
+        const trainerSnapshot = await db.collection('trainers')
+            .where('email', '==', trainerEmail)
+            .get();
+        if (trainerSnapshot.empty) {
+            return res.redirect(`/trainer-dashboard?username=${trainerEmail}&error=Trainer not found`);
+        }
+
+        const trainerDoc = trainerSnapshot.docs[0];
+        const trainerData = trainerDoc.data();
+        const updatedDates = (trainerData.availableDates || []).filter(date => 
+            date instanceof admin.firestore.Timestamp 
+                ? date.toDate().toISOString().split('T')[0] !== dateToDelete
+                : date !== dateToDelete
+        );
+
+        await trainerDoc.ref.update({ availableDates: updatedDates });
+        res.redirect(`/trainer-dashboard?username=${trainerEmail}&success=Date deleted successfully`);
+    } catch (error) {
+        console.error('Error deleting date:', error.message, error.stack);
+        res.redirect(`/trainer-dashboard?username=${trainerEmail}&error=Error deleting date`);
+    }
+});
+
+
+app.post('/trainer-dashboard/add-dates', async (req, res) => {
+    try {
+        const { trainerEmail, availableDates } = req.body;
+        if (!trainerEmail || !availableDates) {
+            return res.redirect(`/trainer-dashboard?username=${encodeURIComponent(trainerEmail)}&error=Missing%20required%20fields`);
+        }
+
+        const trainerSnapshot = await db.collection('trainers')
+            .where('email', '==', trainerEmail)
+            .get();
+        if (trainerSnapshot.empty) {
+            return res.redirect(`/trainer-dashboard?username=${encodeURIComponent(trainerEmail)}&error=Trainer%20not%20found`);
+        }
+
+        const trainerId = trainerSnapshot.docs[0].id;
+        const datesArray = Array.isArray(availableDates) ? availableDates : [availableDates];
+        const validDates = datesArray
+            .filter(date => !isNaN(new Date(date).getTime()))
+            .map(date => admin.firestore.Timestamp.fromDate(new Date(date)));
+
+        if (validDates.length === 0) {
+            return res.redirect(`/trainer-dashboard?username=${encodeURIComponent(trainerEmail)}&error=Invalid%20date%20format`);
+        }
+
+        await db.collection('trainers').doc(trainerId).update({
+            availableDates: admin.firestore.FieldValue.arrayUnion(...validDates)
+        });
+
+        res.redirect(`/trainer-dashboard?username=${encodeURIComponent(trainerEmail)}&success=Available%20dates%20added%20successfully`);
+    } catch (error) {
+        console.error('Error in trainer-dashboard/add-dates route:', error.message, error.stack);
+        res.redirect(`/trainer-dashboard?username=${encodeURIComponent(trainerEmail)}&error=Error%20adding%20available%20dates`);
+    }
+});
+
+app.post('/school-request-trainer-dates', async (req, res) => {
+    try {
+        const { schoolEmail, trainerId } = req.body;
+        if (!schoolEmail || !trainerId) {
+            return res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}&error=Missing%20required%20fields`);
+        }
+
+        const [schoolSnapshot, trainerSnapshot] = await Promise.all([
+            db.collection('schools').where('schoolEmail', '==', schoolEmail).get(),
+            db.collection('trainers').doc(trainerId).get()
+        ]);
+
+        if (schoolSnapshot.empty) {
+            return res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}&error=School%20not%20found`);
+        }
+        if (!trainerSnapshot.exists) {
+            return res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}&error=Trainer%20not%20found`);
+        }
+
+        const schoolData = schoolSnapshot.docs[0].data();
+        const trainerData = trainerSnapshot.data();
+        const schoolName = schoolData.schoolName;
+        const trainerName = trainerData.trainerName;
+        const trainerEmail = trainerData.email;
+
+        await sendEmail(
+            trainerEmail,
+            emailTemplates.trainerDateRequest.subject,
+            emailTemplates.trainerDateRequest.text(trainerName, schoolName, schoolEmail),
+            emailTemplates.trainerDateRequest.html(trainerName, schoolName, schoolEmail)
+        );
+
+        res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}&success=Request%20sent%20to%20trainer`);
+    } catch (error) {
+        console.error('Error in school-request-trainer-dates route:', error.message, error.stack);
+        res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}&error=Error%20sending%20request%20to%20trainer`);
+    }
+});
+
+app.get('/trainer-gamezone', async(req,res)=>{
+    res.sendFile(path.join(__dirname, '/views/trainer-gamezone.html'))
+})
 // Approve trainer
 app.post('/approve-trainer/:id', requireAdmin, async (req, res) => {
     try {

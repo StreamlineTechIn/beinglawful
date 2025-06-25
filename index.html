@@ -259,13 +259,21 @@
       line-height: 1.25rem;
     }
     .hero-circle {
-      width: 80px;
-      height: 80px;
+      width: 120px !important;
+      height: 120px !important;
+      border-radius: 50%;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     }
     .hero-circle-logo {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain !important;
+      z-index: 10;
     }
     .vision-cards {
       flex-direction: column;
@@ -419,14 +427,14 @@
       text-align: center;
     }
     .partner-logo {
-      width: 40px !important;
-      height: 40px !important;
+      width: 80px !important; /* Increased from 40px */
+      height: 80px !important; /* Increased from 40px */
       object-fit: contain !important;
       border-radius: 50% !important;
     }
     .partner-logo-container {
-      width: 40px;
-      height: 40px;
+      width: 80px;
+      height: 100px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -444,8 +452,8 @@
         font-size: 0.625rem;
       }
       .hero-circle {
-        width: 80px;
-        height: 80px;
+        width: 120px !important;
+        height: 120px !important;
       }
       .vision-heading {
         font-size: 0.875rem;
@@ -459,6 +467,14 @@
       .gallery-grid {
         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
       }
+      .partner-logo {
+        width: 80px !important;
+        height: 80px !important;
+      }
+      .partner-logo-container {
+        width: 80px;
+        height: 100px;
+      }
     }
     @media (min-width: 400px) {
       .hero-section {
@@ -468,8 +484,8 @@
         font-size: 0.75rem;
       }
       .hero-circle {
-        width: 100px;
-        height: 100px;
+        width: 150px !important;
+        height: 150px !important;
       }
       .vision-heading {
         font-size: 1rem;
@@ -483,14 +499,22 @@
       .gallery-grid {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       }
+      .partner-logo {
+        width: 90px !important;
+        height: 90px !important;
+      }
+      .partner-logo-container {
+        width: 90px;
+        height: 110px;
+      }
     }
     @media (min-width: 640px) {
       .hero-section {
         padding: 70px 1.5rem 2rem;
       }
       .hero-circle {
-        width: 120px;
-        height: 120px;
+        width: 180px !important;
+        height: 180px !important;
       }
       .hero-text {
         font-size: 0.875rem;
@@ -507,6 +531,14 @@
       .gallery-grid {
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       }
+      .partner-logo {
+        width: 110px !important;
+        height: 110px !important;
+      }
+      .partner-logo-container {
+        width: 110px;
+        height: 130px;
+      }
     }
     @media (min-width: 768px) {
       .hero-content {
@@ -517,8 +549,8 @@
         padding: 80px 2rem 2.5rem;
       }
       .hero-circle {
-        width: 150px;
-        height: 150px;
+        width: 200px !important;
+        height: 200px !important;
       }
       .vision-cards {
         flex-direction: row;
@@ -533,11 +565,19 @@
       .gallery-grid {
         grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
       }
+      .partner-logo {
+        width: 130px !important;
+        height: 130px !important;
+      }
+      .partner-logo-container {
+        width: 130px;
+        height: 150px;
+      }
     }
     @media (min-width: 1024px) {
       .hero-circle {
-        width: 200px;
-        height: 200px;
+        width: 300px !important;
+        height: 300px !important;
       }
       .hero-text {
         font-size: 1rem;
@@ -550,6 +590,14 @@
       }
       .gallery-grid {
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      }
+      .partner-logo {
+        width: 150px !important;
+        height: 150px !important;
+      }
+      .partner-logo-container {
+        width: 150px;
+        height: 170px;
       }
     }
   </style>
@@ -576,11 +624,11 @@
           <a class="nav-link" href="#book">Book</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="#activities">Activities</a>
+          <a class="nav-link" href="#activities">Gallery</a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link" href="#Activities"> Gallery</a>
-        </li>
+        <!-- <li class="nav-item">
+          <a class="nav-link" href="blog.html">Blogs</a>
+        </li> -->
         <li class="nav-item">
           <a class="nav-link" href="/login">Login</a>
         </li>
@@ -645,7 +693,6 @@
         <li>Interactive workshop for high school students</li>
         <li>Civic Awareness</li>
         <li>Fun quiz and games</li>
-        <li>AI learnings</li>
       </ul>
     </div>
   </div>
@@ -760,9 +807,39 @@
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-      <img src="./Assets/Activities/Activity15.jpg" alt="Activity 15" onclick="openModal(this)">
+      <img src="./Assets/Activities/Activity16.jpg" alt="Activity 16" onclick="openModal(this)">
       <div class="gallery-overlay">
-        <span class="gallery-title">Being Lawful Online Game in School Computer Lab</span>
+        <span class="gallery-title">Train the trainer workshop pune</span>
+      </div>
+    </div>
+    <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <img src="./Assets/Activities/Activity17.jpg" alt="Activity 17" onclick="openModal(this)">
+      <div class="gallery-overlay">
+        <span class="gallery-title">Train the trainer workshop pune</span>
+      </div>
+    </div>
+    <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <img src="./Assets/Activities/Activity18.jpg" alt="Activity 18" onclick="openModal(this)">
+      <div class="gallery-overlay">
+        <span class="gallery-title">Train the trainer workshop pune</span>
+      </div>
+    </div>
+    <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <img src="./Assets/Activities/Activity19.jpg" alt="Activity 19" onclick="openModal(this)">
+      <div class="gallery-overlay">
+        <span class="gallery-title">Train the trainer workshop pune</span>
+      </div>
+    </div>
+    <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <img src="./Assets/Activities/Activity20.jpg" alt="Activity 20" onclick="openModal(this)">
+      <div class="gallery-overlay">
+        <span class="gallery-title">Train the trainer workshop pune</span>
+      </div>
+    </div>
+    <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <img src="./Assets/Activities/Activity21.jpg" alt="Activity 21" onclick="openModal(this)">
+      <div class="gallery-overlay">
+        <span class="gallery-title">Adv. S.K Jain addressed the trainers</span>
       </div>
     </div>
   </div>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Being Lawful - Blog</title>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Open+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet"/>
+  
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Open Sans', sans-serif;
+      color: #333;
+      background-color: #f9f9f9;
+      line-height: 1.6;
+    }
+ html, body {
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+      width: 100%;
+      box-sizing: border-box;
+      -webkit-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+      user-select: none;
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+    .navbar {
+      background-color: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+    .navbar.scrolled {
+      background-color: rgba(255, 255, 255, 0.98) !important;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    .navbar-brand {
+      font-family: 'Comic Sans MS', cursive;
+      color: #f59e0b !important;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+    .nav-link {
+      color: #4b5563 !important;
+      font-weight: 500;
+      margin: 0 0.5rem;
+      position: relative;
+    }
+    .nav-link:hover {
+      color: #1e40af !important;
+    }
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: 0;
+      left: 0;
+      background-color: #1e40af;
+      transition: width 0.3s ease;
+    }
+    .nav-link:hover::after {
+      width: 100%;
+    }
+    .blog-section {
+      max-width: 1200px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    .blog-section h2 {
+      font-family: 'Roboto', sans-serif;
+      font-size: 2.5rem;
+      color: #1a2a44;
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .blog-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 30px;
+    }
+    .blog-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .blog-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    }
+    .blog-card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+      border-bottom: 1px solid #eee;
+    }
+    .blog-card-content {
+      padding: 20px;
+    }
+    .blog-card h3 {
+      font-family: 'Roboto', sans-serif;
+      font-size: 1.5rem;
+      color: #1a2a44;
+      margin-bottom: 10px;
+    }
+    .blog-card p {
+      color: #555;
+      font-size: 1rem;
+      margin-bottom: 15px;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .blog-card a {
+      color: #3498db;
+      text-decoration: none;
+      font-weight: 600;
+      transition: color 0.3s;
+    }
+    .blog-card a:hover {
+      color: #1a2a44;
+    }
+    .footer {
+      background-color: #1a2a44;
+      color: #fff;
+      text-align: center;
+      padding: 20px 0;
+      margin-top: 40px;
+    }
+    .footer p {
+      font-size: 0.9rem;
+    }
+    .footer a {
+      color: #3498db;
+      text-decoration: none;
+      margin: 0 10px;
+    }
+    .footer a:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+      .header .container {
+        flex-direction: column;
+        text-align: center;
+      }
+      .nav {
+        margin-top: 10px;
+      }
+      .nav a {
+        margin: 0 10px;
+      }
+      .blog-section h2 {
+        font-size: 2rem;
+      }
+      .blog-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <h1>Being Lawful</h1>
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="
+    ">Being Lawful</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" 
+      aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarContent">
+      <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link" href="/">Home</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/#vision">About</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/#book">Book</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/#activities">Gallery</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="blog.html">Blogs</a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link" href="/login">Login</a>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    </div>
+  </header>
+
+
+
+  <h1>comming soon</h1>
+  <!-- <section class="blog-section">
+    <h2>Our Latest Legal Insights</h2>
+    <div class="blog-grid">
+      <div class="blog-card">
+        <img src="./Assets/Activity-LGS1.jpg" alt="Blog Post 1">
+        <div class="blog-card-content">
+          <h3>What are the </h3>
+          <p>Learn how to ensure your blog complies with GDPR regulations, including creating a privacy policy and managing user data responsibly.</p>
+          <a href="/blog/gdpr-compliance">Read More</a>
+        </div>
+      </div>
+      <div class="blog-card">
+        <img src="https://via.placeholder.com/300x200" alt="Blog Post 2">
+        <div class="blog-card-content">
+          <h3>Copyright Basics for Blog Content</h3>
+          <p>Discover how to protect your blog content and avoid copyright infringement when using images, text, or videos.</p>
+          <a href="/blog/copyright-basics">Read More</a>
+        </div>
+      </div>
+      <div class="blog-card">
+        <img src="https://via.placeholder.com/300x200" alt="Blog Post 3">
+        <div class="blog-card-content">
+          <h3>Avoiding Defamation in Blog Posts</h3>
+          <p>Understand the risks of defamation and how to write responsibly to avoid legal issues while blogging.</p>
+          <a href="/blog/avoiding-defamation">Read More</a>
+        </div>
+      </div>
+      <div class="blog-card">
+        <img src="https://via.placeholder.com/300x200" alt="Blog Post 4">
+        <div class="blog-card-content">
+          <h3>Disclosing Affiliate Links Legally</h3>
+          <p>Learn the best practices for disclosing affiliate links to comply with FTC guidelines and build trust with your audience.</p>
+          <a href="/blog/affiliate-disclosure">Read More</a>
+        </div>
+      </div>
+    </div>
+  </section> -->
+
+  <footer class="footer">
+    <p>&copy; 2025 Being Lawful. All rights reserved. | 
+      <a href="/privacy-policy">Privacy Policy</a> | 
+      <a href="/terms-of-use">Terms of Use</a> | 
+      <a href="/disclaimer">Disclaimer</a>
+    </p>
+  </footer>
+
+  
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+</body>
+</html>

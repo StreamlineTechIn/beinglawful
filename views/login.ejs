@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login to Being Lawful</title>
   <style>
     body {
@@ -104,12 +104,21 @@
     button:hover {
       background-color: #43a047;
     }
+
+    .error-message {
+      color: #e74c3c; /* Red color for error */
+      text-align: center;
+      margin-bottom: 15px;
+      font-size: 14px;
+      display: <%= error ? 'block' : 'none' %>; /* Show only if error exists */
+    }
   </style>
 </head>
 <body>
 
   <div class="login-container">
     <h2>Login to Being Lawful</h2>
+    <div class="error-message"><%= error || '' %></div> <!-- Error message display -->
     <div class="tabs">
       <div class="tab active" data-tab="student">Student</div>
       <div class="tab" data-tab="school">School</div>

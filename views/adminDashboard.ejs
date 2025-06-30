@@ -26,17 +26,14 @@
             const rows = table.querySelectorAll('tbody tr');
             const filters = {};
 
-            // Collect filter values
             table.querySelectorAll('.filter-select').forEach(select => {
                 filters[select.dataset.column] = select.value.trim();
             });
 
-            // Reset all rows to visible
             rows.forEach(row => {
                 row.style.display = '';
             });
 
-            // Apply filters
             rows.forEach(row => {
                 let show = true;
                 for (const [column, value] of Object.entries(filters)) {
@@ -64,7 +61,6 @@
                 const column = header.dataset.filter;
                 const select = header.querySelector('.filter-select');
                 
-                // Collect unique values for this column
                 const values = new Set(['All']);
                 rows.forEach(row => {
                     const cell = row.querySelector(`td[data-column="${column}"]`);
@@ -76,7 +72,6 @@
                     }
                 });
 
-                // Populate dropdown and set "All" as default
                 select.innerHTML = '';
                 let isAllSet = false;
                 [...values].sort().forEach(value => {
@@ -90,7 +85,6 @@
                     select.appendChild(option);
                 });
 
-                // Add event listener for filter change
                 select.addEventListener('change', () => applyFilters(tableId));
             });
         }
@@ -99,21 +93,36 @@
             return confirm(`Are you sure you want to delete trainer ${trainerName}? This action cannot be undone.`);
         }
 
+        async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
+            event.preventDefault();
+            const form = event.target.closest('form');
+            const formData = new FormData(form);
+            const response = await fetch(url.replace(':schoolId', schoolId), {
+                method: 'POST',
+                body: formData
+            });
+            const redirectUrl = new URL(window.location.href);
+            if (response.ok) {
+                redirectUrl.searchParams.set('success', successMessage);
+            } else {
+                redirectUrl.searchParams.set('error', errorMessage);
+            }
+            window.location.href = redirectUrl.toString();
+        }
+
         window.onload = function() {
             openTab('visualization');
 
-            // Initialize filters for all tables
             ['not-approved', 'approved-no-date', 'approved-with-date', 'trainers', 'students'].forEach(tableId => {
                 initializeFilters(tableId);
             });
 
-            // District-wise chart
             const districtData = <%- JSON.stringify(
                 schools ? schools.reduce((acc, school) => {
                     acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
                     acc[school.district].schools += 1;
                     acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
-                    acc[school.district].trainers += (school.assignedTrainerId ? 1 : 0);
+                    acc[school.district].trainers += (school.trainerId1 || school.trainerId2 ? (school.trainerId1 && school.trainerId2 ? 2 : 1) : 0);
                     return acc;
                 }, {}) : {}
             ) %>;
@@ -122,32 +131,14 @@
                 data: {
                     labels: Object.keys(districtData),
                     datasets: [
-                        {
-                            label: 'Schools',
-                            data: Object.values(districtData).map(d => d.schools),
-                            backgroundColor: 'rgba(54, 162, 235, 0.5)',
-                        },
-                        {
-                            label: 'Students',
-                            data: Object.values(districtData).map(d => d.students),
-                            backgroundColor: 'rgba(75, 192, 192, 0.5)',
-                        },
-                        {
-                            label: 'Trainers',
-                            data: Object.values(districtData).map(d => d.trainers),
-                            backgroundColor: 'rgba(255, 99, 132, 0.5)',
-                        }
+                        { label: 'Schools', data: Object.values(districtData).map(d => d.schools), backgroundColor: 'rgba(54, 162, 235, 0.5)' },
+                        { label: 'Students', data: Object.values(districtData).map(d => d.students), backgroundColor: 'rgba(75, 192, 192, 0.5)' },
+                        { label: 'Trainers', data: Object.values(districtData).map(d => d.trainers), backgroundColor: 'rgba(255, 99, 132, 0.5)' }
                     ]
                 },
-                options: {
-                    scales: {
-                        y: { beginAtZero: true },
-                        x: { stacked: false }
-                    }
-                }
+                options: { scales: { y: { beginAtZero: true }, x: { stacked: false } } }
             });
 
-            // Profession-wise trainer pie chart
             const professionData = <%- JSON.stringify(
                 trainers ? trainers.reduce((acc, trainer) => {
                     acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
@@ -158,15 +149,82 @@
                 type: 'pie',
                 data: {
                     labels: Object.keys(professionData),
-                    datasets: [{
-                        data: Object.values(professionData),
-                        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40']
-                    }]
+                    datasets: [{ data: Object.values(professionData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
                 },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { position: 'top' } }
+                options: { responsive: true, plugins: { legend: { position: 'top' } } }
+            });
+
+            document.querySelectorAll('#approved-with-date tbody tr').forEach(row => {
+                const schoolId = row.querySelector('td[data-column="id"]').textContent;
+                const trainer1Cell = row.querySelector('td[data-column="trainer1"]');
+                const trainer2Cell = row.querySelector('td[data-column="trainer2"]');
+                const trainer1Text = trainer1Cell ? trainer1Cell.textContent.trim() : 'Not Assigned';
+                const trainer2Text = trainer2Cell ? trainer2Cell.textContent.trim() : 'Not Assigned';
+
+                console.log(`School ID: ${schoolId}`);
+                console.log(`Trainer 1: ${trainer1Text}`);
+                console.log(`Trainer 2: ${trainer2Text}`);
+
+                if (trainer1Text.includes('Pending')) {
+                    console.log(`Approve/Reject buttons should be visible for Trainer 1: ${trainer1Text}`);
+                } else if (trainer1Text === 'Not Assigned') {
+                    console.log(`Assign button should be visible for Trainer 1 for School ID: ${schoolId}`);
                 }
+
+                if (trainer2Text.includes('Pending')) {
+                    console.log(`Approve/Reject buttons should be visible for Trainer 2: ${trainer2Text}`);
+                } else if (trainer2Text === 'Not Assigned') {
+                    console.log(`Assign button should be visible for Trainer 2 for School ID: ${schoolId}`);
+                }
+            });
+
+            document.querySelectorAll('.approve-trainer1-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const schoolId = button.dataset.schoolId;
+                    handleTrainerAction(event, '/admin/approve-trainer1/:schoolId', schoolId, 'Trainer 1 approved successfully', 'Failed to approve Trainer 1');
+                });
+            });
+            document.querySelectorAll('.approve-trainer2-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const schoolId = button.dataset.schoolId;
+                    handleTrainerAction(event, '/admin/approve-trainer2/:schoolId', schoolId, 'Trainer 2 approved successfully', 'Failed to approve Trainer 2');
+                });
+            });
+            document.querySelectorAll('.reject-trainer1-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const schoolId = button.dataset.schoolId;
+                    handleTrainerAction(event, '/admin/reject-trainer1/:schoolId', schoolId, 'Trainer 1 rejected successfully', 'Failed to reject Trainer 1');
+                });
+            });
+            document.querySelectorAll('.reject-trainer2-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const schoolId = button.dataset.schoolId;
+                    handleTrainerAction(event, '/admin/reject-trainer2/:schoolId', schoolId, 'Trainer 2 rejected successfully', 'Failed to reject Trainer 2');
+                });
+            });
+            document.querySelectorAll('.assign-trainer1-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const schoolId = button.dataset.schoolId;
+                    const select = document.querySelector(`.assign-trainer1[data-school-id="${schoolId}"]`);
+                    if (!select.value) {
+                        alert('Please select a trainer for Trainer 1');
+                        event.preventDefault();
+                        return;
+                    }
+                    handleTrainerAction(event, '/admin/assign-trainer1/:schoolId', schoolId, 'Trainer 1 assigned successfully', 'Failed to assign Trainer 1');
+                });
+            });
+            document.querySelectorAll('.assign-trainer2-btn').forEach(button => {
+                button.addEventListener('click', (event) => {
+                    const schoolId = button.dataset.schoolId;
+                    const select = document.querySelector(`.assign-trainer2[data-school-id="${schoolId}"]`);
+                    if (!select.value) {
+                        alert('Please select a trainer for Trainer 2');
+                        event.preventDefault();
+                        return;
+                    }
+                    handleTrainerAction(event, '/admin/assign-trainer2/:schoolId', schoolId, 'Trainer 2 assigned successfully', 'Failed to assign Trainer 2');
+                });
             });
         };
     </script>
@@ -230,6 +288,14 @@
                             : 'N/A' %>
                     </p>
                 </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600">Students Today</h3>
+                    <p class="text-2xl font-bold text-blue-600"><%= studentsTodayCount %></p>
+                </div>
+                <div class="bg-white p-4 rounded-lg shadow-md">
+                    <h3 class="text-lg font-semibold text-gray-600">Average Score Today</h3>
+                    <p class="text-2xl font-bold text-blue-600"><%= averageScore %></p>
+                </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-white p-4 rounded-lg shadow-md">
@@ -247,7 +313,6 @@
             <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Schools</h2>
 
             <% if (schools && schools.length > 0) { %>
-                <!-- Table 1: Schools Not Approved -->
                 <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Not Approved</h3>
                 <div class="overflow-x-auto mb-6">
                     <table id="not-approved" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
@@ -270,7 +335,7 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Assigned Trainer ID</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -283,22 +348,22 @@
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">
-                                        <%= school.eventDate ? new Date(school.eventDate).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
+                                        <%= school.eventDate ? school.eventDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">No</td>
                                     <td class="py-2 px-4 border-b">
                                         <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                                            <form action="/approve-school/<%= school.id %>" method="POST" class="inline">
+                                            <form action="/admin/approve-school/<%= school.id %>" method="POST" class="inline">
                                                 <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded">Approve</button>
                                             </form>
-                                            <form action="/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
+                                            <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
                                                 <select name="eventDate" required class="border rounded py-1 px-2 mr-2 text-gray-700">
                                                     <option value="">Select Event Date</option>
                                                     <% if (school.eventDates && school.eventDates.length > 0) { %>
                                                         <% school.eventDates.forEach(date => { %>
                                                             <% let validDate = new Date(date); %>
                                                             <% if (!isNaN(validDate.getTime())) { %>
-                                                                <% let eventDateStr = school.eventDate ? (new Date(school.eventDate).toISOString().split('T')[0]) : null; %>
+                                                                <% let eventDateStr = school.eventDate ? school.eventDate.toISOString().split('T')[0] : null; %>
                                                                 <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>><%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></option>
                                                             <% } %>
                                                         <% }) %>
@@ -308,17 +373,6 @@
                                                 </select>
                                                 <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
                                             </form>
-                                            <form action="/assign-trainer/<%= school.id %>" method="POST" class="inline">
-                                                <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700">
-                                                    <option value="">Select Trainer</option>
-                                                    <% trainers.forEach(trainer => { %>
-                                                        <% if (trainer.isApproved) { %>
-                                                            <option value="<%= trainer.id %>" <%= school.assignedTrainerId === trainer.id ? 'selected' : '' %>><%= trainer.trainerName %> (<%= trainer.city %>)</option>
-                                                        <% } %>
-                                                    <% }) %>
-                                                </select>
-                                                <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Trainer</button>
-                                            </form>
                                         </div>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
@@ -327,20 +381,19 @@
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= school.registeredAt ? new Date(school.registeredAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                        <%= school.registeredAt ? school.registeredAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700">
                                         <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.assignedTrainerId || 'None' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
                                 </tr>
                             <% }) %>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Table 2: Schools Approved but No Date Assigned -->
                 <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved, No Event Date</h3>
                 <div class="overflow-x-auto mb-6">
                     <table id="approved-no-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
@@ -363,7 +416,7 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Assigned Trainer ID</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -379,14 +432,14 @@
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
                                     <td class="py-2 px-4 border-b">
                                         <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                                            <form action="/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
+                                            <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
                                                 <select name="eventDate" required class="border rounded py-1 px-2 mr-2 text-gray-700">
                                                     <option value="">Select Event Date</option>
                                                     <% if (school.eventDates && school.eventDates.length > 0) { %>
                                                         <% school.eventDates.forEach(date => { %>
                                                             <% let validDate = new Date(date); %>
                                                             <% if (!isNaN(validDate.getTime())) { %>
-                                                                <% let eventDateStr = school.eventDate ? (new Date(school.eventDate).toISOString().split('T')[0]) : null; %>
+                                                                <% let eventDateStr = school.eventDate ? school.eventDate.toISOString().split('T')[0] : null; %>
                                                                 <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>><%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></option>
                                                             <% } %>
                                                         <% }) %>
@@ -396,17 +449,6 @@
                                                 </select>
                                                 <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
                                             </form>
-                                            <form action="/assign-trainer/<%= school.id %>" method="POST" class="inline">
-                                                <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700">
-                                                    <option value="">Select Trainer</option>
-                                                    <% trainers.forEach(trainer => { %>
-                                                        <% if (trainer.isApproved) { %>
-                                                            <option value="<%= trainer.id %>" <%= school.assignedTrainerId === trainer.id ? 'selected' : '' %>><%= trainer.trainerName %> (<%= trainer.city %>)</option>
-                                                        <% } %>
-                                                    <% }) %>
-                                                </select>
-                                                <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Trainer</button>
-                                            </form>
                                         </div>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
@@ -415,20 +457,19 @@
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= school.registeredAt ? new Date(school.registeredAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                        <%= school.registeredAt ? school.registeredAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700">
                                         <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.assignedTrainerId || 'None' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
                                 </tr>
                             <% }) %>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Table 3: Schools Approved and Date Assigned -->
                 <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved and Event Date Assigned</h3>
                 <div class="overflow-x-auto mb-6">
                     <table id="approved-with-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
@@ -442,6 +483,8 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer1">Trainer 1<br><select class="filter-select text-sm w-full" data-column="trainer1"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer2">Trainer 2<br><select class="filter-select text-sm w-full" data-column="trainer2"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
@@ -451,7 +494,7 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Assigned Trainer ID</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -464,19 +507,39 @@
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">
-                                        <%= school.eventDate ? new Date(school.eventDate).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
+                                        <%= school.eventDate ? school.eventDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer1">
+                                        <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
+                                        <% if (school.trainerApproved === false) { %>
+                                            <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city}) - Pending` : 'Not Assigned' %>
+                                        <% } else if (school.trainerApproved === true) { %>
+                                            <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city}) - Approved` : 'Not Assigned' %>
+                                        <% } else { %>
+                                            Not Assigned
+                                        <% } %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer2">
+                                        <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
+                                        <% if (school.trainerApproved === false) { %>
+                                            <%= trainer2 ? `${trainer2.trainerName} (${trainer2.city}) - Pending` : 'Not Assigned' %>
+                                        <% } else if (school.trainerApproved === true) { %>
+                                            <%= trainer2 ? `${trainer2.trainerName} (${trainer2.city}) - Approved` : 'Not Assigned' %>
+                                        <% } else { %>
+                                            Not Assigned
+                                        <% } %>
+                                    </td>
                                     <td class="py-2 px-4 border-b">
                                         <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                                            <form action="/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
-                                                <select name="eventDate" required class="border rounded py-1 px-2 mr-2 text-gray-700">
+                                            <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
+                                                <select name="eventDate" required class="border rounded py-1 px-2 mr-2 text-gray-700 assign-event-date" data-school-id="<%= school.id %>">
                                                     <option value="">Select Event Date</option>
                                                     <% if (school.eventDates && school.eventDates.length > 0) { %>
                                                         <% school.eventDates.forEach(date => { %>
                                                             <% let validDate = new Date(date); %>
                                                             <% if (!isNaN(validDate.getTime())) { %>
-                                                                <% let eventDateStr = school.eventDate ? (new Date(school.eventDate).toISOString().split('T')[0]) : null; %>
+                                                                <% let eventDateStr = school.eventDate ? school.eventDate.toISOString().split('T')[0] : null; %>
                                                                 <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>><%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></option>
                                                             <% } %>
                                                         <% }) %>
@@ -484,19 +547,54 @@
                                                         <option value="" disabled>No dates available</option>
                                                     <% } %>
                                                 </select>
-                                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
+                                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded assign-event-date-btn" data-school-id="<%= school.id %>">Assign Event Date</button>
                                             </form>
-                                            <form action="/assign-trainer/<%= school.id %>" method="POST" class="inline">
-                                                <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700">
-                                                    <option value="">Select Trainer</option>
-                                                    <% trainers.forEach(trainer => { %>
-                                                        <% if (trainer.isApproved) { %>
-                                                            <option value="<%= trainer.id %>" <%= school.assignedTrainerId === trainer.id ? 'selected' : '' %>><%= trainer.trainerName %> (<%= trainer.city %>)</option>
-                                                        <% } %>
-                                                    <% }) %>
-                                                </select>
-                                                <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Trainer</button>
-                                            </form>
+                                            <% if (school.trainerApproved === false && trainer1) { %>
+                                                <div class="flex items-center space-x-2">
+                                                    <span><%= trainer1.trainerName %> (<%= trainer1.city %>)</span>
+                                                    <form action="/admin/approve-trainer1/<%= school.id %>" method="POST" class="inline">
+                                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded approve-trainer1-btn" data-school-id="<%= school.id %>">Approve Trainer 1</button>
+                                                    </form>
+                                                    <form action="/admin/reject-trainer1/<%= school.id %>" method="POST" class="inline">
+                                                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded reject-trainer1-btn" data-school-id="<%= school.id %>">Reject Trainer 1</button>
+                                                    </form>
+                                                </div>
+                                            <% } else if (!trainer1) { %>
+                                                <form action="/admin/assign-trainer1/<%= school.id %>" method="POST" class="inline">
+                                                    <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700 assign-trainer1" data-school-id="<%= school.id %>">
+                                                        <option value="">Select Trainer 1</option>
+                                                        <% trainers.forEach(trainer => { %>
+                                                            <% if (trainer.isApproved) { %>
+                                                                <option value="<%= trainer.id %>"><%= trainer.trainerName %> (<%= trainer.city %>)</option>
+                                                            <% } %>
+                                                        <% }) %>
+                                                    </select>
+                                                    <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded assign-trainer1-btn" data-school-id="<%= school.id %>">Assign Trainer 1</button>
+                                                </form>
+                                            <% } %>
+                                            <% if (school.trainerApproved === false && trainer2) { %>
+                                                <div class="flex items-center space-x-2">
+                                                    <span><%= trainer2.trainerName %> (<%= trainer2.city %>)</span>
+                                                    <form action="/admin/approve-trainer2/<%= school.id %>" method="POST" class="inline">
+                                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded approve-trainer2-btn" data-school-id="<%= school.id %>">Approve Trainer 2</button>
+                                                    </form>
+                                                    <form action="/admin/reject-trainer2/<%= school.id %>" method="POST" class="inline">
+                                                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded reject-trainer2-btn" data-school-id="<%= school.id %>">Reject Trainer 2</button>
+                                                    </form>
+                                                </div>
+                                            <% } else if (!trainer2) { %>
+                                                <form action="/admin/assign-trainer2/<%= school.id %>" method="POST" class="inline">
+                                                    <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700 assign-trainer2" data-school-id="<%= school.id %>">
+                                                        <option value="">Select Trainer 2</option>
+                                                        <% trainers.forEach(trainer => { %>
+                                                            <% if (trainer.isApproved) { %>
+                                                                <option value="<%= trainer.id %>"><%= trainer.trainerName %> (<%= trainer.city %>)</option>
+                                                            <% } %>
+                                                        <% }) %>
+                                                    </select>
+                                                    <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded assign-trainer2-btn" data-school-id="<%= school.id %>">Assign Trainer 2</button>
+                                                </form>
+                                            <% } %>
                                         </div>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
@@ -505,13 +603,13 @@
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= school.registeredAt ? new Date(school.registeredAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                        <%= school.registeredAt ? school.registeredAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700">
                                         <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.assignedTrainerId || 'None' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
                                 </tr>
                             <% }) %>
                         </tbody>
@@ -554,7 +652,7 @@
                                     <td class="py-2 px-4 border-b text-gray-700"><%= trainer.whatsappNumber || 'N/A' %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= trainer.referenceName || 'N/A' %></td>
                                     <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= trainer.registeredAt ? new Date(trainer.registeredAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                        <%= trainer.registeredAt ? trainer.registeredAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">
                                         <%= trainer.isApproved ? 'Yes' : 'No' %>
@@ -562,11 +660,12 @@
                                     <td class="py-2 px-4 border-b">
                                         <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                                             <% if (!trainer.isApproved) { %>
-                                                <form action="/approve-trainer/<%= trainer.id %>" method="POST" class="inline">
+                                                <form action="/admin/approve-trainer" method="POST" class="inline">
+                                                    <input type="hidden" name="trainerId" value="<%= trainer.id %>">
                                                     <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded">Approve</button>
                                                 </form>
                                             <% } %>
-                                            <form action="/delete-trainer/<%= trainer.id %>" method="POST" class="inline" onsubmit="return confirmDelete('<%= trainer.trainerName %>')">
+                                            <form action="/admin/delete-trainer/<%= trainer.id %>" method="POST" class="inline" onsubmit="return confirmDelete('<%= trainer.trainerName %>')">
                                                 <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded">Delete</button>
                                             </form>
                                         </div>
@@ -604,20 +703,6 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Total Questions</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Percentage</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Completed At</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Completed</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Completed</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Correct Answers</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Wrong Answers</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Score</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Total</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 %</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Correct</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 1 Wrong</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Score</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Total</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 %</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Correct</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Trial 2 Wrong</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -633,7 +718,7 @@
                                     <td class="py-2 px-4 border-b text-gray-700"><%= participant.address || 'N/A' %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= participant.city || 'N/A' %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= participant.pincode || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.birthdate ? new Date(participant.birthdate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' }) : 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.birthdate ? participant.birthdate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' }) : 'N/A' %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="hasCompletedMCQ">
                                         <%= participant.hasCompletedMCQ ? 'Yes' : 'No' %>
                                     </td>
@@ -647,26 +732,8 @@
                                         <%= participant.percentage ? `${participant.percentage}%` : 'N/A' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= participant.completedAt ? new Date(participant.completedAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                        <%= participant.completedAt ? participant.completedAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
                                     </td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= participant.hasCompletedTrial1 ? 'Yes' : 'No' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= participant.hasCompletedTrial2 ? 'Yes' : 'No' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.correctAnswers || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.wrongAnswers || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1Score || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1TotalQuestions || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1Percentage ? `${participant.trial1Percentage}%` : 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1CorrectAnswers || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial1WrongAnswers || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2Score || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2TotalQuestions || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2Percentage ? `${participant.trial2Percentage}%` : 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2CorrectAnswers || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.trial2WrongAnswers || 'N/A' %></td>
                                 </tr>
                             <% }) %>
                         </tbody>

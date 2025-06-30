@@ -208,6 +208,62 @@
       background-position: center;
       background-repeat: no-repeat;
     }
+    #stakeholders {
+      background: linear-gradient(rgba(245, 245, 220, 0.8), rgba(245, 245, 220, 0.8)), url('https://www.transparenttextures.com/patterns/paper-fibers.png');
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      position: relative;
+      overflow: hidden;
+      padding: 2rem 0;
+      margin: 2rem 0;
+    }
+    .stakeholder-card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      margin: 1rem 0;
+    }
+    .stakeholder-card:hover {
+      transform: translateY(-5px) rotate(2deg);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    .stakeholder-card h3 {
+      color: #1e40af;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    .stakeholder-card ul li {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .stakeholder-card a {
+      background: linear-gradient(to right, #f59e0b, #1e40af);
+      color: white;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      display: inline-block;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .stakeholder-card a:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    .wave-bg {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 100px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 320'%3E%3Cpath fill='%23f59e0b' fill-opacity='0.3' d='M0,192L48,176C96,160,192,128,288,149.3C384,171,480,245,576,245.3C672,245,768,171,864,154.7C960,139,1056,181,1152,181.3C1248,181,1344,139,1392,117.3L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z'%3E%3C/path%3E%3C/svg%3E");
+      background-size: cover;
+      z-index: 0;
+    }
     .circle-bg::before {
       content: '';
       position: absolute;
@@ -229,6 +285,20 @@
       background-size: cover;
       background-position: center;
       background-repeat: no-repeat;
+      width: 100%;
+      aspect-ratio: 4 / 5;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+    @media (min-width: 768px) {
+      .book-bg {
+        width: 200px;
+      }
+    }
+    @media (min-width: 1024px) {
+      .book-bg {
+        width: 300px;
+      }
     }
     .author-bg {
       background-image: url('./Assets/vibhawaribhidwe.jpg');
@@ -248,11 +318,13 @@
     .hero-section {
       padding: 40px 0.5rem 1rem;
       width: 100%;
+      margin: 1rem 0;
     }
     .hero-content {
       flex-direction: column;
       gap: 1rem;
       width: 100%;
+      padding: 0 1rem;
     }
     .hero-text {
       font-size: 0.625rem;
@@ -279,6 +351,7 @@
       flex-direction: column;
       gap: 1rem;
       width: 100%;
+      padding: 0 1rem;
     }
     .vision-card {
       padding: 0.75rem;
@@ -427,8 +500,8 @@
       text-align: center;
     }
     .partner-logo {
-      width: 80px !important; /* Increased from 40px */
-      height: 80px !important; /* Increased from 40px */
+      width: 80px !important;
+      height: 80px !important;
       object-fit: contain !important;
       border-radius: 50% !important;
     }
@@ -443,6 +516,23 @@
     }
     .partner-logo-container:hover {
       transform: scale(1.1);
+    }
+    .blink-button {
+      animation: blink 1.5s infinite;
+      background: linear-gradient(to right, #f59e0b, #ffeb3b);
+      color: white;
+      border: 2px solid #1e40af;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    .blink-button:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+    }
+    @keyframes blink {
+      0% { opacity: 1; }
+      50% { opacity: 0.7; }
+      100% { opacity: 1; }
     }
     @media (min-width: 320px) {
       .hero-section {
@@ -626,9 +716,6 @@
         <li class="nav-item">
           <a class="nav-link" href="#activities">Gallery</a>
         </li>
-        <!-- <li class="nav-item">
-          <a class="nav-link" href="blog.html">Blogs</a>
-        </li> -->
         <li class="nav-item">
           <a class="nav-link" href="/login">Login</a>
         </li>
@@ -645,7 +732,7 @@
       <p class="text-gray-700 leading-relaxed hero-text">
         As India commemorates the 75th anniversary of its Constitution in 2025, it becomes imperative to engage the younger generation in understanding and embodying the foundational values that have shaped our nation. The "Being Lawful" workshop is designed for students from 9th to 12th standard, with an aim to help them recognize the Constitution's relevance in their daily conduct. This initiative aspires to transform the topic of Constitution from a mere academic subject into a lived experience for students, fostering a generation that upholds and cherishes democratic principles through CBSE school programs on Samvidhan, civics, and government.
       </p>
-      <button class="mt-4 px-3 py-1 border-2 border-gray-800 text-gray-800 font-semibold rounded-md shadow-md hover:bg-gray-800 hover:text-white hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm" data-aos="zoom-in" data-aos-delay="300" onclick="document.getElementById('participateModal').classList.remove('hidden')">Participate Now</button>
+      <button class="mt-4 px-3 py-1 blink-button border-2 border-gray-800 font-semibold rounded-md shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm" data-aos="zoom-in" data-aos-delay="300" onclick="document.getElementById('participateModal').classList.remove('hidden')">Participate Now</button>
     </div>
     <div class="relative rounded-full flex items-center justify-center shadow-lg mt-4 md:mt-0 hero-circle" data-aos="fade-left" data-aos-delay="200">
       <div class="circle-bg"></div>
@@ -676,7 +763,7 @@
 </div>
 
 <!-- Vision Section -->
-<section class="vision-bg min-h-screen flex flex-col items-center justify-center py-6 px-2" id="vision" data-aos="fade-up">
+<section class="vision-bg min-h-screen flex flex-col items-center justify-center py-8 px-4" id="vision" data-aos="fade-up">
   <h2 class="font-bold text-center mb-4 vision-heading" data-aos="fade-up" data-aos-delay="200">
     Celebrating 75 years of Samvidhan.<br class="sm:hidden">Hamara Samvidhan, Hamara Swabhiman
   </h2>
@@ -698,8 +785,57 @@
   </div>
 </section>
 
+<!-- Stakeholders Section -->
+<section class="min-h-screen flex flex-col items-center justify-center py-8 px-4" id="stakeholders" data-aos="fade-up">
+  <div class="wave-bg"></div>
+  <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-6 relative z-10" data-aos="fade-up" data-aos-delay="200">Our Stakeholders</h2>
+  <div class="flex flex-col md:flex-row gap-6 max-w-4xl w-full px-4 relative z-10">
+    <!-- Schools Card -->
+    <div class="stakeholder-card flex-1" data-aos="fade-right" data-aos-delay="300">
+      <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🏫</span> Benefits for Schools</h3>
+      <ul class="list-none text-gray-600 text-xs sm:text-sm">
+        <li><span>📚</span> <strong>Value-Added Learning</strong>: Offers experiential civics education aligned with CBSE/National Curriculum.</li>
+        <li><span>🏆</span> <strong>Reputation Enhancement</strong>: Demonstrates commitment to legal awareness and democratic education.</li>
+        <li><span>🎮</span> <strong>Student Engagement</strong>: Encourages active participation through gamified and interactive modules.</li>
+        <li><span>⚙️</span> <strong>Easy Execution</strong>: Being Lawful team handles design, content, and trainer training.</li>
+        <li><span>🎖️</span> <strong>Recognition</strong>: Participating schools receive digital certificates and social media recognition.</li>
+      </ul>
+      <a href="/school-participation" class="mt-3 inline-block px-3 py-1 rounded-md font-semibold text-xs sm:text-sm">Join as a School</a>
+    </div>
+    <!-- Trainers Card -->
+    <div class="stakeholder-card flex-1" data-aos="fade-up" data-aos-delay="400">
+      <h3 class="text-base sm:text-lg font-semibold mb-2"><span>👩‍🏫</span> Benefits for Trainers</h3>
+      <ul class="list-none text-gray-600 text-xs sm:text-sm">
+        <li><span>📜</span> <strong>Certification</strong>: Get certified after completing the Train-the-Trainer (ToT) program.</li>
+        <li><span>🌟</span> <strong>Leadership Opportunity</strong>: Lead a legal awareness initiative within your school.</li>
+        <li><span>🛠️</span> <strong>Skill Development</strong>: Gain public speaking, facilitation, and student engagement skills.</li>
+        <li><span>🏅</span> <strong>Recognition</strong>: Trainers receive a certificate and can be highlighted in Being Lawful’s community.</li>
+        <li><span>🌍</span> <strong>Impact-Driven Role</strong>: Play a direct role in shaping civic understanding among students.</li>
+      </ul>
+      <a href="/trainer-participation" class="mt-3 inline-block px-3 py-1 rounded-md font-semibold text-xs sm:text-sm">Join as a Trainer</a>
+    </div>
+    <!-- Students Card -->
+    <div class="stakeholder-card flex-1" data-aos="fade-left" data-aos-delay="500">
+      <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🎓</span> Benefits for Students</h3>
+      <ul class="list-none text-gray-600 text-xs sm:text-sm">
+        <li><span>⚖️</span> <strong>Legal Awareness</strong>: Understand the Indian Constitution, rights, duties, and democratic values.</li>
+        <li><span>🧩</span> <strong>Interactive Learning</strong>: Participate in quizzes, games, and role-play scenarios.</li>
+        <li><span>🧠</span> <strong>Critical Thinking</strong>: Develop reasoning skills through real-life law-based situations.</li>
+        <li><span>💪</span> <strong>Confidence Building</strong>: Learn to ask questions and understand justice and fairness.</li>
+        <li><span>🥇</span> <strong>Certification & Recognition</strong>: Students receive participation certificates, adding value to their profile.</li>
+      </ul>
+      <a href="/participation?type=Student" class="mt-3 inline-block px-3 py-1 rounded-md font-semibold text-xs sm:text-sm">Join as a Student</a>
+    </div>
+  </div>
+</section>
+
+<!-- Workflow -->
+
+<section class="Workflow py-8 px-4" data-aos="fade-up" style="display: flex; justify-content: center; align-items: center;">
+    <img src="./Assets/beinglawfulworkflow.jpg" alt="workflow" class="mx-auto" style="max-height: 80vh; display: block;">
+</section>
 <!-- Book Overview Section -->
-<section class="tan-bg min-h-screen flex flex-col items-center justify-center py-6 px-2" id="book" data-aos="fade-up">
+<section class="tan-bg min-h-screen flex flex-col items-center justify-center py-8 px-4" id="book" data-aos="fade-up">
   <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Being Lawful Book Overview</h2>
   <div class="flex flex-col md:flex-row gap-4 max-w-4xl w-full items-center px-1">
     <div class="bg-gray-200 p-3 rounded-xl flex-1 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-right" data-aos-delay="300">
@@ -714,12 +850,12 @@
       </p>
       <a href="/buy-book" class="px-3 py-1 bg-gray-800 text-white rounded-md hover:bg-blue-600 transform hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm" data-aos="zoom-in" data-aos-delay="400">Buy Now</a>
     </div>
-    <div class="book-bg w-full md:w-48 h-60 rounded-xl transform hover:scale-105 transition-all duration-300" data-aos="fade-left" data-aos-delay="300"></div>
+    <div class="book-bg w-full md:w-48 transform hover:scale-105 transition-all duration-300" data-aos="fade-left" data-aos-delay="300"></div>
   </div>
 </section>
 
 <!-- Activities Section -->
-<section class="bg-white min-h-screen flex flex-col items-center justify-center py-6 px-2" id="activities" data-aos="fade-up">
+<section class="bg-white min-h-screen flex flex-col items-center justify-center py-8 px-4" id="activities" data-aos="fade-up">
   <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Gallery</h2>
   <div class="gallery-grid">
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="300">
@@ -807,25 +943,25 @@
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-      <img src="./Assets/Activities/Activity16.JPG" alt="Activity 16" onclick="openModal(this)">
+      <img src="./Assets/Activities/Activity16.jpg" alt="Activity 16" onclick="openModal(this)">
       <div class="gallery-overlay">
         <span class="gallery-title">Train the trainer workshop pune</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-      <img src="./Assets/Activities/Activity17.JPG" alt="Activity 17" onclick="openModal(this)">
+      <img src="./Assets/Activities/Activity17.jpg" alt="Activity 17" onclick="openModal(this)">
       <div class="gallery-overlay">
         <span class="gallery-title">Train the trainer workshop pune</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-      <img src="./Assets/Activities/Activity18.JPG" alt="Activity 18" onclick="openModal(this)">
+      <img src="./Assets/Activities/Activity18.jpg" alt="Activity 18" onclick="openModal(this)">
       <div class="gallery-overlay">
         <span class="gallery-title">Train the trainer workshop pune</span>
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-      <img src="./Assets/Activities/Activity19.JPG" alt="Activity 19" onclick="openModal(this)">
+      <img src="./Assets/Activities/Activity19.jpg" alt="Activity 19" onclick="openModal(this)">
       <div class="gallery-overlay">
         <span class="gallery-title">Train the trainer workshop pune</span>
       </div>
@@ -837,7 +973,7 @@
       </div>
     </div>
     <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-      <img src="./Assets/Activities/Activity21.JPG" alt="Activity 21" onclick="openModal(this)">
+      <img src="./Assets/Activities/Activity21.jpg" alt="Activity 21" onclick="openModal(this)">
       <div class="gallery-overlay">
         <span class="gallery-title">Adv. S.K Jain addressed the trainers</span>
       </div>
@@ -854,7 +990,7 @@
 </div>
 
 <!-- Author Note Section -->
-<section class="tan-bg min-h-screen flex flex-col items-center justify-center py-6 px-2" id="author" data-aos="fade-up">
+<section class="tan-bg min-h-screen flex flex-col items-center justify-center py-8 px-4" id="author" data-aos="fade-up">
   <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Author Note</h2>
   <div class="flex flex-col md:flex-row gap-4 max-w-3xl w-full items-center px-1">
     <div class="author-bg w-44 h-48 rounded-full transform hover:scale-105 transition-all duration-300" data-aos="fade-right" data-aos-delay="300"></div>
@@ -873,7 +1009,7 @@
 </section>
 
 <!-- Samvidhan Hero Section -->
-<section class="samvidhan-bg min-h-screen flex items-center px-2 py-6" id="samvidhan" data-aos="fade-up">
+<section class="samvidhan-bg min-h-screen flex items-center px-4 py-8" id="samvidhan" data-aos="fade-up">
   <div class="text-left">
     <h2 class="text-white text-lg sm:text-xl md:text-3xl font-bold mb-3" data-aos="fade-up" data-aos-delay="200">Visit Constitution75.com</h2>
     <p class="text-white text-sm sm:text-base md:text-lg mb-3" data-aos="fade-up" data-aos-delay="200">Celebrating 75 years of Samvidhan</p>
@@ -884,9 +1020,9 @@
 </section>
 
 <!-- Our Partners Section -->
-<section class="bg-white min-h-[40vh] flex flex-col items-center justify-center py-6 px-2" id="partners" data-aos="fade-up">
+<section class="bg-white min-h-[40vh] flex flex-col items-center justify-center py-8 px-4" id="partners" data-aos="fade-up">
   <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Our Partners</h2>
-  <div class="flex flex-wrap gap-2 justify-center max-w-3xl w-full px-1">
+  <div class="flex flex-wrap gap-4 justify-center max-w-3xl w-full px-1">
     <div class="partner-logo-container" data-aos="fade-up" data-aos-delay="300">
       <img src="./Assets/MHKC.png" alt="MHKC Logo" class="partner-logo">
     </div>
@@ -900,7 +1036,7 @@
 </section>
 
 <!-- Footer Section -->
-<footer class="bg-gray-800 text-white py-6 px-2" id="footer" data-aos="fade-up">
+<footer class="bg-gray-800 text-white py-6 px-4" id="footer" data-aos="fade-up">
   <div class="flex flex-col md:flex-row gap-4 justify-center max-w-3xl mx-auto mb-4">
     <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="200">
       <h5 class="font-semibold text-sm sm:text-base mb-3">Quick Links</h5>
@@ -952,21 +1088,6 @@
       navbar.classList.add('scrolled');
     } else {
       navbar.classList.remove('scrolled');
-    }
-  });
-
-  // Disable right-click, F12, and developer tools
-  function disableDevTools(event) {
-    if (event.key === 'F12' || event.key === 'f12' || (event.ctrlKey && event.shiftKey && event.key === 'I') || (event.ctrlKey && event.key === 'U')) {
-      event.preventDefault();
-      return false;
-    }
-  }
-
-  // Disable screenshot (basic prevention, note limitations)
-  document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-      // Removed alert
     }
   });
 

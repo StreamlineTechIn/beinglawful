@@ -1,0 +1,58 @@
+<% if (error) { %>
+    <div class="alert alert-danger" role="alert">
+        <%= error %>
+    </div>
+<% } %>
+<% if (success) { %>
+    <div class="alert alert-success" role="alert">
+        <%= success %>
+    </div>
+<% } %>
+
+<div class="container mt-4">
+    <h2>School Media Uploads</h2>
+    <div class="accordion" id="mediaAccordion">
+        <% schools.forEach(school => { %>
+            <div class="card">
+                <div class="card-header" id="heading-<%= school.id %>">
+                    <h5 class="mb-0">
+                        <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#collapse-<%= school.id %>" aria-expanded="true" aria-controls="collapse-<%= school.id %>">
+                            <%= school.schoolName %> (<% if (school.mediaUploads && school.mediaUploads.length > 0) { %><%= school.mediaUploads.length %> Uploads<% } else { %>No Uploads<% } %>)
+                        </button>
+                    </h5>
+                </div>
+                <div id="collapse-<%= school.id %>" class="collapse" aria-labelledby="heading-<%= school.id %>" data-parent="#mediaAccordion">
+                    <div class="card-body">
+                        <% if (school.mediaUploads && school.mediaUploads.length > 0) { %>
+                            <div class="row">
+                                <% school.mediaUploads.forEach(upload => { %>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card">
+                                            <% if (upload.type === 'image') { %>
+                                                <img src="<%= upload.url %>" class="card-img-top" alt="Media Upload" style="max-height: 200px; object-fit: cover;">
+                                            <% } else if (upload.type === 'video') { %>
+                                                <video controls class="card-img-top" style="max-height: 200px; width: 100%;">
+                                                    <source src="<%= upload.url %>" type="<%= upload.contentType || 'video/mp4' %>">
+                                                    Your browser does not support the video tag.
+                                                </video>
+                                            <% } %>
+                                            <div class="card-body">
+                                                <h5 class="card-title"><%= upload.description || 'No Description' %></h5>
+                                                <% if (upload.link) { %>
+                                                    <p class="card-text"><a href="<%= upload.link %>" target="_blank">View Link</a></p>
+                                                <% } %>
+                                                <p class="card-text"><small class="text-muted">Uploaded: <%= upload.uploadedAt ? new Date(upload.uploadedAt).toLocaleString() : 'N/A' %></small></p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                <% }) %>
+                            </div>
+                        <% } else { %>
+                            <p>No media uploads available for this school.</p>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+</div>

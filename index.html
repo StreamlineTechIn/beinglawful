@@ -133,7 +133,7 @@
   <meta name="preload" content="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" as="style">
   <meta name="preload" content="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" as="style">
   <meta name="preload" content="https://beinglawful.in/Assets/being_lawful.jpg" as="image">
-  <meta name="content-security-policy" content="default-src 'self'; img-src 'self' https://beinglawful.in https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; object-src 'none';">
+  <meta name="content-security-policy" content="default-src 'self'; img-src 'self' https://beinglawful.in https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; object-src 'none'; frame-src 'self' https://samvidhanai.beinglawful.in;">
   <link rel="canonical" href="https://beinglawful.in/">
 
   <!-- Preload Critical Resources -->
@@ -534,6 +534,72 @@
       50% { opacity: 0.7; }
       100% { opacity: 1; }
     }
+    /* AI Icon Styles */
+    .ai-icon {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      width: 60px;
+      height: 60px;
+      background: linear-gradient(to right, #f59e0b, #1e40af);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      z-index: 1000;
+    }
+    .ai-icon:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+    }
+    .ai-icon img {
+      width: 40px;
+      height: 40px;
+      object-fit: contain;
+    }
+    /* AI Modal Styles */
+    .ai-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1001;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .ai-modal.active {
+      display: flex;
+    }
+    .ai-modal-content {
+      width: 90%;
+      max-width: 800px;
+      height: 80vh;
+      background: white;
+      border-radius: 12px;
+      overflow: hidden;
+      position: relative;
+    }
+    .ai-modal-content iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .ai-close-modal {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      color: black;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 1002;
+    }
     @media (min-width: 320px) {
       .hero-section {
         padding: 40px 0.5rem 1rem;
@@ -830,10 +896,10 @@
 </section>
 
 <!-- Workflow -->
-
 <section class="Workflow py-8 px-4" data-aos="fade-up" style="display: flex; justify-content: center; align-items: center;">
     <img src="./Assets/beinglawfulworkflow.jpg" alt="workflow" class="mx-auto" style="max-height: 80vh; display: block;">
 </section>
+
 <!-- Book Overview Section -->
 <section class="tan-bg min-h-screen flex flex-col items-center justify-center py-8 px-4" id="book" data-aos="fade-up">
   <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Being Lawful Book Overview</h2>
@@ -848,8 +914,7 @@
       <p class="text-gray-600 mb-3 text-xs sm:text-sm">
         May this book provide a fresh perspective on this journey, proving valuable not only to children but also to their parents and teachers.
       </p>
-      <a href="/buy-book" class="px-3 py-1 bg-gray-800 text-white rounded-md hover:bg-blue-600 transform hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm" data-aos="zoom-in" data-aos-delay="400">Buy Now</a>
-    </div>
+   <a href="/buy-book" class="px-3 py-1 bg-gray-800 text-white rounded-md hover:bg-blue-600 transform hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm" data-aos="zoom-in" data-aos-delay="400">Buy book</a></div>
     <div class="book-bg w-full md:w-48 transform hover:scale-105 transition-all duration-300" data-aos="fade-left" data-aos-delay="300"></div>
   </div>
 </section>
@@ -989,6 +1054,22 @@
   </div>
 </div>
 
+<!-- AI Modal -->
+<div id="aiModal" class="ai-modal" onclick="closeAIModal(event)">
+  <span class="ai-close-modal" onclick="closeAIModal(event)" aria-label="Close Samvidhan AI">×</span>
+  <div class="ai-modal-content">
+    <iframe id="aiIframe" src="https://samvidhanai.beinglawful.in/" title="Samvidhan AI" aria-label="Samvidhan AI Interface"></iframe>
+  </div>
+</div>
+
+<!-- AI Icon -->
+<div class="ai-icon-container">
+  <div class="ai-icon" onclick="openAIModal()" role="button" aria-label="Open Samvidhan AI">
+    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z'/%3E%3C/svg%3E" alt="Samvidhan AI Chat Icon">
+  </div>
+</div>
+
+
 <!-- Author Note Section -->
 <section class="tan-bg min-h-screen flex flex-col items-center justify-center py-8 px-4" id="author" data-aos="fade-up">
   <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Author Note</h2>
@@ -1113,6 +1194,21 @@
     if (event.target.classList.contains('modal') || event.target.classList.contains('close-modal')) {
       modal.style.display = 'none';
       modal.classList.remove('active');
+    }
+  }
+
+  // AI Modal functions
+  function openAIModal() {
+    const aiModal = document.getElementById('aiModal');
+    aiModal.classList.add('active');
+    aiModal.style.display = 'flex';
+  }
+
+  function closeAIModal(event) {
+    const aiModal = document.getElementById('aiModal');
+    if (event.target.classList.contains('ai-modal') || event.target.classList.contains('ai-close-modal')) {
+      aiModal.style.display = 'none';
+      aiModal.classList.remove('active');
     }
   }
 

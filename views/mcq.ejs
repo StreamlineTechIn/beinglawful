@@ -3,70 +3,110 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCQ Test - Being Lawful</title>
+    <title>Main Exam</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-        }
-        .mcq-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .mcq-container h2 {
-            text-align: center;
-            color: #333;
-        }
-        .question {
-            margin-bottom: 15px;
-        }
-        .question p {
-            font-weight: bold;
-        }
-        .question label {
-            display: block;
-            margin: 5px 0;
-        }
-        .mcq-container button {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-top: 20px;
-        }
-        .mcq-container button:hover {
-            background-color: #45a049;
-        }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .question { margin-bottom: 20px; }
+        .question p { font-weight: bold; }
+        .question label { display: block; margin: 5px 0; }
+        button { width: 100%; padding: 12px; background: #28a745; color: #fff; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        button:hover { background: #218838; }
+        .error { color: red; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="mcq-container">
-        <h2>Main MCQ Exam</h2>
-        <form action="/submit-mcq" method="POST">
-            <input type="hidden" name="parentMobile1" value="<%= parentMobile1 %>">
-            <% mcqs.forEach((question, index) => { %>
+
+<div class="container">
+    <h1>Main Exam</h1>
+    <p id="error-message" class="error"></p>
+
+    <form id="examForm" action="/submit-mcq" method="POST" target="_self">
+        <input type="hidden" name="parentMobile1" value="<%= parentMobile1 %>">
+        <% if (mcqs && mcqs.length > 0) { %>
+            <% mcqs.forEach((mcq, index) => { %>
                 <div class="question">
-                    <p><%= index + 1 %>. <%= question.question %></p>
-                    <% question.options.forEach(option => { %>
+                    <p><%= index + 1 %>. <%= mcq.question %></p>
+                    <% mcq.options.forEach(option => { %>
                         <label>
                             <input type="radio" name="q<%= index %>" value="<%= option %>" required>
                             <%= option %>
                         </label>
-                    <% }) %>
+                    <% }); %>
                 </div>
-            <% }) %>
+            <% }); %>
             <button type="submit">Submit Exam</button>
-        </form>
-    </div>
+        <% } else { %>
+            <p>No questions available for this exam.</p>
+        <% } %>
+    </form>
+</div>
+
+<script>
+    let formSubmitted = false;
+    let warningCount = 0;
+    const maxWarnings = 3;
+
+    function giveWarning() {
+        warningCount++;
+        if (warningCount >= maxWarnings) {
+            alert('⚠️ You switched tab/minimized window 3 times. You are now logged out.');
+            window.location.href = '/logout';  // ✅ Your logout route here
+        } else {
+            alert(`⚠️ Warning ${warningCount}: Do not switch tab or minimize window during exam!`);
+        }
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+            giveWarning();
+        }
+    });
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    history.pushState(null, null, location.href);
+    window.onpopstate = function () {
+        history.go(1);
+        alert('⚠️ Back navigation is disabled during the exam!');
+    };
+
+    window.addEventListener('beforeunload', function (e) {
+        if (!formSubmitted) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key === "F12" || (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key))) {
+            e.preventDefault();
+            alert('⚠️ Developer tools are disabled during the exam!');
+        }
+    });
+
+    function validateForm(event) {
+        const form = document.getElementById('examForm');
+        const questions = <%- JSON.stringify(mcqs.length) %>;
+        for (let i = 0; i < questions; i++) {
+            const answer = form.querySelector(`input[name="q${i}"]:checked`);
+            if (!answer) {
+                event.preventDefault();
+                document.getElementById('error-message').innerText = '⚠️ Please answer all questions before submitting.';
+                return false;
+            }
+        }
+        if (!confirm('Are you sure you want to submit your exam? You cannot change your answers after submission.')) {
+            event.preventDefault();
+            return false;
+        }
+        formSubmitted = true;
+        return true;
+    }
+
+    document.getElementById('examForm').addEventListener('submit', validateForm);
+</script>
+
 </body>
 </html>

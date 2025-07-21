@@ -12,32 +12,39 @@
             padding: 0;
             background-color: #f4f4f4;
             display: flex;
-        }
-        .sidebar {
-            width: 250px;
-            background: #2c3e50;
-            color: #fff;
-            height: 100vh;
-            position: fixed;
-            padding-top: 20px;
-        }
-        .sidebar h2 {
-            text-align: center;
-            margin-bottom: 30px;
-            font-size: 1.5em;
-        }
-        .sidebar a {
-            display: block;
-            color: #fff;
-            padding: 15px 20px;
-            text-decoration: none;
-            font-size: 1.1em;
-        }
-        .sidebar a:hover {
-            background: #3498db;
-        }
-        .sidebar a.active {
-            background: #3498db;
+    .sidebar {
+    width: 250px;
+    background: linear-gradient(180deg, #1e7e34, #145a32); /* Dark Green Gradient */
+    color: #fff;
+    height: 100vh;
+    position: fixed;
+    padding-top: 20px;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 1.5em;
+}
+
+.sidebar a {
+    display: block;
+    color: #fff;
+    padding: 15px 20px;
+    text-decoration: none;
+    font-size: 1.1em;
+    transition: background 0.3s;
+}
+
+.sidebar a:hover {
+    background: #51ca6d; /* Light Green Hover */
+}
+
+.sidebar a.active {
+    background: #51ca6d; /* Active Tab Highlight */
+}
+;
         }
         .main-content {
             margin-left: 250px;
@@ -66,7 +73,7 @@
             justify-content: center;
             align-items: center;
             color: #000;
-            pointer-events: none; /* Ensure content doesn't interfere with download */
+            pointer-events: none; /* Ensure content doesn't interfere   with download */
         }
         .certificate-content p {
             margin: 5px 0;

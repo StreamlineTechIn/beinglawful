@@ -74,37 +74,185 @@
         .tab-content.active {
             display: block;
         }
-        table {
+        .table-container {
             width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
+            overflow-x: auto;
         }
-        table th, table td {
+        #studentTable {
+            width: 1200px;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        #studentTable th,
+        #studentTable td {
             padding: 12px;
             border: 1px solid #ddd;
             text-align: left;
         }
-        table th {
+        #studentTable th {
             background-color: #4CAF50;
             color: white;
+            font-weight: bold;
         }
-        table tr:nth-child(even) {
+        #studentTable tr:nth-child(even) {
             background-color: #f9f9f9;
+        }
+        #studentTable th:nth-child(1),
+        #studentTable td:nth-child(1) {
+            width: 180px;
+        }
+        #studentTable th:nth-child(2),
+        #studentTable td:nth-child(2) {
+            width: 90px;
+        }
+        #studentTable th:nth-child(3),
+        #studentTable td:nth-child(3) {
+            width: 140px;
+        }
+        #studentTable th:nth-child(4),
+        #studentTable td:nth-child(4) {
+            width: 140px;
+        }
+        #studentTable th:nth-child(5),
+        #studentTable td:nth-child(5) {
+            width: 140px;
+        }
+        #studentTable th:nth-child(6),
+        #studentTable td:nth-child(6) {
+            width: 140px;
+        }
+        #studentTable th:nth-child(7),
+        #studentTable td:nth-child(7) {
+            width: 140px;
+        }
+        #studentTable th:nth-child(8),
+        #studentTable td:nth-child(8) {
+            width: 140px;
+        }
+        #studentTable th:nth-child(9),
+        #studentTable td:nth-child(9) {
+            width: 100px;
         }
         .filter-select {
             padding: 5px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            width: auto;
-            min-width: 200px;
+            width: 200px;
+            margin-top: 5px;
+            background: linear-gradient(135deg, #f5f7fa, #e4e7eb);
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
-        .edit-form label, .resources-form label, .media-form label {
+        .filter-select:hover {
+            border-color: #4CAF50;
+        }
+        .filter-select:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
+            outline: none;
+        }
+        .timepicker {
+            padding: 8px;
+            border: 1px solid #00acc1;
+            border-radius: 6px;
+            width: 160px;
+            margin-top: 5px;
+            background: linear-gradient(135deg, #ffffff, #e0f7fa);
+            color: #333;
+            font-size: 14px;
+            font-family: 'Arial', sans-serif;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+        }
+        .timepicker:hover {
+            border-color: #4CAF50;
+            box-shadow: 0 4px 8px rgba(76, 175, 80, 0.2);
+            transform: translateY(-2px);
+        }
+        .timepicker:focus {
+            border-color: #4CAF50;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
+            outline: none;
+            transform: translateY(-1px);
+        }
+        .timepicker::-webkit-calendar-picker-indicator {
+            filter: invert(48%) sepia(13%) saturate(3207%) hue-rotate(130deg) brightness(95%) contrast(80%);
+            cursor: pointer;
+            padding: 5px;
+        }
+        .timepicker-container {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .timepicker-container::before {
+            content: '🕒';
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #4CAF50;
+            font-size: 16px;
+            pointer-events: none;
+        }
+        .timepicker-container .timepicker {
+            padding-left: 35px;
+        }
+        .timepicker-save-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .timepicker-save-button:hover {
+            background-color: #45a049;
+            transform: translateY(-1px);
+        }
+        .timepicker-save-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .approve-button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .approve-button:hover {
+            background-color: #45a049;
+        }
+        .approve-button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .edit-form label,
+        .resources-form label,
+        .media-form label {
             display: block;
             margin: 10px 0 5px;
             font-weight: bold;
             color: #333;
         }
-        .edit-form input, .resources-form input[type="text"], .media-form input[type="text"], .media-form textarea {
+        .edit-form input,
+        .resources-form input[type="text"],
+        .resources-form input[type="time"],
+        .media-form input[type="text"],
+        .media-form textarea {
             width: 100%;
             padding: 8px;
             margin-bottom: 10px;
@@ -112,7 +260,9 @@
             border-radius: 4px;
             box-sizing: border-box;
         }
-        .edit-form input[type="submit"], .resources-form input[type="submit"], .media-form input[type="submit"] {
+        .edit-form input[type="submit"],
+        .resources-form input[type="submit"],
+        .media-form input[type="submit"] {
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -121,7 +271,9 @@
             border-radius: 4px;
             width: auto;
         }
-        .edit-form input[type="submit"]:hover, .resources-form input[type="submit"]:hover, .media-form input[type="submit"]:hover {
+        .edit-form input[type="submit"]:hover,
+        .resources-form input[type="submit"]:hover,
+        .media-form input[type="submit"]:hover {
             background-color: #45a049;
         }
         .resources-form .resource-item {
@@ -147,37 +299,38 @@
             margin-bottom: 5px;
         }
         .trainer-select-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin: 20px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .trainer-select-container > div {
             display: flex;
             align-items: center;
             gap: 10px;
-            margin: 20px 0;
             flex-wrap: wrap;
-        }
-        .trainer-note {
-    color: #e74c3c; /* Yellowish-red for default note */
-    font-style: italic;
-    margin-top: 5px;
-    margin-left: 10px;
-}
-
-.date-list {
-    color: #2ecc71; /* Green for available dates */
-    font-style: normal; /* Remove italic for dates */
-}
-
-.no-dates {
-    color: #f1c40f; /* Yellow for no dates message */
-}
-        .trainer-label {
-            font-weight: bold;
-            color: #333;
-            white-space: nowrap;
         }
         .trainer-note {
             color: #e74c3c;
             font-style: italic;
             margin-top: 5px;
-            margin-left: 10px;
+            grid-column: 1 / -1;
+        }
+        .date-list {
+            color: #2ecc71;
+            font-style: normal;
+        }
+        .no-dates {
+            color: #f1c40f;
+        }
+        .duration-message {
+            color: #333;
+            font-size: 0.9em;
+            grid-column: 1 / -1;
+            display: none;
         }
         .media-form textarea {
             height: 150px;
@@ -186,15 +339,48 @@
         .media-form input[type="file"] {
             padding: 5px;
         }
-        .media-preview img {
+        .media-preview img,
+        .media-preview video {
             max-width: 150px;
             margin: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
+        @media (max-width: 1200px) {
+            .table-container {
+                max-width: 100%;
+            }
+            .trainer-select-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        .logout-button {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            text-decoration: none;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: inline-block;
+        }
+        .logout-button:hover {
+            background-color: #c0392b;
+        }
+        @media (max-width: 1200px) {
+            .logout-button {
+                padding: 6px 12px;
+                font-size: 12px;
+                top: 10px;
+                right: 10px;
+            }
+        }
     </style>
 </head>
-
 <body>
     <div class="dashboard-container">
         <h2><%= schoolName %> Dashboard</h2>
@@ -208,8 +394,7 @@
         <% if (error) { %>
             <div class="error"><%= error %></div>
         <% } %>
-
-        <!-- Tab Navigation -->
+        <a href="/logout" class="logout-button">Logout</a>
         <div class="tab-container">
             <div class="tab-buttons">
                 <button class="tab-button active" onclick="openTab('resources')">Resource Arrangement</button>
@@ -217,18 +402,19 @@
                 <button class="tab-button" onclick="openTab('edit-info')">Edit School Information</button>
                 <button class="tab-button" onclick="openTab('media-upload')">Media Upload</button>
             </div>
-
-            <!-- Resource Arrangement Tab -->
             <div id="resources" class="tab-content active">
                 <% if (resourcesConfirmed) { %>
                     <div class="confirmation-message">
-                        <h4 color="green">The school must ensure that event photos are uploaded in the “Media Upload” section for media coverage by Being Lawful officials.</h4>
+                        <h4 style="color: #4CAF50;">The school must ensure that event photos are uploaded in the “Media Upload” section for media coverage by Being Lawful officials.</h4>
                         <p>You have confirmed the arrangement of the following resources:</p>
                         <ul>
                             <% selectedResources.forEach(resource => { %>
                                 <li><%= resource %></li>
                             <% }) %>
                         </ul>
+                       <% if (typeof workshopStartTime !== 'undefined' && typeof workshopEndTime !== 'undefined' && workshopStartTime && workshopEndTime) { %>
+    <p>Workshop Schedule: <%= workshopStartTime %> to <%= workshopEndTime %> (4-hour duration)</p>
+<% } %>
                         <% if (selectedTrainers && selectedTrainers.length > 0) { %>
                             <% selectedTrainers.forEach((trainer, index) => { %>
                                 <p>Selected Trainer <%= index + 1 %>: <%= trainer.trainerName %> (<%= trainer.district %>)</p>
@@ -279,29 +465,55 @@
                                 <input type="checkbox" id="trainer2" name="resources" value="Trainer 2" checked required>
                                 <label for="trainer2">Trainer 2</label>
                             </div>
+                            <div class="resource-item">
+                                <input type="checkbox" id="showAllTrainers" name="showAllTrainers" onchange="updateTrainerSelection()">
+                                <label for="showAllTrainers">Show all trainers (including other districts)</label>
+                            </div>
                             <div class="trainer-select-container">
-                                <label for="trainerId1" class="trainer-label">Select First Trainer:</label>
-                                <select id="trainerId1" name="trainerId1" class="filter-select" required onchange="updateTrainerSelection()">
-                                    <option value="">Select a trainer</option>
-                                    <% trainers.forEach(trainer => { %>
-                                        <option value="<%= trainer.id %>" data-district="<%= trainer.district %>" data-dates='<%= JSON.stringify(trainer.availableDates || []) %>'>
-                                            <%= trainer.trainerName %> (<%= trainer.district %>)
-                                        </option>
-                                    <% }) %>
-                                </select>
-                                <div id="trainer1-dates" class="trainer-note" style="display: none;">Available Dates: <span id="trainer1-dates-list"></span></div>
-
-                                <label for="trainerId2" class="trainer-label">Select Second Trainer:</label>
-                                <select id="trainerId2" name="trainerId2" class="filter-select" required onchange="updateTrainerSelection()">
-                                    <option value="">Select a trainer</option>
-                                    <% trainers.forEach(trainer => { %>
-                                        <option value="<%= trainer.id %>" data-district="<%= trainer.district %>" data-dates='<%= JSON.stringify(trainer.availableDates || []) %>'>
-                                            <%= trainer.trainerName %> (<%= trainer.district %>)
-                                        </option>
-                                    <% }) %>
-                                </select>
-                                <div id="trainer2-dates" class="trainer-note" style="display: none;">Available Dates: <span id="trainer2-dates-list"></span></div>
-
+                                <div>
+                                    <label for="trainerId1" class="trainer-label">Trainer 1:</label>
+                                    <select id="trainerId1" name="trainerId1" class="filter-select" required onchange="updateTrainerSelection()">
+                                        <option value="">Select a trainer</option>
+                                        <% trainers.forEach(trainer => { %>
+                                            <option value="<%= trainer.id %>" data-district="<%= trainer.district %>" data-dates='<%= JSON.stringify(trainer.availableDates || []) %>'>
+                                                <%= trainer.trainerName %> (<%= trainer.district %>)
+                                            </option>
+                                        <% }) %>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="trainerId2" class="trainer-label">Trainer 2:</label>
+                                    <select id="trainerId2" name="trainerId2" class="filter-select" required onchange="updateTrainerSelection()">
+                                        <option value="">Select a trainer</option>
+                                        <% trainers.forEach(trainer => { %>
+                                            <option value="<%= trainer.id %>" data-district="<%= trainer.district %>" data-dates='<%= JSON.stringify(trainer.availableDates || []) %>'>
+                                                <%= trainer.trainerName %> (<%= trainer.district %>)
+                                            </option>
+                                        <% }) %>
+genres-form input[type="time"] {
+                                            width: 160px;
+                                        }
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="workshopStartTime" class="trainer-label">Workshop Time:</label>
+                                    <div class="timepicker-container">  
+                                        <input type="time" id="workshopStartTime" name="workshopStartTime" class="timepicker" required oninput="enableSaveButton()">
+                                        <button type="button" id="timepickerSaveButton" class="timepicker-save-button" onclick="updateEndTime()" disabled>Save</button>
+                                    </div>
+                                    <input type="hidden" id="workshopEndTime" name="workshopEndTime">
+                                </div>
+                                <div>
+                                    <label class="trainer-label">End Time:</label>
+                                    <span id="workshopEndTimeDisplay" style="margin-left: 10px;"></span>
+                                </div>
+                                <span id="durationMessage" class="duration-message">Workshop duration: 4 hours</span>
+                                <p class="trainer-note" id="trainer1-dates" style="display: none;">
+                                    Available Dates for Trainer 1: <span id="trainer1-dates-list" class="date-list"></span>
+                                </p>
+                                <p class="trainer-note" id="trainer2-dates" style="display: none;">
+                                    Available Dates for Trainer 2: <span id="trainer2-dates-list" class="date-list"></span>
+                                </p>
                                 <p class="trainer-note" id="trainer-cost-note" style="display: none;">
                                     Note: Selecting a trainer from another district will incur an additional ₹1000 + travel expenses.
                                 </p>
@@ -311,44 +523,45 @@
                     </div>
                 <% } %>
             </div>
-
-            <!-- Student Data Tab -->
             <div id="student-data" class="tab-content">
                 <% if (students.length > 0) { %>
-                    <table id="studentTable">
-                        <thead>
-                            <tr>
-                                <th data-filter="studentName">Student Name<br><select class="filter-select" data-column="studentName" onchange="applyFilters('studentTable')"></select></th>
-                                <th data-filter="studentClass">Class<br><select class="filter-select" data-column="studentClass" onclick="applyFilters('studentTable')"></select></tr>
-                                <th data-filter="trial1Percentage">Trial 1 (%)<br><select class="filter-select" data-column="trial1Percentage" onchange="applyFilters('studentTable')"></select></th>
-                                <th data-filter="trial2Percentage">Trial 2 (%)<br><select class="filter-select" data-column="trial2Percentage" onchange="applyFilters('studentTable')"></select></th>
-                                <th data-filter="hasCompletedMCQ">MCQ Completed<br><select class="filter-select" data-column="hasCompletedMCQ" onchange="applyFilters('studentTable')"></select></th>
-                                <th data-filter="score">MCQ Score<br><select class="filter-select" data-column="score" onchange="applyFilters('studentTable')"></select></th>
-                                <th data-filter="percentage">MCQ Percentage<br><select class="filter-select" data-column="percentage" onchange="applyFilters('studentTable')"></select></th>
-                                <th data-filter="completedAt">Completed At<br><select class="filter-select" data-column="completedAt" onchange="applyFilters('studentTable')"></select></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% students.sort((a, b) => (b.score || 0) - (a.score || 0)).forEach(student => { %>
+                    <div class="table-container">
+                        <table id="studentTable">
+                            <thead>
                                 <tr>
-                                    <td data-column="studentName"><%= student.studentName %></td>
-                                    <td data-column="studentClass"><%= student.studentClass %></td>
-                                    <td data-column="trial1Percentage"><%= student.trial1Percentage %></td>
-                                    <td data-column="trial2Percentage"><%= student.trial2Percentage %></td>
-                                    <td data-column="hasCompletedMCQ"><%= student.hasCompletedMCQ ? 'Yes' : 'No' %></td>
-                                    <td data-column="score"><%= student.score %> / <%= student.totalQuestions %></td>
-                                    <td data-column="percentage"><%= student.percentage %>%</td>
-                                    <td data-column="completedAt"><%= student.completedAt %></td>
+                                    <th data-filter="studentName">Student Name<br><select class="filter-select" data-column="studentName" onchange="applyFilters('studentTable')"></select></th>
+                                    <th data-filter="studentClass">Class<br><select class="filter-select" data-column="studentClass" onchange="applyFilters('studentTable')"></select></th>
+                                    <th data-filter="trial1Percentage">Trial 1 (%)<br><select class="filter-select" data-column="trial1Percentage" onchange="applyFilters('studentTable')"></select></th>
+                                    <th data-filter="trial2Percentage">Trial 2 (%)<br><select class="filter-select" data-column="trial2Percentage" onchange="applyFilters('studentTable')"></select></th>
+                                    <th data-filter="hasCompletedMCQ">MCQ Completed<br><select class="filter-select" data-column="hasCompletedMCQ" onchange="applyFilters('studentTable')"></select></th>
+                                    <th data-filter="score">MCQ Score<br><select class="filter-select" data-column="score" onchange="applyFilters('studentTable')"></select></th>
+                                    <th data-filter="percentage">MCQ Percentage<br><select class="filter-select" data-column="percentage" onchange="applyFilters('studentTable')"></select></th>
+                                    <th data-filter="completedAt">Completed At<br><select class="filter-select" data-column="completedAt" onchange="applyFilters('studentTable')"></select></th>
+                                    <th>Approve</th>
                                 </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <% students.sort((a, b) => (b.score || 0) - (a.score || 0)).forEach(student => { %>
+                                    <tr>
+                                        <td data-column="studentName"><%= student.studentName || 'N/A' %></td>
+                                        <td data-column="studentClass"><%= student.studentClass || 'N/A' %></td>
+                                        <td data-column="trial1Percentage"><%= student.trial1Percentage !== undefined ? student.trial1Percentage : 'N/A' %></td>
+                                        <td data-column="trial2Percentage"><%= student.trial2Percentage !== undefined ? student.trial2Percentage : 'N/A' %></td>
+                                        <td data-column="hasCompletedMCQ"><%= student.hasCompletedMCQ ? 'Yes' : 'No' %></td>
+                                        <td data-column="score"><%= student.score !== undefined && student.totalQuestions !== undefined ? `${student.score} / ${student.totalQuestions}` : 'N/A' %></td>
+                                        <td data-column="percentage"><%= student.percentage !== undefined ? `${student.percentage}%` : 'N/A' %></td>
+                                        <td data-column="completedAt"><%= student.completedAt || 'N/A' %></td>
+                               
+
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
                 <% } else { %>
                     <p>No students found for this school.</p>
                 <% } %>
             </div>
-
-            <!-- Edit School Information Tab -->
             <div id="edit-info" class="tab-content">
                 <div class="edit-form">
                     <form action="/school-dashboard/update" method="POST">
@@ -375,8 +588,6 @@
                     </form>
                 </div>
             </div>
-
-            <!-- Media Upload Tab -->
             <div id="media-upload" class="tab-content">
                 <div class="media-form">
                     <form action="/school-dashboard/upload-media" method="POST" enctype="multipart/form-data">
@@ -411,7 +622,7 @@
                                     <% } else { %>
                                         <video src="<%= upload.url %>" controls style="max-width: 150px;"></video>
                                     <% } %>
-                                    <p><%= upload.description.substring(0, 100) %>...</p>
+                                    <p><%= upload.description ? upload.description.substring(0, 100) + '...' : 'No description' %></p>
                                     <% if (upload.link) { %>
                                         <a href="<%= upload.link %>" target="_blank">View Link</a>
                                     <% } %>
@@ -424,86 +635,93 @@
                 </div>
             </div>
         </div>
+    </div>
+    <script>
+     document.addEventListener('DOMContentLoaded', function () {
+    // Initialize the first tab as active
+    openTab('student-data');
+});
 
-        <script>
-            function openTab(tabId) {
-                document.querySelectorAll('.tab-content').forEach(tab => {
-                    tab.classList.remove('active');
-                });
-                document.querySelectorAll('.tab-button').forEach(button => {
-                    button.classList.remove('active');
-                });
-                document.getElementById(tabId).classList.add('active');
-                document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`).classList.add('active');
-                if (tabId === 'student-data') {
-                    initializeFilters('studentTable');
+function openTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+    });
+    document.getElementById(tabId).classList.add('active');
+    document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`).classList.add('active');
+    
+    if (tabId === 'student-data') {
+        initializeFilters('studentTable');
+    }
+    if (tabId === 'resources') {
+        updateTrainerSelection();
+    }
+}
+
+function initializeFilters(tableId) {
+    const table = document.getElementById(tableId);
+    const headers = table.querySelectorAll('th[data-filter]');
+    const rows = table.querySelectorAll('tbody tr');
+    headers.forEach(header => {
+        const column = header.dataset.filter;
+        const select = header.querySelector('.filter-select');
+        const values = new Set(['All']);
+        rows.forEach(row => {
+            const cell = row.querySelector(`td[data-column="${column}"]`);
+            if (cell) {
+                let cellText = cell.textContent.trim();
+                if (cellText && !values.has(cellText)) {
+                    values.add(cellText);
                 }
             }
-
-            function initializeFilters(tableId) {
-                const table = document.getElementById(tableId);
-                const headers = table.querySelectorAll('th[data-filter]');
-                const rows = table.querySelectorAll('tbody tr');
-
-                headers.forEach(header => {
-                    const column = header.dataset.filter;
-                    const select = header.querySelector('.filter-select');
-                    const values = new Set(['All']);
-                    rows.forEach(row => {
-                        const cell = row.querySelector(`td[data-column="${column}"]`);
-                        if (cell) {
-                            let cellText = cell.textContent.trim();
-                            if (cellText && !values.has(cellText)) {
-                                values.add(cellText);
-                            }
-                        }
-                    });
-                    select.innerHTML = '';
-                    let isAllSet = false;
-                    [...values].sort().forEach(value => {
-                        const option = document.createElement('option');
-                        option.value = value;
-                        option.textContent = value;
-                        if (value === 'All' && !isAllSet) {
-                            option.selected = true;
-                            isAllSet = true;
-                        }
-                        select.appendChild(option);
-                    });
-                });
+        });
+        select.innerHTML = '';
+        let isAllSet = false;
+        [...values].sort().forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            if (value === 'All' && !isAllSet) {
+                option.selected = true;
+                isAllSet = true;
             }
+            select.appendChild(option);
+        });
+    });
+}
 
-            function applyFilters(tableId) {
-                const table = document.getElementById(tableId);
-                const rows = table.querySelectorAll('tbody tr');
-                const filters = {};
-                table.querySelectorAll('.filter-select').forEach(select => {
-                    filters[select.dataset.column] = select.value.trim();
-                });
-                rows.forEach(row => {
-                    let show = true;
-                    for (const [column, value] of Object.entries(filters)) {
-                        if (value && value !== 'All' && value !== '') {
-                            const cell = row.querySelector(`td[data-column="${column}"]`);
-                            if (cell) {
-                                let cellText = cell.textContent.trim();
-                                if (cellText !== value) {
-                                    show = false;
-                                    break;
-                                }
-                            }
-                        }
+function applyFilters(tableId) {
+    const table = document.getElementById(tableId);
+    const rows = table.querySelectorAll('tbody tr');
+    const filters = {};
+    table.querySelectorAll('.filter-select').forEach(select => {
+        filters[select.dataset.column] = select.value.trim();
+    });
+    rows.forEach(row => {
+        let show = true;
+        for (const [column, value] of Object.entries(filters)) {
+            if (value && value !== 'All' && value !== '') {
+                const cell = row.querySelector(`td[data-column="${column}"]`);
+                if (cell) {
+                    let cellText = cell.textContent.trim();
+                    if (cellText !== value) {
+                        show = false;
+                        break;
                     }
-                    row.style.display = show ? '' : 'none';
-                });
+                }
             }
+        }
+        row.style.display = show ? '' : 'none';
+    });
+}
 
-            // Trainer selection logic
-            // Trainer selection logic
-// Trainer selection logic
 function updateTrainerSelection() {
     const trainer1Select = document.getElementById('trainerId1');
     const trainer2Select = document.getElementById('trainerId2');
+    const showAllTrainers = document.getElementById('showAllTrainers').checked;
+    const schoolDistrict = '<%= district %>'.trim();
     const trainer1Value = trainer1Select.value;
     const trainer2Value = trainer2Select.value;
     const trainer1DatesDiv = document.getElementById('trainer1-dates');
@@ -511,47 +729,90 @@ function updateTrainerSelection() {
     const trainer1DatesList = document.getElementById('trainer1-dates-list');
     const trainer2DatesList = document.getElementById('trainer2-dates-list');
     const costNote = document.getElementById('trainer-cost-note');
-    const schoolDistrict = '<%= district %>'.trim();
+    const originalOptions = Array.from(trainer1Select.options).slice(1);
+    const sortedOptions = originalOptions.sort((a, b) => {
+        const districtA = a.getAttribute('data-district');
+        const districtB = b.getAttribute('data-district');
+        if (districtA === schoolDistrict && districtB !== schoolDistrict) return -1;
+        if (districtA !== schoolDistrict && districtB === schoolDistrict) return 1;
+        return districtA.localeCompare(districtB);
+    });
 
-    // Prevent duplicate trainers
+    [trainer1Select, trainer2Select].forEach(select => {
+        const currentValue = select.value;
+        select.innerHTML = '<option value="">Select a trainer</option>';
+        const filteredOptions = showAllTrainers ? sortedOptions : sortedOptions.filter(option => option.getAttribute('data-district') === schoolDistrict);
+        filteredOptions.forEach(option => {
+            const newOption = option.cloneNode(true);
+            select.appendChild(newOption);
+            if (newOption.value === currentValue) {
+                newOption.selected = true;
+            }
+        });
+    });
+
     if (trainer1Value && trainer2Value && trainer1Value === trainer2Value) {
         alert('Please select different trainers for Trainer 1 and Trainer 2.');
         if (trainer1Select.value === trainer2Value) trainer1Select.value = '';
         if (trainer2Select.value === trainer1Value) trainer2Select.value = '';
     }
 
-    // Update available dates for Trainer 1
-    if (trainer1Value) {
+    if (trainer1Select.value) {
         const selectedOption1 = trainer1Select.options[trainer1Select.selectedIndex];
         const dates1 = JSON.parse(selectedOption1.getAttribute('data-dates'));
-        trainer1DatesList.textContent = dates1.length > 0 ? dates1.join(', ') : 'Available Dates: No dates available (Our admin team will coordinate with both parties and update availability/assign the trainer accordingly)';
+        trainer1DatesList.textContent = dates1.length > 0 ? dates1.join(', ') : 'No dates available';
         trainer1DatesList.className = dates1.length > 0 ? 'date-list' : 'no-dates';
         trainer1DatesDiv.style.display = 'block';
     } else {
         trainer1DatesDiv.style.display = 'none';
     }
 
-    // Update available dates for Trainer 2
-    if (trainer2Value) {
+    if (trainer2Select.value) {
         const selectedOption2 = trainer2Select.options[trainer2Select.selectedIndex];
         const dates2 = JSON.parse(selectedOption2.getAttribute('data-dates'));
-        trainer2DatesList.textContent = dates2.length > 0 ? dates2.join(', ') : 'No dates available (Please contact admin to update)';
+        trainer2DatesList.textContent = dates2.length > 0 ? dates2.join(', ') : 'No dates available';
         trainer2DatesList.className = dates2.length > 0 ? 'date-list' : 'no-dates';
         trainer2DatesDiv.style.display = 'block';
     } else {
         trainer2DatesDiv.style.display = 'none';
     }
 
-    // Update cost note based on district
-    const trainer1District = trainer1Value ? trainer1Select.options[trainer1Select.selectedIndex].getAttribute('data-district') : '';
-    const trainer2District = trainer2Value ? trainer2Select.options[trainer2Select.selectedIndex].getAttribute('data-district') : '';
+    const trainer1District = trainer1Select.value ? trainer1Select.options[trainer1Select.selectedIndex].getAttribute('data-district') : '';
+    const trainer2District = trainer2Select.value ? trainer2Select.options[trainer2Select.selectedIndex].getAttribute('data-district') : '';
     if ((trainer1District && trainer1District !== schoolDistrict) || (trainer2District && trainer2District !== schoolDistrict)) {
         costNote.style.display = 'block';
     } else {
         costNote.style.display = 'none';
     }
 }
-        </script>
-    </div>
+
+function enableSaveButton() {
+    const startTimeInput = document.getElementById('workshopStartTime');
+    const saveButton = document.getElementById('timepickerSaveButton');
+    saveButton.disabled = !startTimeInput.value;
+}
+
+function updateEndTime() {
+    const startTimeInput = document.getElementById('workshopStartTime');
+    const endTimeInput = document.getElementById('workshopEndTime');
+    const endTimeDisplay = document.getElementById('workshopEndTimeDisplay');
+    const durationMessage = document.getElementById('durationMessage');
+    if (startTimeInput.value) {
+        const startTime = new Date(`1970-01-01T${startTimeInput.value}:00`);
+        startTime.setHours(startTime.getHours() + 4);
+        const hours = String(startTime.getHours()).padStart(2, '0');
+        const minutes = String(startTime.getMinutes()).padStart(2, '0');
+        const endTime = `${hours}:${minutes}`;
+        endTimeInput.value = endTime;
+        endTimeDisplay.textContent = endTime;
+        durationMessage.style.display = 'block';
+    } else {
+        endTimeInput.value = '';
+        endTimeDisplay.textContent = '';
+        durationMessage.style.display = 'none';
+    }
+}
+
+    </script>
 </body>
 </html>

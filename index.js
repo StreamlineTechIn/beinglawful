@@ -11,20 +11,21 @@ const multer = require('multer');
 
 
 // Multer setup for file uploads
-const storage = multer.memoryStorage();
-const upload = multer({
+const storage = multer.memoryStorage();const upload = multer({
     storage: storage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit per file
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
     fileFilter: (req, file, cb) => {
-        if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
+        const allowedTypes = ['image/', 'video/', 'application/zip', 'application/x-zip-compressed'];
+        if (allowedTypes.some(type => file.mimetype.startsWith(type))) {
             cb(null, true);
         } else {
-            cb(new Error('Only image and video files are allowed'), false);
+            cb(new Error('Only images, videos, and ZIP files are allowed'), false);
         }
     }
 }).fields([
     { name: 'photos', maxCount: 10 },
-    { name: 'videos', maxCount: 5 }
+    { name: 'videos', maxCount: 5 },
+    { name: 'zipFiles', maxCount: 5 } // Add ZIP file upload field
 ]);
 
 const app = express();
@@ -48,7 +49,7 @@ app.use(session({
 // Parse JSON for fetch requests
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
-
+app.use('/activities', express.static('activities'));
 // Trial test questions
 const trialTests = {
     trial1: [
@@ -56,11 +57,11 @@ const trialTests = {
         { question: "Who is President of India?", options: ["Rahul Gandhi", "Narendra Modi", "Yogi Aditya Nath", "Dropady Murmu"], correctAnswer: "Dropady Murmu" }
     ],
     trial2: [
-        { question: "What is the minimum age to vote in India?", options: ["16", "20", "18", "17"], correctAnswer: "2" },
+        { question: "What is the minimum age to vote in India?", options: ["16", "20", "18", "17"], correctAnswer: "18" },
         { question: "The Constitution of India was adopted on?", options: ["15 August 1947", "26 January 1950", "26 November 1949", "2 October 1950"], correctAnswer: "26 November 1949" }
     ]
 };
-
+    
 // Validate environment variables for Firebase and Email
 const requiredEnvVars = [
     'FIREBASE_PROJECT_ID',
@@ -105,6 +106,7 @@ try {
 } catch (error) {
     console.error('Failed to initialize Firebase:', error.message, error.stack);
     process.exit(1);
+
 }
 
 // Set up Express app
@@ -117,15 +119,25 @@ const ADMIN_PASSWORD = 'admin123';
 
 // Email setup
 const transporter = nodemailer.createTransport({
-    host: 'smtp-mail.outlook.com', // As per the image
-    port: 587,                    // Matches the image's SMTP port
-    secure: false,                // false for STARTTLS on port 587
+    host: 'smtp-mail.outlook.com',
+    port: 587,
+    secure: false,
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        ciphers: 'SSLv3',
+        rejectUnauthorized: false
     }
 });
-
+transporter.verify(function (error, success) {
+    if (error) {
+        console.log('SMTP Verify Error:', error);
+    } else {
+        console.log('SMTP Connection Success ✅ Ready to send emails');
+    }
+});
 // Email templates
 const emailTemplates = {
     schoolRegistration: {
@@ -368,213 +380,203 @@ function requireStudentAuth(req, res, next) {
 }
 
 // Check if it's on or after the event date
-async function checkEventDate(req, res, next) {
-    try {
-        const parentMobile1 = req.session.parentMobile1 || req.params.parentMobile1;
-        const { user } = await getUserByParentMobile(parentMobile1);
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(user.schoolNameDropdown || '');
-        res.locals.isEventDate = isEventDate;
-        res.locals.isOnOrAfterEventDate = isOnOrAfterEventDate;
-        res.locals.eventDateMissing = eventDateMissing;
-        res.locals.eventDate = eventDate;
-        res.locals.user = user;
-        next();
-    } catch (error) {
-        console.error('Error in checkEventDate middleware:', error.message, error.stack);
-        res.locals.isEventDate = false;
-        res.locals.isOnOrAfterEventDate = false;
-        res.locals.eventDateMissing = true;
-        res.locals.eventDate = null;
-        next();
-    }
-}
-
-// Send workshop reminder emails (runs daily)
-const checkAndSendWorkshopEmails = async () => {
-    const today = new Date().toISOString().split('T')[0];
-    console.log(`Checking for workshop reminders on ${today}`);
-
-    const schoolsSnapshot = await db.collection('schools').where('isApproved', '==', true).get();
-    console.log(`Found ${schoolsSnapshot.size} approved schools`);
-    if (!schoolsSnapshot.empty) {
-        for (const doc of schoolsSnapshot.docs) {
-            const school = doc.data();
-            const schoolName = school.schoolName;
-            const schoolEmail = school.schoolEmail;
-
-            if (school.eventDate && typeof school.eventDate.toDate === 'function') {
-                const eventDate = school.eventDate.toDate();
-                const eventDateString = eventDate.toISOString().split('T')[0];
-                console.log(`School ${schoolName} has event date ${eventDateString}`);
-
-                if (today === eventDateString) {
-                    const formattedEventDate = eventDate.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    });
-                    console.log(`Sending workshop reminder to ${schoolEmail} for event on ${formattedEventDate}`);
-                    await sendEmail(
-                        schoolEmail,
-                        emailTemplates.schoolWorkshopReminder.subject,
-                        emailTemplates.schoolWorkshopReminder.text(schoolName, formattedEventDate),
-                        emailTemplates.schoolWorkshopReminder.html(schoolName, formattedEventDate)
-                    );
-                }
-            } else {
-                console.log(`School ${schoolName} has no event date`);
-            }
+    async function checkEventDate(req, res, next) {
+        try {
+            const parentMobile1 = req.session.parentMobile1 || req.params.parentMobile1;
+            const { user } = await getUserByParentMobile(parentMobile1);
+            const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(user.schoolNameDropdown || '');
+            res.locals.isEventDate = isEventDate;
+            res.locals.isOnOrAfterEventDate = isOnOrAfterEventDate;
+            res.locals.eventDateMissing = eventDateMissing;
+            res.locals.eventDate = eventDate;
+            res.locals.user = user;
+            next();
+        } catch (error) {
+            console.error('Error in checkEventDate middleware:', error.message, error.stack);
+            res.locals.isEventDate = false;
+            res.locals.isOnOrAfterEventDate = false;
+            res.locals.eventDateMissing = true;
+            res.locals.eventDate = null;
+            next();
         }
-    } else {
-        console.log('No approved schools found');
     }
 
-    const studentsSnapshot = await db.collection('participants').where('hasCompletedMCQ', '==', true).get();
-    console.log(`Found ${studentsSnapshot.size} students who completed MCQ`);
-    if (!studentsSnapshot.empty) {
-        for (const doc of studentsSnapshot.docs) {
-            const student = doc.data();
-            const studentName = student.studentName;
-            const parentEmail = student.parentEmail;
-            const schoolName = student.schoolNameDropdown;
+    // Send workshop reminder emails (runs daily)
+    const checkAndSendWorkshopEmails = async () => {
+        const today = new Date().toISOString().split('T')[0];
+        console.log(`Checking for workshop reminders on ${today}`);
 
-            const schoolSnapshot = await db.collection('schools')
-                .where('schoolName', '==', schoolName)
-                .get();
-            if (schoolSnapshot.empty) {
-                console.log(`No school found for student ${studentName} with schoolName ${schoolName}`);
-                continue;
-            }
+        const schoolsSnapshot = await db.collection('schools').where('isApproved', '==', true).get();
+        console.log(`Found ${schoolsSnapshot.size} approved schools`);
+        if (!schoolsSnapshot.empty) {
+            for (const doc of schoolsSnapshot.docs) {
+                const school = doc.data();
+                const schoolName = school.schoolName;
+                const schoolEmail = school.schoolEmail;
 
-            const schoolData = schoolSnapshot.docs[0].data();
-            if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
-                const eventDate = schoolData.eventDate.toDate();
-                const eventDateString = eventDate.toISOString().split('T')[0];
-                console.log(`Student ${studentName} linked to school ${schoolName} with event date ${eventDateString}`);
+                if (school.eventDate && typeof school.eventDate.toDate === 'function') {
+                    const eventDate = school.eventDate.toDate();
+                    const eventDateString = eventDate.toISOString().split('T')[0];
+                    console.log(`School ${schoolName} has event date ${eventDateString}`);
 
-                if (today === eventDateString && parentEmail) {
-                    const formattedEventDate = eventDate.toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    });
-                    console.log(`Sending workshop reminder to ${parentEmail} for event on ${formattedEventDate}`);
-                    await sendEmail(
-                        parentEmail,
-                        emailTemplates.studentWorkshopReminder.subject,
-                        emailTemplates.studentWorkshopReminder.text(studentName, formattedEventDate),
-                        emailTemplates.studentWorkshopReminder.html(studentName, formattedEventDate)
-                    );
+                    if (today === eventDateString) {
+                        const formattedEventDate = eventDate.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                        console.log(`Sending workshop reminder to ${schoolEmail} for event on ${formattedEventDate}`);
+                        await sendEmail(
+                            schoolEmail,
+                            emailTemplates.schoolWorkshopReminder.subject,
+                            emailTemplates.schoolWorkshopReminder.text(schoolName, formattedEventDate),
+                            emailTemplates.schoolWorkshopReminder.html(schoolName, formattedEventDate)
+                        );
+                    }
+                } else {
+                    console.log(`School ${schoolName} has no event date`);
                 }
-            } else {
-                console.log(`School ${schoolName} for student ${studentName} has no event date`);
             }
+        } else {
+            console.log('No approved schools found');
         }
-    } else {
-        console.log('No students found who completed MCQ');
-    }
-};
 
-// Schedule daily email reminders at 10:30 PM IST
-const IST_OFFSET = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
-const job = schedule.scheduleJob('30 22 * * *', () => {
-    const now = new Date();
-    const istTime = new Date(now.getTime() + IST_OFFSET);
-    console.log(`Running email reminder job at ${istTime.toISOString()} IST (Server time: ${now.toISOString()})`);
-    checkAndSendWorkshopEmails();
-});
+        const studentsSnapshot = await db.collection('participants').where('hasCompletedMCQ', '==', true).get();
+        console.log(`Found ${studentsSnapshot.size} students who completed MCQ`);
+        if (!studentsSnapshot.empty) {
+            for (const doc of studentsSnapshot.docs) {
+                const student = doc.data();
+                const studentName = student.studentName;
+                const parentEmail = student.parentEmail;
+                const schoolName = student.schoolNameDropdown;
+
+                const schoolSnapshot = await db.collection('schools')
+                    .where('schoolName', '==', schoolName)
+                    .get();
+                if (schoolSnapshot.empty) {
+                    console.log(`No school found for student ${studentName} with schoolName ${schoolName}`);
+                    continue;
+                }
+
+                const schoolData = schoolSnapshot.docs[0].data();
+                if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
+                    const eventDate = schoolData.eventDate.toDate();
+                    const eventDateString = eventDate.toISOString().split('T')[0];
+                    console.log(`Student ${studentName} linked to school ${schoolName} with event date ${eventDateString}`);
+
+                    if (today === eventDateString && parentEmail) {
+                        const formattedEventDate = eventDate.toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                        console.log(`Sending workshop reminder to ${parentEmail} for event on ${formattedEventDate}`);
+                        await sendEmail(
+                            parentEmail,
+                            emailTemplates.studentWorkshopReminder.subject,
+                            emailTemplates.studentWorkshopReminder.text(studentName, formattedEventDate),
+                            emailTemplates.studentWorkshopReminder.html(studentName, formattedEventDate)
+                        );
+                    }
+                } else {
+                    console.log(`School ${schoolName} for student ${studentName} has no event date`);
+                }
+            }
+        } else {
+            console.log('No students found who completed MCQ');
+        }
+    };
+
+    // Schedule daily email reminders at 10:30 PM IST
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30
+    const job = schedule.scheduleJob('30 22 * * *', () => {
+        const now = new Date();
+        const istTime = new Date(now.getTime() + IST_OFFSET);
+        console.log(`Running email reminder job at ${istTime.toISOString()} IST (Server time: ${now.toISOString()})`);
+        checkAndSendWorkshopEmails();
+    });
 
 // Routes
 
-// Home route (serves static HTML)
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
+    // Home route (serves static HTML)
+    app.get('/', (req, res) => {
+        res.sendFile(path.join(__dirname, 'index.html'));
+    });
 
 // Login page (renders login.ejs)
-app.get('/login', (req, res) => {
-    const error = req.query.error || null;
-    res.render('login', { error });
-});
+    app.get('/login', (req, res) => {
+        const error = req.query.error || null;
+        res.render('login', { error });
+    });
 
-// Student login (renders login.ejs or dashboard.ejs)
+    // Student login (renders login.ejs or dashboard.ejs)
+  // Student login
+// Student login
 app.post('/student-login', async (req, res) => {
-    const { username, password } = req.body;
     try {
-        if (!username || !password) {
-            return res.render('login', { error: 'Username and password are required.' });
+        const { studentId, password } = req.body;
+        console.log(`Student login attempt: studentId=${studentId}`);
+
+        // Validate inputs
+        if (!studentId || !password) {
+            console.log('Missing studentId or password');
+            return res.render('studentLogin', { error: 'Student ID and password are required.' });
         }
 
-        console.log(`Student login attempt for username: ${username}`);
-        const { user, userId } = await getUserByParentMobile(username);
+        // Fetch student document
+        const studentDoc = await db.collection('participants').doc(studentId).get();
 
-        if (!user.birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(user.birthdate)) {
-            console.error(`Invalid birthdate format for user ${username}: ${user.birthdate}`);
-            return res.render('login', { error: 'Invalid user data. Contact administrator.' });
+        if (!studentDoc.exists) {
+            console.log(`No student found for studentId: ${studentId}`);
+            return res.render('studentLogin', { error: 'Invalid student ID or password.' });
         }
 
-        const [year, month, day] = user.birthdate.split('-');
-        const expectedPassword = `${day}${month}${year}`;
-        if (password !== expectedPassword) {
-            console.log(`Invalid password for username: ${username}. Expected: ${expectedPassword}, Got: ${password}`);
-            return res.render('login', { error: 'Invalid username or password.' });
+        const studentData = studentDoc.data();
+
+        // Check if student is approved
+        if (!studentData.isApproved) {
+            console.log(`Student not approved: studentId=${studentId}`);
+            return res.render('studentLogin', { error: 'Your account is not approved by the school. Please contact your school administrator.' });
         }
 
-        req.session.parentMobile1 = username;
-
-        let mcqs = [];
-        const hasCompletedMCQ = user.hasCompletedMCQ || false;
-        if (!hasCompletedMCQ) {
-            await db.runTransaction(async (transaction) => {
-                const userRef = db.collection('participants').doc(userId);
-                const userDoc = await transaction.get(userRef);
-                const userData = userDoc.data();
-                mcqs = userData.currentMcqs || [];
-                if (mcqs.length === 0) {
-                    mcqs = await getRandomQuestions(30);
-                    transaction.update(userRef, { currentMcqs: mcqs });
-                }
-            });
+        // Verify password (assuming parentMobile1 is used as password)
+        if (password !== studentData.parentMobile1) {
+            console.log(`Invalid password for studentId: ${studentId}`);
+            return res.render('studentLogin', { error: 'Invalid student ID or password.' });
         }
 
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(user.schoolNameDropdown || '');
+        // Store studentId in session
+        req.session.studentId = studentId;
+        req.session.schoolEmail = studentData.schoolEmail || '';
+        console.log(`Login successful for studentId: ${studentId}, redirecting to student dashboard`);
+        res.redirect(`/student-dashboard?studentId=${encodeURIComponent(studentId)}`);
 
-        res.render('dashboard', {
-            studentName: user.studentName || 'Unknown Student',
-            parentMobile1: username,
-            hasCompletedMCQ: hasCompletedMCQ,
-            hasCompletedTrial1: user.hasCompletedTrial1 || false,
-            hasCompletedTrial2: user.hasCompletedTrial2 || false,
-            mcqs: mcqs,
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate: isEventDate,
-            isOnOrAfterEventDate: isOnOrAfterEventDate,
-            eventDateMissing: eventDateMissing,
-            eventDate: eventDate,
-            showResults: hasCompletedMCQ,
-            score: user.score || 0,
-            totalQuestions: user.totalQuestions || 30,
-            percentage: user.percentage || 0
-        });
     } catch (error) {
         console.error('Error during student login:', error.message, error.stack);
-        res.render('login', { error: 'Login failed. Please try again later.' });
+        res.render('studentLogin', { error: 'Login failed. Please try again later.' });
     }
 });
-
-// Dashboard (renders dashboard.ejs)
+    // Dashboard (renders dashboard.ejs)
 app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
         const parentMobile1 = req.session.parentMobile1;
         const user = res.locals.user;
-        const userId = (await db.collection('participants').where('parentMobile1', '==', parentMobile1).get()).docs[0].id;
+
+        const participantSnapshot = await db.collection('participants')
+            .where('parentMobile1', '==', parentMobile1)
+            .get();
+
+        if (participantSnapshot.empty) {
+            return res.redirect('/login?error=Student%20not%20found');
+        }
+
+        const participantDocId = participantSnapshot.docs[0].id;
 
         let mcqs = [];
         const hasCompletedMCQ = user.hasCompletedMCQ || false;
         if (!hasCompletedMCQ) {
             await db.runTransaction(async (transaction) => {
-                const userRef = db.collection('participants').doc(userId);
+                const userRef = db.collection('participants').doc(participantDocId);
                 const userDoc = await transaction.get(userRef);
                 const userData = userDoc.data();
                 mcqs = userData.currentMcqs || [];
@@ -585,13 +587,21 @@ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (
             });
         }
 
+        const mediaSnapshot = await db.collection('participants')
+            .doc(participantDocId)
+            .collection('mediaUploads')
+            .orderBy('uploadedAt', 'desc')
+            .get();
+
+        const mediaUploads = mediaSnapshot.docs.map(doc => doc.data());
+
         res.render('dashboard', {
             studentName: user.studentName || 'Unknown Student',
-            parentMobile1: parentMobile1,
-            hasCompletedMCQ: hasCompletedMCQ,
+            parentMobile1,
+            hasCompletedMCQ,
             hasCompletedTrial1: user.hasCompletedTrial1 || false,
             hasCompletedTrial2: user.hasCompletedTrial2 || false,
-            mcqs: mcqs,
+            mcqs,
             trial1: trialTests.trial1,
             trial2: trialTests.trial2,
             isEventDate: res.locals.isEventDate,
@@ -601,435 +611,596 @@ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (
             showResults: hasCompletedMCQ,
             score: user.score || 0,
             totalQuestions: user.totalQuestions || 30,
-            percentage: user.percentage || 0
+            percentage: user.percentage || 0,
+            mediaUploads: mediaUploads || [],
+            showMediaSection: false,   // ✅ Added this line
+                isApproved: user.isApproved || false 
         });
+
     } catch (error) {
-        console.error('Error in dashboard route:', error.message, error.stack);
+        console.error('Error loading dashboard:', error);
         res.redirect('/login?error=Error%20loading%20dashboard');
     }
 });
 
-// MCQ test (renders mcq.ejs)
-app.get('/mcq-test/:parentMobile1', requireStudentAuth, async (req, res) => {
-    try {
-        const parentMobile1 = req.session.parentMobile1;
-        const { user, userId } = await getUserByParentMobile(parentMobile1);
 
-        if (user.hasCompletedMCQ) {
-            return res.status(400).send('You have already completed the MCQ test.');
-        }
-        if (!(user.hasCompletedTrial1 || false) || !(user.hasCompletedTrial2 || false)) {
-            return res.status(400).send('Please complete both trial tests before starting the main exam.');
-        }
+    // MCQ test (renders mcq.ejs)
+    app.get('/mcq-test/:parentMobile1', requireStudentAuth, async (req, res) => {
+        try {
+            const parentMobile1 = req.session.parentMobile1;
+            const { user, userId } = await getUserByParentMobile(parentMobile1);
 
-        let mcqs = [];
-        await db.runTransaction(async (transaction) => {
-            const userRef = db.collection('participants').doc(userId);
-            const userDoc = await transaction.get(userRef);
-            const userData = userDoc.data();
-            mcqs = userData.currentMcqs || [];
-            if (mcqs.length === 0) {
-                mcqs = await getRandomQuestions(30);
-                transaction.update(userRef, { currentMcqs: mcqs });
+            if (user.hasCompletedMCQ) {
+                return res.status(400).send('You have already completed the MCQ test.');
             }
-        });
+            if (!(user.hasCompletedTrial1 || false) || !(user.hasCompletedTrial2 || false)) {
+                return res.status(400).send('Please complete both trial tests before starting the main exam.');
+            }
 
-        res.render('mcq', { parentMobile1, mcqs });
-    } catch (error) {
-        console.error('Error in MCQ test route:', error.message, error.stack);
-        res.status(500).send('Error loading MCQ test.');
-    }
-});
+            let mcqs = [];
+            await db.runTransaction(async (transaction) => {
+                const userRef = db.collection('participants').doc(userId);
+                const userDoc = await transaction.get(userRef);
+                const userData = userDoc.data();
+                mcqs = userData.currentMcqs || [];
+                if (mcqs.length === 0) {
+                    mcqs = await getRandomQuestions(30);
+                    transaction.update(userRef, { currentMcqs: mcqs });
+                }
+            });
+
+            res.render('mcq', { parentMobile1, mcqs });
+        } catch (error) {
+            console.error('Error in MCQ test route:', error.message, error.stack);
+            res.status(500).send('Error loading MCQ test.');
+        }
+    });
 
 // Submit Trial 1 (renders dashboard.ejs)
-app.post('/submit-trial1', requireStudentAuth, async (req, res) => {
-    try {
-        const { parentMobile1, ...answers } = req.body;
-        const { user, userId } = await getUserByParentMobile(parentMobile1);
+    app.post('/submit-trial1', requireStudentAuth, async (req, res) => {
+        try {
+            const { parentMobile1, ...answers } = req.body;
+            const { user, userId } = await getUserByParentMobile(parentMobile1);
 
-        let score = 0, correctAnswers = 0, wrongAnswers = 0;
-        const trial1 = trialTests.trial1;
-        trial1.forEach((mcq, index) => {
-            const userAnswer = answers[`q${index}`]?.trim().toLowerCase();
-            const correctAnswer = mcq.correctAnswer?.trim().toLowerCase();
-            const isCorrect = userAnswer === correctAnswer;
-            if (isCorrect) {
-                score++;
-                correctAnswers++;
-            } else {
-                wrongAnswers++;
-            }
-        });
+            let score = 0, correctAnswers = 0, wrongAnswers = 0;
+            const trial1 = trialTests.trial1;
+            trial1.forEach((mcq, index) => {
+                const userAnswer = answers[`q${index}`]?.trim().toLowerCase();
+                const correctAnswer = mcq.correctAnswer?.trim().toLowerCase();
+                const isCorrect = userAnswer === correctAnswer;
+                if (isCorrect) {
+                    score++;
+                    correctAnswers++;
+                } else {
+                    wrongAnswers++;
+                }
+            });
 
-        const totalQuestions = trial1.length;
-        const percentage = Math.round((score / totalQuestions) * 100);
-        const mcqs = await getRandomQuestions(30);
+            const totalQuestions = trial1.length;
+            const percentage = Math.round((score / totalQuestions) * 100);
+            const mcqs = await getRandomQuestions(30);
 
-        await db.collection('participants').doc(userId).update({
-            hasCompletedTrial1: true,
-            trial1Score: score,
-            trial1TotalQuestions: totalQuestions,
-            trial1Percentage: percentage,
-            trial1CorrectAnswers: correctAnswers,
-            trial1WrongAnswers: wrongAnswers,
-            currentMcqs: mcqs
-        });
+            await db.collection('participants').doc(userId).update({
+                hasCompletedTrial1: true,
+                trial1Score: score,
+                trial1TotalQuestions: totalQuestions,
+                trial1Percentage: percentage,
+                trial1CorrectAnswers: correctAnswers,
+                trial1WrongAnswers: wrongAnswers,
+                currentMcqs: mcqs
+            });
 
-        const updatedUser = (await db.collection('participants').doc(userId).get()).data();
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+            const updatedUser = (await db.collection('participants').doc(userId).get()).data();
+            const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
 
-        res.render('dashboard', {
-            studentName: updatedUser.studentName || 'Unknown Student',
-            parentMobile1,
-            hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
-            hasCompletedTrial1: true,
-            hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
-            mcqs,
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate,
-            isOnOrAfterEventDate,
-            eventDateMissing,
-            eventDate,
-            showResults: updatedUser.hasCompletedMCQ || false,
-            score: updatedUser.score || 0,
-            totalQuestions: updatedUser.totalQuestions || 30,
-            percentage: updatedUser.percentage || 0
-        });
-    } catch (error) {
-        console.error('Error in submit-trial1 route:', error.message, error.stack);
-        res.status(500).send('Error processing trial test.');
-    }
-});
-
-// Submit Trial 2 (renders dashboard.ejs)
-app.post('/submit-trial2', requireStudentAuth, async (req, res) => {
-    try {
-        const { parentMobile1, ...answers } = req.body;
-        const { user, userId } = await getUserByParentMobile(parentMobile1);
-
-        let score = 0, correctAnswers = 0, wrongAnswers = 0;
-        const trial2 = trialTests.trial2;
-        trial2.forEach((mcq, index) => {
-            const userAnswer = answers[`q${index}`]?.trim().toLowerCase();
-            const correctAnswer = mcq.correctAnswer?.trim().toLowerCase();
-            const isCorrect = userAnswer === correctAnswer;
-            if (isCorrect) {
-                score++;
-                correctAnswers++;
-            } else {
-                wrongAnswers++;
-            }
-        });
-
-        const totalQuestions = trial2.length;
-        const percentage = Math.round((score / totalQuestions) * 100);
-        const mcqs = await getRandomQuestions(30);
-
-        await db.collection('participants').doc(userId).update({
-            hasCompletedTrial2: true,
-            trial2Score: score,
-            trial2TotalQuestions: totalQuestions,
-            trial2Percentage: percentage,
-            trial2CorrectAnswers: correctAnswers,
-            trial2WrongAnswers: wrongAnswers,
-            currentMcqs: mcqs
-        });
-
-        const updatedUser = (await db.collection('participants').doc(userId).get()).data();
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
-
-        res.render('dashboard', {
-            studentName: updatedUser.studentName || 'Unknown Student',
-            parentMobile1,
-            hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
-            hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
-            hasCompletedTrial2: true,
-            mcqs,
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate,
-            isOnOrAfterEventDate,
-            eventDateMissing,
-            eventDate,
-            showResults: updatedUser.hasCompletedMCQ || false,
-            score: updatedUser.score || 0,
-            totalQuestions: updatedUser.totalQuestions || 30,
-            percentage: updatedUser.percentage || 0
-        });
-    } catch (error) {
-        console.error('Error in submit-trial2 route:', error.message, error.stack);
-        res.status(500).send('Error processing trial test.');
-    }
-});
-
-// Submit MCQ (renders dashboard.ejs)
-app.post('/submit-mcq', requireStudentAuth, async (req, res) => {
-    try {
-        const { parentMobile1, ...answers } = req.body;
-        const { user, userId } = await getUserByParentMobile(parentMobile1);
-        let mcqs = user.currentMcqs || [];
-
-        if (mcqs.length === 0) {
-            return res.status(400).send('No questions found for this test session.');
+            res.render('dashboard', {
+                studentName: updatedUser.studentName || 'Unknown Student',
+                parentMobile1,
+                hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
+                hasCompletedTrial1: true,
+                hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
+                mcqs,
+                trial1: trialTests.trial1,
+                trial2: trialTests.trial2,
+                isEventDate,
+                isOnOrAfterEventDate,
+                eventDateMissing,
+                eventDate,
+                showResults: updatedUser.hasCompletedMCQ || false,
+                score: updatedUser.score || 0,
+                totalQuestions: updatedUser.totalQuestions || 30,
+                percentage: updatedUser.percentage || 0
+            });
+        } catch (error) {
+            console.error('Error in submit-trial1 route:', error.message, error.stack);
+            res.status(500).send('Error processing trial test.');
         }
+    });
 
-        let score = 0, correctAnswers = 0, wrongAnswers = 0;
-        mcqs.forEach((mcq, index) => {
-            const userAnswer = answers[`q${index}`]?.trim().toLowerCase();
-            const correctAnswer = mcq.correctAnswer?.trim().toLowerCase();
-            const isCorrect = userAnswer === correctAnswer;
-            if (isCorrect) {
-                score++;
-                correctAnswers++;
-            } else {
-                wrongAnswers++;
+    // Submit Trial 2 (renders dashboard.ejs)
+    app.post('/submit-trial2', requireStudentAuth, async (req, res) => {
+        try {
+            const { parentMobile1, ...answers } = req.body;
+            const { user, userId } = await getUserByParentMobile(parentMobile1);
+
+            let score = 0, correctAnswers = 0, wrongAnswers = 0;
+            const trial2 = trialTests.trial2;
+            trial2.forEach((mcq, index) => {
+                const userAnswer = answers[`q${index}`]?.trim().toLowerCase();
+                const correctAnswer = mcq.correctAnswer?.trim().toLowerCase();
+                const isCorrect = userAnswer === correctAnswer;
+                if (isCorrect) {
+                    score++;
+                    correctAnswers++;
+                } else {
+                    wrongAnswers++;
+                }
+            });
+
+            const totalQuestions = trial2.length;
+            const percentage = Math.round((score / totalQuestions) * 100);
+            const mcqs = await getRandomQuestions(30);
+
+            await db.collection('participants').doc(userId).update({
+                hasCompletedTrial2: true,
+                trial2Score: score,
+                trial2TotalQuestions: totalQuestions,
+                trial2Percentage: percentage,
+                trial2CorrectAnswers: correctAnswers,
+                trial2WrongAnswers: wrongAnswers,
+                currentMcqs: mcqs
+            });
+
+            const updatedUser = (await db.collection('participants').doc(userId).get()).data();
+            const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+
+            res.render('dashboard', {
+                studentName: updatedUser.studentName || 'Unknown Student',
+                parentMobile1,
+                hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
+                hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
+                hasCompletedTrial2: true,
+                mcqs,
+                trial1: trialTests.trial1,
+                trial2: trialTests.trial2,
+                isEventDate,
+                isOnOrAfterEventDate,
+                eventDateMissing,
+                eventDate,
+                showResults: updatedUser.hasCompletedMCQ || false,
+                score: updatedUser.score || 0,
+                totalQuestions: updatedUser.totalQuestions || 30,
+                percentage: updatedUser.percentage || 0
+            });
+        } catch (error) {
+            console.error('Error in submit-trial2 route:', error.message, error.stack);
+            res.status(500).send('Error processing trial test.');
+        }
+    });
+
+    // Submit MCQ (renders dashboard.ejs)
+    app.post('/submit-mcq', requireStudentAuth, async (req, res) => {
+        try {
+            const { parentMobile1, ...answers } = req.body;
+            const { user, userId } = await getUserByParentMobile(parentMobile1);
+            let mcqs = user.currentMcqs || [];
+
+            if (mcqs.length === 0) {
+                return res.status(400).send('No questions found for this test session.');
             }
-        });
 
-        const totalQuestions = mcqs.length;
-        const percentage = Math.round((score / totalQuestions) * 100);
-        const newMcqs = await getRandomQuestions(30);
+            let score = 0, correctAnswers = 0, wrongAnswers = 0;
+            mcqs.forEach((mcq, index) => {
+                const userAnswer = answers[`q${index}`]?.trim().toLowerCase();
+                const correctAnswer = mcq.correctAnswer?.trim().toLowerCase();
+                const isCorrect = userAnswer === correctAnswer;
+                if (isCorrect) {
+                    score++;
+                    correctAnswers++;
+                } else {
+                    wrongAnswers++;
+                }
+            });
 
-        await db.collection('participants').doc(userId).update({
-            hasCompletedMCQ: true,
-            score,
-            totalQuestions,
-            correctAnswers,
-            wrongAnswers,
-            percentage,
-            completedAt: admin.firestore.FieldValue.serverTimestamp(),
-            currentMcqs: newMcqs
-        });
+            const totalQuestions = mcqs.length;
+            const percentage = Math.round((score / totalQuestions) * 100);
+            const newMcqs = await getRandomQuestions(30);
 
-        const updatedUser = (await db.collection('participants').doc(userId).get()).data();
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+            await db.collection('participants').doc(userId).update({
+                hasCompletedMCQ: true,
+                score,
+                totalQuestions,
+                correctAnswers,
+                wrongAnswers,
+                percentage,
+                completedAt: admin.firestore.FieldValue.serverTimestamp(),
+                currentMcqs: newMcqs
+            });
 
-        res.render('dashboard', {
-            studentName: updatedUser.studentName || 'Unknown Student',
-            parentMobile1,
-            hasCompletedMCQ: true,
-            hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
-            hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
-            mcqs: newMcqs,
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate,
-            isOnOrAfterEventDate,
-            eventDateMissing,
-            eventDate,
-            showResults: true,
-            score,
-            totalQuestions,
-            percentage
-        });
-    } catch (error) {
-        console.error('Error in submit-mcq route:', error.message, error.stack);
-        res.status(500).send('Error processing your exam submission.');
-    }
-});
+            const updatedUser = (await db.collection('participants').doc(userId).get()).data();
+            const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+
+            res.render('dashboard', {
+                studentName: updatedUser.studentName || 'Unknown Student',
+                parentMobile1,
+                hasCompletedMCQ: true,
+                hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
+                hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
+                mcqs: newMcqs,
+                trial1: trialTests.trial1,
+                trial2: trialTests.trial2,
+                isEventDate,
+                isOnOrAfterEventDate,
+                eventDateMissing,
+                eventDate,
+                showResults: true,
+                score,
+                totalQuestions,
+                percentage
+            });
+        } catch (error) {
+            console.error('Error in submit-mcq route:', error.message, error.stack);
+            res.status(500).send('Error processing your exam submission.');
+        }
+    });
 
 // Game Zone (renders gamezone.ejs)
-app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
+    app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
+        try {
+            const parentMobile1 = req.session.parentMobile1;
+            const user = res.locals.user;
+
+            if (!(user.hasCompletedMCQ || false)) {
+                return res.status(400).send('Please complete the main exam to access the Game Zone.');
+            }
+            if (res.locals.eventDateMissing) {
+                return res.status(400).send('Event date yet to decide.');
+            }
+            if (!res.locals.isOnOrAfterEventDate) {
+                return res.status(400).send(`Game Zone is only available on or after the event date: ${res.locals.eventDate}.`);
+            }
+
+            res.render('gamezone', { studentName: user.studentName || 'Unknown Student', parentMobile1 });
+        } catch (error) {
+            console.error('Error in gamezone route:', error.message, error.stack);
+            res.status(500).send('Error loading Game Zone.');
+        }
+    });
+
+    //student dashboard upload media
+   app.post('/student-dashboard/upload-media', upload, async (req, res) => {
     try {
-        const parentMobile1 = req.session.parentMobile1;
+        const { parentMobile1, mediaDescription, mediaLink } = req.body;
+        const photos = req.files['photos'] || [];
+        const videos = req.files['videos'] || [];
+
+        if (!parentMobile1) {
+            return res.status(400).send('Parent Mobile Number is required.');
+        }
+
+        const participantSnapshot = await db.collection('participants')
+            .where('parentMobile1', '==', parentMobile1)
+            .get();
+
+        if (participantSnapshot.empty) {
+            return res.status(404).send('Student not found.');
+        }
+
+        const participantId = participantSnapshot.docs[0].id;
+        const participantData = participantSnapshot.docs[0].data();
+
+        if (mediaDescription && mediaDescription.length > 1000) {
+            return res.status(400).send('Media description cannot exceed 1000 words.');
+        }
+
+        const bucket = admin.storage().bucket('beinglawful-ee5a4.appspot.com');
+        const mediaUploads = [];
+
+        for (const file of photos) {
+            const fileName = `studentMedia/${participantId}/photos/${Date.now()}_${file.originalname}`;
+            const fileUpload = bucket.file(fileName);
+
+            await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
+            const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
+
+            mediaUploads.push({
+                url,
+                type: 'image',
+                path: fileName,
+                description: mediaDescription || '',
+                link: mediaLink || '',
+                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        for (const file of videos) {
+            const fileName = `studentMedia/${participantId}/videos/${Date.now()}_${file.originalname}`;
+            const fileUpload = bucket.file(fileName);
+
+            await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
+            const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
+
+            mediaUploads.push({
+                url,
+                type: 'video',
+                path: fileName,
+                description: mediaDescription || '',
+                link: mediaLink || '',
+                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        if (mediaUploads.length > 0) {
+            const batch = db.batch();
+            mediaUploads.forEach(upload => {
+                const mediaRef = db.collection('participants').doc(participantId).collection('mediaUploads').doc();
+                batch.set(mediaRef, upload);
+            });
+            await batch.commit();
+        }
+
+        const uploadedMediaSnapshot = await db.collection('participants').doc(participantId).collection('mediaUploads').orderBy('uploadedAt', 'desc').get();
+        const allUploadedMedia = uploadedMediaSnapshot.docs.map(doc => doc.data());
+
+        const updatedUser = (await db.collection('participants').doc(participantId).get()).data();
+        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+
+        res.render('dashboard', {
+            studentName: updatedUser.studentName || 'Unknown Student',
+            parentMobile1,
+            hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
+            hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
+            hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
+            mcqs: updatedUser.currentMcqs || [],
+            trial1: trialTests.trial1,
+            trial2: trialTests.trial2,
+            isEventDate,
+            isOnOrAfterEventDate,
+            eventDateMissing,
+            eventDate,
+            showResults: updatedUser.hasCompletedMCQ || false,
+            score: updatedUser.score || 0,
+            totalQuestions: updatedUser.totalQuestions || 30,
+            percentage: updatedUser.percentage || 0,
+            mediaUploads: allUploadedMedia,
+            error: null
+        });
+
+    } catch (error) {
+        console.error('Error uploading media:', error);
+        res.status(500).send(`Error uploading media: ${error.message}`);
+    }
+});
+
+app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, async (req, res) => {
+    try {
+        const { parentMobile1 } = req.params;
         const user = res.locals.user;
 
-        if (!(user.hasCompletedMCQ || false)) {
-            return res.status(400).send('Please complete the main exam to access the Game Zone.');
-        }
-        if (res.locals.eventDateMissing) {
-            return res.status(400).send('Event date yet to decide.');
-        }
-        if (!res.locals.isOnOrAfterEventDate) {
-            return res.status(400).send(`Game Zone is only available on or after the event date: ${res.locals.eventDate}.`);
+        const participantSnapshot = await db.collection('participants')
+            .where('parentMobile1', '==', parentMobile1)
+            .get();
+
+        if (participantSnapshot.empty) {
+            return res.status(404).send('Student not found.');
         }
 
-        res.render('gamezone', { studentName: user.studentName || 'Unknown Student', parentMobile1 });
+        const participantDocId = participantSnapshot.docs[0].id;
+        const participantData = participantSnapshot.docs[0].data();
+
+        const mediaSnapshot = await db.collection('participants')
+            .doc(participantDocId)
+            .collection('mediaUploads')
+            .orderBy('uploadedAt', 'desc')
+            .get();
+
+        const participantMediaUploads = mediaSnapshot.docs.map(doc => doc.data());
+
+        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(participantData.schoolNameDropdown || '');
+
+        res.render('dashboard', {
+            studentName: participantData.studentName || 'Unknown Student',
+            parentMobile1,
+            hasCompletedMCQ: participantData.hasCompletedMCQ || false,
+            hasCompletedTrial1: participantData.hasCompletedTrial1 || false,
+            hasCompletedTrial2: participantData.hasCompletedTrial2 || false,
+            mcqs: participantData.currentMcqs || [],
+            trial1: trialTests.trial1,
+            trial2: trialTests.trial2,
+            isEventDate,
+            isOnOrAfterEventDate,
+            eventDateMissing,
+            eventDate,
+            showResults: participantData.hasCompletedMCQ || false,
+            score: participantData.score || 0,
+            totalQuestions: participantData.totalQuestions || 30,
+            percentage: participantData.percentage || 0,
+            mediaUploads: participantMediaUploads,
+            showMediaSection: true
+        });
+
     } catch (error) {
-        console.error('Error in gamezone route:', error.message, error.stack);
-        res.status(500).send('Error loading Game Zone.');
+        console.error('Error loading media upload page:', error);
+        res.redirect('/dashboard/' + req.params.parentMobile1);
     }
 });
+
 
 // Certificate (renders certificate.ejs)
-app.get('/certificate/:parentMobile1', requireStudentAuth, async (req, res) => {
-    try {
-        const parentMobile1 = req.session.parentMobile1;
-        const { user } = await getUserByParentMobile(parentMobile1);
+    app.get('/certificate/:parentMobile1', requireStudentAuth, async (req, res) => {
+        try {
+            const parentMobile1 = req.session.parentMobile1;
+            const { user } = await getUserByParentMobile(parentMobile1);
 
-        if (!(user.hasCompletedMCQ || false)) {
-            return res.status(400).send('Please complete the main exam to access the certificate.');
+            if (!(user.hasCompletedMCQ || false)) {
+                return res.status(400).send('Please complete the main exam to access the certificate.');
+            }
+
+            const schoolSnapshot = await db.collection('schools')
+                .where('schoolName', '==', user.schoolNameDropdown || '')
+                .get();
+            const schoolName = schoolSnapshot.empty ? 'N/A' : schoolSnapshot.docs[0].data().schoolName;
+
+            res.render('certificate', {
+                studentName: user.studentName || 'Unknown Student',
+                schoolName,
+                percentage: user.percentage || 0,
+                completedAt: user.completedAt ? user.completedAt.toDate().toLocaleDateString() : 'N/A',
+                parentMobile1
+            });
+        } catch (error) {
+            console.error('Error in certificate route:', error.message, error.stack);
+            res.status(500).send('Error loading certificate.');
         }
-
-        const schoolSnapshot = await db.collection('schools')
-            .where('schoolName', '==', user.schoolNameDropdown || '')
-            .get();
-        const schoolName = schoolSnapshot.empty ? 'N/A' : schoolSnapshot.docs[0].data().schoolName;
-
-        res.render('certificate', {
-            studentName: user.studentName || 'Unknown Student',
-            schoolName,
-            percentage: user.percentage || 0,
-            completedAt: user.completedAt ? user.completedAt.toDate().toLocaleDateString() : 'N/A',
-            parentMobile1
-        });
-    } catch (error) {
-        console.error('Error in certificate route:', error.message, error.stack);
-        res.status(500).send('Error loading certificate.');
-    }
-});
+    });
 
 // ... (Existing imports and setup remain unchanged)
 
 // Book Order Route
-app.post(
-    '/submit-book-order',
-    [
-        body('buyerName')
-            .trim()
-            .notEmpty()
-            .withMessage('Buyer name is required')
-            .matches(/^[A-Za-z\s]{2,}$/)
-            .withMessage('Invalid name format'),
-        body('email')
-            .trim()
-            .isEmail()
-            .withMessage('Invalid email address'),
-        body('phone')
-            .trim()
-            .matches(/^\d{10}$/)
-            .withMessage('Phone number must be 10 digits'),
-        body('address')
-            .trim()
-            .isLength({ min: 5 })
-            .withMessage('Address must be at least 5 characters'),
-        body('city')
-            .trim()
-            .matches(/^[A-Za-z\s]{2,}$/)
-            .withMessage('Invalid city name'),
-        body('pincode')
-            .trim()
-            .matches(/^\d{6}$/)
-            .withMessage('Pincode must be 6 digits'),
-        body('quantity')
-            .isInt({ min: 1, max: 10 })
-            .withMessage('Quantity must be between 1 and 10'),
-    ],
-    async (req, res) => {
+    app.post('/submit-book-order',
+        [
+            body('buyerName')
+                .trim()
+                .notEmpty()
+                .withMessage('Buyer name is required')
+                .matches(/^[A-Za-z\s]{2,}$/)
+                .withMessage('Invalid name format'),
+            body('email')
+                .trim()
+                .isEmail()
+                .withMessage('Invalid email address'),
+            body('phone')
+                .trim()
+                .matches(/^\d{10}$/)
+                .withMessage('Phone number must be 10 digits'),
+            body('address')
+                .trim()
+                .isLength({ min: 5 })
+                .withMessage('Address must be at least 5 characters'),
+            body('city')
+                .trim()
+                .matches(/^[A-Za-z\s]{2,}$/)
+                .withMessage('Invalid city name'),
+            body('pincode')
+                .trim()
+                .matches(/^\d{6}$/)
+                .withMessage('Pincode must be 6 digits'),
+            body('quantity')
+                .isInt({ min: 1, max: 10 })
+                .withMessage('Quantity must be between 1 and 10'),
+        ],
+        async (req, res) => {
+            try {
+                // Check for validation errors
+                const errors = validationResult(req);
+                if (!errors.isEmpty()) {
+                    console.error('Validation errors:', errors.array());
+                    return res.status(400).render('orderError', {
+                        error: errors.array()[0].msg,
+                        values: req.body,
+                    });
+                }
+
+                const { buyerName, email, phone, address, city, pincode, quantity } = req.body;
+
+                // Check for duplicate order by email or phone
+                const ordersRef = db.collection('orders');
+                const emailSnapshot = await ordersRef.where('email', '==', email).get();
+                const phoneSnapshot = await ordersRef.where('phone', '==', phone).get();
+
+                if (!emailSnapshot.empty) {
+                    return res.status(400).render('orderError', {
+                        error: 'An order with this email already exists.',
+                        values: req.body,
+                    });
+                }
+                if (!phoneSnapshot.empty) {
+                    return res.status(400).render('orderError', {
+                        error: 'An order with this phone number already exists.',
+                        values: req.body,
+                    });
+                }
+
+                // Save order to Firestore
+                const orderData = {
+                    buyerName,
+                    email,
+                    phone,
+                    address,
+                    city,
+                    pincode,
+                    quantity: parseInt(quantity),
+                    createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                };
+
+                const orderRef = await ordersRef.add(orderData);
+                console.log(`Order created with ID: ${orderRef.id}`);
+
+                // Optionally send confirmation email (using existing nodemailer setup)
+                await sendEmail(
+                    email,
+                    'Book Order Confirmation - Being Lawful',
+                    `Dear ${buyerName},\n\nThank you for your book order! Your order ID is ${orderRef.id}.\n\nBest regards,\nBeing Lawful Team`,
+                    `
+                        <h2>Book Order Confirmation</h2>
+                        <p>Dear ${buyerName},</p>
+                        <p>Thank you for your book order with <strong>Being Lawful</strong>!</p>
+                        <p>Your order ID is: <strong>${orderRef.id}</strong></p>
+                        <p>Best regards,<br>Being Lawful Team</p>
+                    `
+                );
+
+                // Render confirmation page
+                res.render('orderConfirmation', {
+                    buyerName,
+                    email,
+                    orderId: orderRef.id,
+                });
+            } catch (error) {
+                console.error('Error in submit-book-order route:', error.message, error.stack);
+                res.status(500).render('orderError', {
+                    error: 'Failed to submit order. Please try again later.',
+                    values: req.body,
+                });
+            }
+        }
+    );
+    app.get('/buy-book', (req, res) => {
         try {
-            // Check for validation errors
-            const errors = validationResult(req);
-            if (!errors.isEmpty()) {
-                console.error('Validation errors:', errors.array());
-                return res.status(400).render('orderError', {
-                    error: errors.array()[0].msg,
-                    values: req.body,
-                });
-            }
-
-            const { buyerName, email, phone, address, city, pincode, quantity } = req.body;
-
-            // Check for duplicate order by email or phone
-            const ordersRef = db.collection('orders');
-            const emailSnapshot = await ordersRef.where('email', '==', email).get();
-            const phoneSnapshot = await ordersRef.where('phone', '==', phone).get();
-
-            if (!emailSnapshot.empty) {
-                return res.status(400).render('orderError', {
-                    error: 'An order with this email already exists.',
-                    values: req.body,
-                });
-            }
-            if (!phoneSnapshot.empty) {
-                return res.status(400).render('orderError', {
-                    error: 'An order with this phone number already exists.',
-                    values: req.body,
-                });
-            }
-
-            // Save order to Firestore
-            const orderData = {
-                buyerName,
-                email,
-                phone,
-                address,
-                city,
-                pincode,
-                quantity: parseInt(quantity),
-                createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            };
-
-            const orderRef = await ordersRef.add(orderData);
-            console.log(`Order created with ID: ${orderRef.id}`);
-
-            // Optionally send confirmation email (using existing nodemailer setup)
-            await sendEmail(
-                email,
-                'Book Order Confirmation - Being Lawful',
-                `Dear ${buyerName},\n\nThank you for your book order! Your order ID is ${orderRef.id}.\n\nBest regards,\nBeing Lawful Team`,
-                `
-                    <h2>Book Order Confirmation</h2>
-                    <p>Dear ${buyerName},</p>
-                    <p>Thank you for your book order with <strong>Being Lawful</strong>!</p>
-                    <p>Your order ID is: <strong>${orderRef.id}</strong></p>
-                    <p>Best regards,<br>Being Lawful Team</p>
-                `
-            );
-
-            // Render confirmation page
-            res.render('orderConfirmation', {
-                buyerName,
-                email,
-                orderId: orderRef.id,
-            });
+            res.render('buy-Book', { error: null }); // Render buy-book.ejs from views
         } catch (error) {
-            console.error('Error in submit-book-order route:', error.message, error.stack);
-            res.status(500).render('orderError', {
-                error: 'Failed to submit order. Please try again later.',
-                values: req.body,
+            console.error('Error rendering buy-book:', error.message, error.stack);
+            res.status(500).render('orderError', { error: 'Failed to load the order form. Please try again later.' });
+        }
+    });
+
+    app.post('/admin/assign-event-date-school/:id', requireAdmin, async (req, res) => {
+        try {
+            const schoolId = req.params.id;
+            const { eventDate } = req.body;
+            if (!eventDate) {
+                return res.status(400).send('Event date is required.');
+            }
+            const parsedDate = new Date(eventDate);
+            if (isNaN(parsedDate.getTime())) {
+                return res.status(400).send('Invalid event date format.');
+            }
+            await db.collection('schools').doc(schoolId).update({
+                eventDate: admin.firestore.Timestamp.fromDate(parsedDate)
             });
+            res.redirect('/admin-dashboard');
+        } catch (error) {
+            console.error('Error in assign-event-date-school route:', error.message, error.stack);
+            res.status(500).send('Error assigning event date.');
         }
-    }
-);
-app.get('/buy-book', (req, res) => {
-    try {
-        res.render('buyBook', { error: null }); // Render buy-book.ejs from views
-    } catch (error) {
-        console.error('Error rendering buy-book:', error.message, error.stack);
-        res.status(500).render('orderError', { error: 'Failed to load the order form. Please try again later.' });
-    }
-});
-
-
-app.post('/admin/assign-event-date-school/:id', requireAdmin, async (req, res) => {
-    try {
-        const schoolId = req.params.id;
-        const { eventDate } = req.body;
-        if (!eventDate) {
-            return res.status(400).send('Event date is required.');
-        }
-        const parsedDate = new Date(eventDate);
-        if (isNaN(parsedDate.getTime())) {
-            return res.status(400).send('Invalid event date format.');
-        }
-        await db.collection('schools').doc(schoolId).update({
-            eventDate: admin.firestore.Timestamp.fromDate(parsedDate)
-        });
-        res.redirect('/admin-dashboard');
-    } catch (error) {
-        console.error('Error in assign-event-date-school route:', error.message, error.stack);
-        res.status(500).send('Error assigning event date.');
-    }
-});
+    });
 
 // School dashboard (renders schoolDashboard.ejs)
 
 // GET route for school dashboard
-app.get('/school-dashboard', async (req, res) => {
+  app.get('/school-dashboard', async (req, res) => {
     try {
         const schoolEmail = req.query.username;
-        console.log('Request query:', req.query); // Debug log
 
         if (!schoolEmail) {
             return res.render('schoolDashboard', {
@@ -1049,10 +1220,12 @@ app.get('/school-dashboard', async (req, res) => {
                 resourcesConfirmed: false,
                 selectedResources: [],
                 selectedTrainers: [],
-                error: 'Please login first',
+                error: 'Please login first. School email is missing.',
                 trialTests,
                 trainers: [],
-                mediaUploads: []
+                mediaUploads: [],
+                workshopStartTime: null,
+                workshopEndTime: null
             });
         }
 
@@ -1060,7 +1233,7 @@ app.get('/school-dashboard', async (req, res) => {
             .where('schoolEmail', '==', schoolEmail)
             .get();
 
-        if (schoolSnapshot.empty || schoolSnapshot.docs.length === 0) {
+        if (schoolSnapshot.empty) {
             return res.render('schoolDashboard', {
                 schoolName: 'Unknown',
                 schoolEmail: '',
@@ -1078,17 +1251,19 @@ app.get('/school-dashboard', async (req, res) => {
                 resourcesConfirmed: false,
                 selectedResources: [],
                 selectedTrainers: [],
-                error: 'School not found',
+                error: 'School not found.',
                 trialTests,
                 trainers: [],
-                mediaUploads: []
+                mediaUploads: [],
+                workshopStartTime: null,
+                workshopEndTime: null
             });
         }
 
         const schoolData = schoolSnapshot.docs[0].data();
         const schoolName = schoolData.schoolName;
 
-        // Format event date
+        // Format Event Date
         let eventDate = null;
         let eventDateMissing = true;
         if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
@@ -1100,7 +1275,7 @@ app.get('/school-dashboard', async (req, res) => {
             eventDateMissing = false;
         }
 
-        // Fetch students
+        // Fetch Students
         const studentsSnapshot = await db.collection('participants')
             .where('schoolNameDropdown', '==', schoolName)
             .get();
@@ -1108,9 +1283,17 @@ app.get('/school-dashboard', async (req, res) => {
         const students = studentsSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
+                id: doc.id,
                 studentName: data.studentName || 'N/A',
                 studentClass: data.studentClass || 'N/A',
+                parentMobile1: data.parentMobile1 || 'N/A',
+                parentMobile2: data.parentMobile2 || 'N/A',
+                parentEmail: data.parentEmail || 'N/A',
+                address: data.address || 'N/A',
+                city: data.city || 'N/A',
+                pincode: data.pincode || 'N/A',
                 hasCompletedMCQ: data.hasCompletedMCQ || false,
+                isApproved: data.isApproved || false,
                 trial1Percentage: data.trial1Percentage || 'N/A',
                 trial2Percentage: data.trial2Percentage || 'N/A',
                 score: data.score || 0,
@@ -1120,7 +1303,7 @@ app.get('/school-dashboard', async (req, res) => {
             };
         });
 
-        // Fetch trainers with transformed availableDates
+        // Fetch Trainers
         const trainersSnapshot = await db.collection('trainers').get();
         const trainers = trainersSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -1128,16 +1311,20 @@ app.get('/school-dashboard', async (req, res) => {
                 id: doc.id,
                 trainerName: data.trainerName || 'Unnamed',
                 district: data.district || 'Not Specified',
-                availableDates: Array.isArray(data.availableDates) ? data.availableDates.map(dateObj => 
-                    dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
-                ) : [] // Transform objects to date strings
+                availableDates: Array.isArray(data.availableDates)
+                    ? data.availableDates.map(dateObj =>
+                        dateObj.date || dateObj.toDate
+                            ? dateObj.toDate().toISOString().split('T')[0]
+                            : 'N/A'
+                    )
+                    : []
             };
         });
 
-        // Fetch media uploads (optional, placeholder)
-        const mediaUploads = []; // Replace with actual fetch if needed
+        // Fetch Media Uploads — You can fetch real data if needed
+        const mediaUploads = [];
 
-        // ✅ Fixed selectedTrainers
+        // Prepare Selected Trainers
         const selectedTrainers = [
             schoolData.selectedTrainer1 || '',
             schoolData.selectedTrainer2 || ''
@@ -1166,11 +1353,13 @@ app.get('/school-dashboard', async (req, res) => {
             selectedTrainers,
             error: null,
             trialTests,
-            trainers
+            trainers,
+            workshopStartTime: schoolData.workshopStartTime || null,
+            workshopEndTime: schoolData.workshopEndTime || null
         });
 
     } catch (error) {
-        console.error('Error in /school-dashboard route:', error.message, error.stack);
+        console.error('Error loading /school-dashboard:', error);
         res.render('schoolDashboard', {
             schoolName: 'Unknown',
             schoolEmail: '',
@@ -1188,60 +1377,175 @@ app.get('/school-dashboard', async (req, res) => {
             resourcesConfirmed: false,
             selectedResources: [],
             selectedTrainers: [],
-            error: 'Error loading school data.',
+            error: 'Error loading dashboard. Please try again later.',
             trialTests,
             trainers: [],
-            mediaUploads: []
+            mediaUploads: [],
+            workshopStartTime: null,
+            workshopEndTime: null
         });
     }
 });
+
 // POST route for submitting resources
-app.post('/school-dashboard/submit-resources', async (req, res) => {
-    try {
-        console.log("🔧 Incoming form body:", req.body);
+    app.post('/school-dashboard/submit-resources', async (req, res) => {
+        try {
+            console.log("🔧 Incoming form body:", req.body);
 
-        const rawEmail = req.body.schoolEmail;
-        if (typeof rawEmail !== 'string') {
-            throw new Error("Invalid or missing email.");
-        }
+            const rawEmail = req.body.schoolEmail;
+            if (typeof rawEmail !== 'string') {
+                throw new Error("Invalid or missing email.");
+            }
 
-        const schoolEmail = rawEmail.trim().toLowerCase();
-        const { resources, trainerId1, trainerId2 } = req.body;
+            const schoolEmail = rawEmail.trim().toLowerCase();
+            const { resources, trainerId1, trainerId2 } = req.body;
 
-        console.log("📨 Cleaned Email:", schoolEmail);
+            console.log("📨 Cleaned Email:", schoolEmail);
 
-        // 🔍 Step 1: Try normal Firestore query
-        let schoolDoc = null;
-        const snapshot = await db.collection('schools')
-            .where('schoolEmail', '==', schoolEmail)
-            .get();
+            // 🔍 Step 1: Try normal Firestore query
+            let schoolDoc = null;
+            const snapshot = await db.collection('schools')
+                .where('schoolEmail', '==', schoolEmail)
+                .get();
 
-        if (!snapshot.empty) {
-            schoolDoc = snapshot.docs[0];
-        }
+            if (!snapshot.empty) {
+                schoolDoc = snapshot.docs[0];
+            }
 
-        // 🔍 Step 2: Fallback if needed (case/space mismatch)
-        if (!schoolDoc) {
-            console.log("❌ Exact match failed. Trying fallback...");
-            const allSchools = await db.collection('schools').get();
-            allSchools.forEach(doc => {
-                const data = doc.data();
-                if (
-                    data.schoolEmail &&
-                    data.schoolEmail.trim().toLowerCase() === schoolEmail
-                ) {
-                    schoolDoc = doc;
-                }
+            // 🔍 Step 2: Fallback if needed (case/space mismatch)
+            if (!schoolDoc) {
+                console.log("❌ Exact match failed. Trying fallback...");
+                const allSchools = await db.collection('schools').get();
+                allSchools.forEach(doc => {
+                    const data = doc.data();
+                    if (
+                        data.schoolEmail &&
+                        data.schoolEmail.trim().toLowerCase() === schoolEmail
+                    ) {
+                        schoolDoc = doc;
+                    }
+                });
+            }
+
+            // ❌ Step 3: If still not found
+            if (!schoolDoc) {
+                console.log("❌ School not found after fallback.");
+
+                return res.status(404).render('schoolDashboard', {
+                    schoolName: '',
+                    schoolEmail,
+                    city: '',
+                    district: '',
+                    pincode: '',
+                    schoolPhoneNumber: '',
+                    principalNumber: '',
+                    principalEmail: '',
+                    civicsTeacherNumber: '',
+                    civicsTeacherEmail: '',
+                    students: [],
+                    eventDate: null,
+                    eventDateMissing: true,
+                    resourcesConfirmed: false,
+                    selectedResources: [],
+                    selectedTrainers: [],
+                    trainers: [],
+                    mediaUploads: [],
+                    trialTests,
+                    error: 'School not found.'
+                });
+            }
+
+            // ✅ Step 4: School found
+            const schoolData = schoolDoc.data();
+            const schoolId = schoolDoc.id;
+
+            const selectedResources = Array.isArray(resources)
+                ? resources
+                : [resources];
+
+            // 🎯 Step 5: Fetch trainer details with transformed availableDates
+            const trainer1Doc = await db.collection('trainers').doc(trainerId1).get();
+            const trainer2Doc = await db.collection('trainers').doc(trainerId2).get();
+
+            const selectedTrainers = [];
+
+            if (trainer1Doc.exists) {
+                const trainer = trainer1Doc.data();
+                selectedTrainers.push({
+                    ...trainer,
+                    isOtherDistrict: trainer.district !== schoolData.district,
+                    availableDates: Array.isArray(trainer.availableDates) ? trainer.availableDates.map(dateObj => 
+                        dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
+                    ) : []
+                });
+            }
+
+            if (trainer2Doc.exists) {
+                const trainer = trainer2Doc.data();
+                selectedTrainers.push({
+                    ...trainer,
+                    isOtherDistrict: trainer.district !== schoolData.district,
+                    availableDates: Array.isArray(trainer.availableDates) ? trainer.availableDates.map(dateObj => 
+                        dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
+                    ) : []
+                });
+            }
+
+            // 📝 Step 6: Update school data
+            await db.collection('schools').doc(schoolId).update({
+                resourcesConfirmed: true,
+                selectedResources,
+                trainerId1,
+                trainerId2
             });
-        }
 
-        // ❌ Step 3: If still not found
-        if (!schoolDoc) {
-            console.log("❌ School not found after fallback.");
+            // 📚 Step 7: Load all trainers for dropdown
+            const allTrainers = await db.collection('trainers').get();
+            const trainers = allTrainers.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    availableDates: Array.isArray(data.availableDates) ? data.availableDates.map(dateObj => 
+                        dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
+                    ) : []
+                };
+            });
 
-            return res.status(404).render('schoolDashboard', {
-                schoolName: '',
+            // ✅ Step 8: Render school dashboard with confirmation
+            return res.render('schoolDashboard', {
+                schoolName: schoolData.schoolName || '',
                 schoolEmail,
+                city: schoolData.city || '',
+                district: schoolData.district || '',
+                pincode: schoolData.pincode || '',
+                schoolPhoneNumber: schoolData.schoolPhoneNumber || '',
+                principalNumber: schoolData.principalNumber || '',
+                principalEmail: schoolData.principalEmail || '',
+                civicsTeacherNumber: schoolData.civicsTeacherNumber || '',
+                civicsTeacherEmail: schoolData.civicsTeacherEmail || '',
+                students: schoolData.students || [],
+                eventDate: schoolData.eventDate ? schoolData.eventDate.toDate().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : null,
+                eventDateMissing: !schoolData.eventDate,
+                resourcesConfirmed: true,
+                selectedResources,
+                selectedTrainers,
+                trainers,
+                mediaUploads: [], // optional: pass uploads if you have them
+                trialTests,
+                error: null
+            });
+
+        } catch (error) {
+            console.error("❌ Error in /submit-resources:", error);
+
+            res.status(500).render('schoolDashboard', {
+                schoolName: '',
+                schoolEmail: req.body?.schoolEmail || '',
                 city: '',
                 district: '',
                 pincode: '',
@@ -1259,144 +1563,102 @@ app.post('/school-dashboard/submit-resources', async (req, res) => {
                 trainers: [],
                 mediaUploads: [],
                 trialTests,
-                error: 'School not found.'
+                error: 'Something went wrong while submitting resources.'
             });
         }
+    });
 
-        // ✅ Step 4: School found
-        const schoolData = schoolDoc.data();
-        const schoolId = schoolDoc.id;
+    // Update school information
+    app.post('/school-dashboard/update', [
+        body('city').trim().notEmpty().withMessage('City is required'),
+        body('district').trim().notEmpty().withMessage('District is required'),
+        body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
+        body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
+        body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
+        body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
+        body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
+        body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address')
+    ], async (req, res) => {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                const schoolEmail = req.body.schoolEmail;
+                return res.status(400).render('schoolDashboard', {
+                    schoolName: 'Unknown',
+                    schoolEmail,
+                    city: req.body.city,
+                    district: req.body.district,
+                    pincode: req.body.pincode,
+                    schoolPhoneNumber: req.body.schoolPhoneNumber,
+                    principalNumber: req.body.principalNumber,
+                    principalEmail: req.body.principalEmail,
+                    civicsTeacherNumber: req.body.civicsTeacherNumber,
+                    civicsTeacherEmail: req.body.civicsTeacherEmail,
+                    students: [],
+                    eventDate: null,
+                    eventDateMissing: true,
+                    resourcesConfirmed: false,
+                    selectedResources: [],
+                    error: errors.array()[0].msg,
+                    trialTests
+                });
+            }
 
-        const selectedResources = Array.isArray(resources)
-            ? resources
-            : [resources];
-
-        // 🎯 Step 5: Fetch trainer details with transformed availableDates
-        const trainer1Doc = await db.collection('trainers').doc(trainerId1).get();
-        const trainer2Doc = await db.collection('trainers').doc(trainerId2).get();
-
-        const selectedTrainers = [];
-
-        if (trainer1Doc.exists) {
-            const trainer = trainer1Doc.data();
-            selectedTrainers.push({
-                ...trainer,
-                isOtherDistrict: trainer.district !== schoolData.district,
-                availableDates: Array.isArray(trainer.availableDates) ? trainer.availableDates.map(dateObj => 
-                    dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
-                ) : []
-            });
-        }
-
-        if (trainer2Doc.exists) {
-            const trainer = trainer2Doc.data();
-            selectedTrainers.push({
-                ...trainer,
-                isOtherDistrict: trainer.district !== schoolData.district,
-                availableDates: Array.isArray(trainer.availableDates) ? trainer.availableDates.map(dateObj => 
-                    dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
-                ) : []
-            });
-        }
-
-        // 📝 Step 6: Update school data
-        await db.collection('schools').doc(schoolId).update({
-            resourcesConfirmed: true,
-            selectedResources,
-            trainerId1,
-            trainerId2
-        });
-
-        // 📚 Step 7: Load all trainers for dropdown
-        const allTrainers = await db.collection('trainers').get();
-        const trainers = allTrainers.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                availableDates: Array.isArray(data.availableDates) ? data.availableDates.map(dateObj => 
-                    dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
-                ) : []
-            };
-        });
-
-        // ✅ Step 8: Render school dashboard with confirmation
-        return res.render('schoolDashboard', {
-            schoolName: schoolData.schoolName || '',
-            schoolEmail,
-            city: schoolData.city || '',
-            district: schoolData.district || '',
-            pincode: schoolData.pincode || '',
-            schoolPhoneNumber: schoolData.schoolPhoneNumber || '',
-            principalNumber: schoolData.principalNumber || '',
-            principalEmail: schoolData.principalEmail || '',
-            civicsTeacherNumber: schoolData.civicsTeacherNumber || '',
-            civicsTeacherEmail: schoolData.civicsTeacherEmail || '',
-            students: schoolData.students || [],
-            eventDate: schoolData.eventDate ? schoolData.eventDate.toDate().toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            }) : null,
-            eventDateMissing: !schoolData.eventDate,
-            resourcesConfirmed: true,
-            selectedResources,
-            selectedTrainers,
-            trainers,
-            mediaUploads: [], // optional: pass uploads if you have them
-            trialTests,
-            error: null
-        });
-
-    } catch (error) {
-        console.error("❌ Error in /submit-resources:", error);
-
-        res.status(500).render('schoolDashboard', {
-            schoolName: '',
-            schoolEmail: req.body?.schoolEmail || '',
-            city: '',
-            district: '',
-            pincode: '',
-            schoolPhoneNumber: '',
-            principalNumber: '',
-            principalEmail: '',
-            civicsTeacherNumber: '',
-            civicsTeacherEmail: '',
-            students: [],
-            eventDate: null,
-            eventDateMissing: true,
-            resourcesConfirmed: false,
-            selectedResources: [],
-            selectedTrainers: [],
-            trainers: [],
-            mediaUploads: [],
-            trialTests,
-            error: 'Something went wrong while submitting resources.'
-        });
-    }
-});
-
-
-
-
-// Update school information
-app.post('/school-dashboard/update', [
-    body('city').trim().notEmpty().withMessage('City is required'),
-    body('district').trim().notEmpty().withMessage('District is required'),
-    body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
-    body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
-    body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
-    body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
-    body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
-    body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address')
-], async (req, res) => {
-    try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            const schoolEmail = req.body.schoolEmail;
-            return res.status(400).render('schoolDashboard', {
-                schoolName: 'Unknown',
+            const {
                 schoolEmail,
+                city,
+                district,
+                pincode,
+                schoolPhoneNumber,
+                principalNumber,
+                principalEmail,
+                civicsTeacherNumber,
+                civicsTeacherEmail
+            } = req.body;
+
+            const schoolSnapshot = await db.collection('schools')
+                .where('schoolEmail', '==', schoolEmail)
+                .get();
+            if (schoolSnapshot.empty) {
+                return res.status(404).render('schoolDashboard', {
+                    schoolName: 'Unknown',
+                    schoolEmail,
+                    city,
+                    district,
+                    pincode,
+                    schoolPhoneNumber,
+                    principalNumber,
+                    principalEmail,
+                    civicsTeacherNumber,
+                    civicsTeacherEmail,
+                    students: [],
+                    eventDate: null,
+                    eventDateMissing: true,
+                    resourcesConfirmed: false,
+                    selectedResources: [],
+                    error: 'School not found',
+                    trialTests
+                });
+            }
+
+            const schoolId = schoolSnapshot.docs[0].id;
+            await db.collection('schools').doc(schoolId).update({
+                city,
+                district,
+                pincode,
+                schoolPhoneNumber,
+                principalNumber,
+                principalEmail,
+                civicsTeacherNumber,
+                civicsTeacherEmail
+            });
+
+            res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}`);
+        } catch (error) {
+            console.error('Error in school-dashboard/update route:', error.message, error.stack);
+            res.status(500).render('schoolDashboard', {
+                schoolName: 'Unknown',
+                schoolEmail: req.body.schoolEmail,
                 city: req.body.city,
                 district: req.body.district,
                 pincode: req.body.pincode,
@@ -1410,590 +1672,545 @@ app.post('/school-dashboard/update', [
                 eventDateMissing: true,
                 resourcesConfirmed: false,
                 selectedResources: [],
-                error: errors.array()[0].msg,
+                error: 'Error updating school information',
                 trialTests
             });
         }
+    });
 
-        const {
-            schoolEmail,
-            city,
-            district,
-            pincode,
-            schoolPhoneNumber,
-            principalNumber,
-            principalEmail,
-            civicsTeacherNumber,
-            civicsTeacherEmail
-        } = req.body;
+    // School login (renders login.ejs)
+    app.post('/school-login', async (req, res) => {
+        const { username, password } = req.body;
+        console.log(`School login attempt: username=${username}`); // Add logging
+        try {
+            if (!username || !password) {
+                console.log('Missing username or password');
+                return res.render('login', { error: 'Username and password are required.' });
+            }
 
-        const schoolSnapshot = await db.collection('schools')
-            .where('schoolEmail', '==', schoolEmail)
-            .get();
-        if (schoolSnapshot.empty) {
-            return res.status(404).render('schoolDashboard', {
+            const snapshot = await db.collection('schools')
+                .where('schoolEmail', '==', username)
+                .get();
+            if (snapshot.empty) {
+                console.log(`No school found for username: ${username}`);
+                return res.render('login', { error: 'Invalid username or password.' });
+            }
+
+            const school = snapshot.docs[0].data();
+            if (password !== school.principalNumber) {
+
+                console.log(`Invalid password for username: ${username} , ${school.principalNumber}, ${password}`);
+                return res.render('login', { error: 'Invalid username or password.' });
+            }
+
+            console.log(`Login successful for ${username}, redirecting to school-dashboard`);
+            // Store schoolEmail in session for consistency
+            req.session.schoolEmail = username;
+            res.redirect(`/school-dashboard?username=${encodeURIComponent(username)}`);
+        } catch (error) {
+            console.error('Error during school login:', error.message, error.stack);
+            res.render('login', { error: 'Login failed. Try again later.' });
+        }
+    });
+
+    // School upload media 
+    app.post('/school-dashboard/upload-media', upload, async (req, res) => {
+        try {
+            const { schoolEmail, mediaDescription, mediaLink } = req.body;
+            const photos = req.files['photos'] || [];
+            const videos = req.files['videos'] || [];
+
+            if (!schoolEmail) {
+                return res.status(400).render('schoolDashboard', {
+                    schoolName: 'Unknown',
+                    schoolEmail: '',
+                    city: '',
+                    district: '',
+                    pincode: '',
+                    schoolPhoneNumber: '',
+                    principalNumber: '',
+                    principalEmail: '',
+                    civicsTeacherNumber: '',
+                    civicsTeacherEmail: '',
+                    students: [],
+                    eventDate: null,
+                    eventDateMissing: true,
+                    resourcesConfirmed: false,
+                    selectedResources: [],
+                    selectedTrainers: [],
+                    trainers: [],
+                    mediaUploads: [],
+                    error: 'School email is required',
+                    trialTests
+                });
+            }
+
+            const schoolSnapshot = await db.collection('schools')
+                .where('schoolEmail', '==', schoolEmail)
+                .get();
+            if (schoolSnapshot.empty) {
+                return res.status(404).render('schoolDashboard', {
+                    schoolName: 'Unknown',
+                    schoolEmail,
+                    city: '',
+                    district: '',
+                    pincode: '',
+                    schoolPhoneNumber: '',
+                    principalNumber: '',
+                    principalEmail: '',
+                    civicsTeacherNumber: '',
+                    civicsTeacherEmail: '',
+                    students: [],
+                    eventDate: null,
+                    eventDateMissing: true,
+                    resourcesConfirmed: false,
+                    selectedResources: [],
+                    selectedTrainers: [],
+                    trainers: [],
+                    mediaUploads: [],
+                    error: 'School not found',
+                    trialTests
+                });
+            }
+
+            const schoolId = schoolSnapshot.docs[0].id;
+            const schoolData = schoolSnapshot.docs[0].data();
+
+            if (mediaDescription && mediaDescription.length > 1000) {
+                return res.status(400).render('schoolDashboard', {
+                    schoolName: schoolData.schoolName,
+                    schoolEmail,
+                    city: schoolData.city || '',
+                    district: schoolData.district || schoolData.city || '',
+                    pincode: schoolData.pincode || '',
+                    schoolPhoneNumber: schoolData.schoolPhoneNumber || '',
+                    principalNumber: schoolData.principalNumber || '',
+                    principalEmail: schoolData.principalEmail || '',
+                    civicsTeacherNumber: schoolData.civicsTeacherNumber || '',
+                    civicsTeacherEmail: schoolData.civicsTeacherEmail || '',
+                    students: [],
+                    eventDate: schoolData.eventDate ? schoolData.eventDate.toDate().toLocaleDateString('en-US') : null,
+                    eventDateMissing: !schoolData.eventDate,
+                    resourcesConfirmed: schoolData.resourcesConfirmed || false,
+                    selectedResources: schoolData.selectedResources || [],
+                    selectedTrainers: [
+                        schoolData.selectedTrainer1 || '',
+                        schoolData.selectedTrainer2 || ''
+                    ],
+                    trainers: [],
+                    mediaUploads: [],
+                    error: 'Media description cannot exceed 1000 words',
+                    trialTests
+                });
+            }
+
+            // Explicitly set the bucket name
+            const bucket = admin.storage().bucket('beinglawful-ee5a4.firebasestorage.app'); // Verify this matches your bucket
+            const [exists] = await bucket.exists();
+            if (!exists) {
+                throw new Error('The specified bucket does not exist. Please check your Firebase configuration.');
+            }
+
+            const mediaUploads = [];
+            for (const file of photos) {
+                const fileName = `media/${schoolId}/photos/${Date.now()}_${file.originalname}`;
+                const fileUpload = bucket.file(fileName);
+                try {
+                    await fileUpload.save(file.buffer, {
+                        metadata: { contentType: file.mimetype }
+                    });
+                    const [url] = await fileUpload.getSignedUrl({
+                        action: 'read',
+                        expires: '03-09-2491'
+                    });
+                    mediaUploads.push({
+                        url,
+                        type: 'image',
+                        path: fileName,
+                        description: mediaDescription || '',
+                        link: mediaLink || '',
+                        uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (uploadError) {
+                    console.error(`Error uploading photo ${fileName}:`, uploadError.message, uploadError.stack);
+                    throw new Error(`Failed to upload photo: ${uploadError.message}`);
+                }
+            }
+
+            for (const file of videos) {
+                const fileName = `media/${schoolId}/videos/${Date.now()}_${file.originalname}`;
+                const fileUpload = bucket.file(fileName);
+                try {
+                    await fileUpload.save(file.buffer, {
+                        metadata: { contentType: file.mimetype }
+                    });
+                    const [url] = await fileUpload.getSignedUrl({
+                        action: 'read',
+                        expires: '03-09-2491'
+                    });
+                    mediaUploads.push({
+                        url,
+                        type: 'video',
+                        path: fileName,
+                        description: mediaDescription || '',
+                        link: mediaLink || '',
+                        uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+                    });
+                } catch (uploadError) {
+                    console.error(`Error uploading video ${fileName}:`, uploadError.message, uploadError.stack);
+                    throw new Error(`Failed to upload video: ${uploadError.message}`);
+                }
+            }
+
+            if (mediaUploads.length > 0) {
+                const batch = db.batch();
+                mediaUploads.forEach(upload => {
+                    const mediaRef = db.collection('schools').doc(schoolId).collection('mediaUploads').doc();
+                    batch.set(mediaRef, upload);
+                });
+                await batch.commit();
+            }
+
+            const trainersSnapshot = await db.collection('trainers').get();
+            const trainers = trainersSnapshot.docs.map(doc => ({
+                id: doc.id,
+                trainerName: doc.data().trainerName || 'Unnamed',
+                district: doc.data().district || 'Not Specified'
+            }));
+
+            const updatedSchoolSnapshot = await db.collection('schools').doc(schoolId).get();
+            const updatedSchoolData = updatedSchoolSnapshot.data();
+
+            res.render('schoolDashboard', {
+                schoolName: updatedSchoolData.schoolName || '',
+                schoolEmail,
+                city: updatedSchoolData.city || '',
+                district: updatedSchoolData.district || updatedSchoolData.city || '',
+                pincode: updatedSchoolData.pincode || '',
+                schoolPhoneNumber: updatedSchoolData.schoolPhoneNumber || '',
+                principalNumber: updatedSchoolData.principalNumber || '',
+                principalEmail: updatedSchoolData.principalEmail || '',
+                civicsTeacherNumber: updatedSchoolData.civicsTeacherNumber || '',
+                civicsTeacherEmail: updatedSchoolData.civicsTeacherEmail || '',
+                students: [], // Fetch students if needed
+                eventDate: updatedSchoolData.eventDate ? updatedSchoolData.eventDate.toDate().toLocaleDateString('en-US') : null,
+                eventDateMissing: !updatedSchoolData.eventDate,
+                resourcesConfirmed: updatedSchoolData.resourcesConfirmed || false,
+                selectedResources: updatedSchoolData.selectedResources || [],
+                selectedTrainers: [
+                    updatedSchoolData.selectedTrainer1 || '',
+                    updatedSchoolData.selectedTrainer2 || ''
+                ],
+                trainers,
+                mediaUploads,
+                error: null,
+                trialTests
+            });
+        } catch (error) {
+            console.error('Error in school-dashboard/upload-media route:', error.message, error.stack);
+            const schoolEmail = req.body.schoolEmail || '';
+            res.status(500).render('schoolDashboard', {
                 schoolName: 'Unknown',
                 schoolEmail,
+                city: '',
+                district: '',
+                pincode: '',
+                schoolPhoneNumber: '',
+                principalNumber: '',
+                principalEmail: '',
+                civicsTeacherNumber: '',
+                civicsTeacherEmail: '',
+                students: [],
+                eventDate: null,
+                eventDateMissing: true,
+                resourcesConfirmed: false,
+                selectedResources: [],
+                selectedTrainers: [],
+                trainers: [],
+                mediaUploads: [],
+                error: `Error uploading media: ${error.message}`,
+                trialTests
+            });
+        }
+    });
+
+
+
+
+    // Participation form (renders participation.ejs)
+    app.get('/participation', async (req, res) => {
+        try {
+            const type = req.query.type || 'Student';
+
+            const snapshot = await db.collection('schools')
+                .where('isApproved', '==', true)
+                .get();
+
+            const schoolNames = snapshot.docs.map(doc => doc.data().schoolName);
+
+            // ✅ Pass errors and values even if empty
+            res.render('participation', {
+                type,
+                schoolNames,
+                errors: {},  // ← Prevents ReferenceError
+                values: {}   // ← Keeps fields empty on first load
+            });
+        } catch (error) {
+            console.error('Error in participation route:', error.message, error.stack);
+            res.status(500).send('Error loading participation form.');
+        }
+    });
+
+    app.post('/participate', async (req, res) => {
+        try {
+            const participant = {
+                studentName: req.body.studentName,
+                schoolNameDropdown: req.body.schoolNameDropdown,
+                birthdate: req.body.birthdate,
+                studentClass: req.body.studentClass,
+                parentMobile1: req.body.parentMobile1,
+                parentMobile2: req.body.parentMobile2,
+                parentEmail: req.body.parentEmail,
+                address: req.body.address,
+                city: req.body.city,
+                pincode: req.body.pincode,
+                type: req.body.type,
+                
+            };
+
+            const errors = {};
+
+            // Check for duplicate email or phone number
+            const emailSnapshot = await db.collection('participants')
+                .where('parentEmail', '==', participant.parentEmail)
+                .get();
+            if (!emailSnapshot.empty) {
+                errors.parentEmail = 'User with this email already exists';
+            }
+
+            const mobileSnapshot = await db.collection('participants')
+                .where('parentMobile1', '==', participant.parentMobile1)
+                .get();
+            if (!mobileSnapshot.empty) {
+                errors.parentMobile1 = 'User with this mobile number already exists';
+            }
+
+            const requiredFields = ['studentName', 'schoolNameDropdown', 'birthdate', 'studentClass', 'parentMobile1', 'parentEmail', 'address', 'city', 'pincode', 'type'];
+            requiredFields.forEach(field => {
+                if (!participant[field]) {
+                    errors[field] = 'This field is required';
+                }
+            });
+
+            if (participant.pincode && !/^\d{6}$/.test(participant.pincode)) {
+                errors.pincode = 'Pincode must be 6 digits';
+            }
+
+            if (participant.parentMobile1 && !/^\d{10}$/.test(participant.parentMobile1)) {
+                errors.parentMobile1 = 'Mobile number must be 10 digits';
+            }
+
+            if (participant.parentMobile2 && participant.parentMobile2 !== '' && !/^\d{10}$/.test(participant.parentMobile2)) {
+                errors.parentMobile2 = 'Mobile number must be 10 digits';
+            }
+
+            if (participant.parentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(participant.parentEmail)) {
+                errors.parentEmail = 'Invalid email address';
+            }
+
+            if (participant.birthdate && !/^\d{4}-\d{2}-\d{2}$/.test(participant.birthdate)) {
+                errors.birthdate = 'Birthdate must be YYYY-MM-DD';
+            }
+
+            if (Object.keys(errors).length > 0) {
+                const snapshot = await db.collection('schools')
+                    .where('isApproved', '==', true)
+                    .get();
+                const schoolNames = snapshot.docs.map(doc => doc.data().schoolName);
+
+                return res.render('participation', {
+                    type: participant.type || 'Student',
+                    schoolNames,
+                    errors,
+                    values: participant
+                });
+            }
+
+            await db.collection('participants').add({
+                ...participant,
+                hasCompletedTrial1: false,
+                hasCompletedTrial2: false,
+                hasCompletedMCQ: false,
+                trainerApprove : false, 
+                score: 0
+            });
+
+            const [year, month, day] = participant.birthdate.split('-');
+            const password = `${day}${month}${year}`;
+
+            res.render('studentConfirmation', {
+                studentName: participant.studentName,
+                username: participant.parentMobile1,
+                password
+            });
+
+        } catch (error) {
+            console.error('Error in participate route:', error.message, error.stack);
+            res.status(500).render('participation', {
+                type: 'Student',
+                schoolNames: [],
+                errors: { server: 'Something went wrong. Please try again.' },
+                values: req.body
+            });
+        }
+    });
+
+ app.post('/admin/complete-school/:schoolId', async (req, res) => {
+    try {
+        const { schoolId } = req.params;
+        if (!req.session.isAdmin) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        const schoolRef = db.collection('schools').doc(schoolId);
+        const schoolDoc = await schoolRef.get();
+        if (!schoolDoc.exists) {
+            return res.status(404).json({ error: 'School not found' });
+        }
+        if (schoolDoc.data().isCompleted) {
+            return res.status(400).json({ error: ' Jorge is already completed' });
+        }
+        await schoolRef.update({
+            isCompleted: true,
+            completedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        res.status(200).json({ message: 'School marked as completed', schoolId });
+    } catch (error) {
+        console.error('Error in complete-school route:', error.message, error.stack);
+        res.status(500).json({ error: 'Server error', details: error.message });
+    }
+});
+    // School participation form (renders schoolParticipation.ejs)
+    app.get('/school-participation', async (req, res) => {
+        try {
+            const snapshot = await db.collection('schools').get();
+            const schools = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            res.render('schoolParticipation', { schools, errors: null });
+        } catch (error) {
+            console.error('Error in school-participation route:', error.message, error.stack);
+            res.status(500).send('Error fetching school data.');
+        }
+    });
+
+    app.post('/school-participate', [
+        body('schoolName').trim().notEmpty().withMessage('School name is required'),
+        body('city').trim().notEmpty().withMessage('City is required'),
+        body('district').trim().notEmpty().withMessage('District is required'),
+        body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
+        body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
+        body('schoolEmail').trim().isEmail().withMessage('Invalid school email address'),
+        body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
+        body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
+        body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
+        body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address'),
+        body('eventDate1').isDate().withMessage('Invalid date format for Event Date 1'),
+        body('eventDate2').isDate().withMessage('Invalid date format for Event Date 2'),
+        body('eventDate3').isDate().withMessage('Invalid date format for Event Date 3'),
+        body('eventDate4').isDate().withMessage('Invalid date format for Event Date 4')
+    ], async (req, res) => {
+        try {
+            const errors = validationResult(req).array();
+
+            // Check for duplicate entries
+            const {
+                schoolName,
                 city,
                 district,
                 pincode,
                 schoolPhoneNumber,
+                schoolEmail,
                 principalNumber,
                 principalEmail,
                 civicsTeacherNumber,
                 civicsTeacherEmail,
-                students: [],
-                eventDate: null,
-                eventDateMissing: true,
-                resourcesConfirmed: false,
-                selectedResources: [],
-                error: 'School not found',
-                trialTests
-            });
-        }
+                eventDate1,
+                eventDate2,
+                eventDate3,
+                eventDate4
+            } = req.body;
 
-        const schoolId = schoolSnapshot.docs[0].id;
-        await db.collection('schools').doc(schoolId).update({
-            city,
-            district,
-            pincode,
-            schoolPhoneNumber,
-            principalNumber,
-            principalEmail,
-            civicsTeacherNumber,
-            civicsTeacherEmail
-        });
+            const checks = [
+                { field: 'schoolEmail', value: schoolEmail, message: 'School email already exists' },
+                { field: 'principalEmail', value: principalEmail, message: 'Principal email already exists' },
+                { field: 'civicsTeacherEmail', value: civicsTeacherEmail, message: 'Civics teacher email already exists' },
+                { field: 'schoolPhoneNumber', value: schoolPhoneNumber, message: 'School phone number already exists' },
+                { field: 'principalNumber', value: principalNumber, message: 'Principal phone number already exists' },
+                { field: 'civicsTeacherNumber', value: civicsTeacherNumber, message: 'Civics teacher phone number already exists' }
+            ];
 
-        res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}`);
-    } catch (error) {
-        console.error('Error in school-dashboard/update route:', error.message, error.stack);
-        res.status(500).render('schoolDashboard', {
-            schoolName: 'Unknown',
-            schoolEmail: req.body.schoolEmail,
-            city: req.body.city,
-            district: req.body.district,
-            pincode: req.body.pincode,
-            schoolPhoneNumber: req.body.schoolPhoneNumber,
-            principalNumber: req.body.principalNumber,
-            principalEmail: req.body.principalEmail,
-            civicsTeacherNumber: req.body.civicsTeacherNumber,
-            civicsTeacherEmail: req.body.civicsTeacherEmail,
-            students: [],
-            eventDate: null,
-            eventDateMissing: true,
-            resourcesConfirmed: false,
-            selectedResources: [],
-            error: 'Error updating school information',
-            trialTests
-        });
-    }
-});
+            for (const check of checks) {
+                const snapshot = await db.collection('schools')
+                    .where(check.field, '==', check.value)
+                    .get();
+                if (!snapshot.empty) {
+                    errors.push({ param: check.field, msg: check.message });
+                }
+            }
 
+            if (errors.length > 0) {
+                const schoolsSnapshot = await db.collection('schools').get();
+                const schools = schoolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                return res.status(400).render('schoolParticipation', { schools, errors });
+            }
 
-// School login (renders login.ejs)
-app.post('/school-login', async (req, res) => {
-    const { username, password } = req.body;
-    console.log(`School login attempt: username=${username}`); // Add logging
-    try {
-        if (!username || !password) {
-            console.log('Missing username or password');
-            return res.render('login', { error: 'Username and password are required.' });
-        }
-
-        const snapshot = await db.collection('schools')
-            .where('schoolEmail', '==', username)
-            .get();
-        if (snapshot.empty) {
-            console.log(`No school found for username: ${username}`);
-            return res.render('login', { error: 'Invalid username or password.' });
-        }
-
-        const school = snapshot.docs[0].data();
-        if (password !== school.principalNumber) {
-
-            console.log(`Invalid password for username: ${username} , ${school.principalNumber}, ${password}`);
-            return res.render('login', { error: 'Invalid username or password.' });
-        }
-
-        console.log(`Login successful for ${username}, redirecting to school-dashboard`);
-        // Store schoolEmail in session for consistency
-        req.session.schoolEmail = username;
-        res.redirect(`/school-dashboard?username=${encodeURIComponent(username)}`);
-    } catch (error) {
-        console.error('Error during school login:', error.message, error.stack);
-        res.render('login', { error: 'Login failed. Try again later.' });
-    }
-});
-
-// School upload media 
-app.post('/school-dashboard/upload-media', upload, async (req, res) => {
-    try {
-        const { schoolEmail, mediaDescription, mediaLink } = req.body;
-        const photos = req.files['photos'] || [];
-        const videos = req.files['videos'] || [];
-
-        if (!schoolEmail) {
-            return res.status(400).render('schoolDashboard', {
-                schoolName: 'Unknown',
-                schoolEmail: '',
-                city: '',
-                district: '',
-                pincode: '',
-                schoolPhoneNumber: '',
-                principalNumber: '',
-                principalEmail: '',
-                civicsTeacherNumber: '',
-                civicsTeacherEmail: '',
-                students: [],
-                eventDate: null,
-                eventDateMissing: true,
-                resourcesConfirmed: false,
-                selectedResources: [],
-                selectedTrainers: [],
-                trainers: [],
-                mediaUploads: [],
-                error: 'School email is required',
-                trialTests
-            });
-        }
-
-        const schoolSnapshot = await db.collection('schools')
-            .where('schoolEmail', '==', schoolEmail)
-            .get();
-        if (schoolSnapshot.empty) {
-            return res.status(404).render('schoolDashboard', {
-                schoolName: 'Unknown',
+            await db.collection('schools').add({
+                schoolName,
+                city,
+                district,
+                pincode,
+                schoolPhoneNumber,
                 schoolEmail,
-                city: '',
-                district: '',
-                pincode: '',
-                schoolPhoneNumber: '',
-                principalNumber: '',
-                principalEmail: '',
-                civicsTeacherNumber: '',
-                civicsTeacherEmail: '',
-                students: [],
-                eventDate: null,
-                eventDateMissing: true,
+                principalNumber,
+                principalEmail,
+                civicsTeacherNumber,
+                civicsTeacherEmail,
+                eventDates: [eventDate1, eventDate2, eventDate3, eventDate4],
+                registeredAt: admin.firestore.FieldValue.serverTimestamp(),
+                isApproved: false,
                 resourcesConfirmed: false,
-                selectedResources: [],
-                selectedTrainers: [],
-                trainers: [],
-                mediaUploads: [],
-                error: 'School not found',
-                trialTests
+                selectedResources: []
             });
-        }
 
-        const schoolId = schoolSnapshot.docs[0].id;
-        const schoolData = schoolSnapshot.docs[0].data();
-
-        if (mediaDescription && mediaDescription.length > 1000) {
-            return res.status(400).render('schoolDashboard', {
-                schoolName: schoolData.schoolName,
+            await sendEmail(
                 schoolEmail,
-                city: schoolData.city || '',
-                district: schoolData.district || schoolData.city || '',
-                pincode: schoolData.pincode || '',
-                schoolPhoneNumber: schoolData.schoolPhoneNumber || '',
-                principalNumber: schoolData.principalNumber || '',
-                principalEmail: schoolData.principalEmail || '',
-                civicsTeacherNumber: schoolData.civicsTeacherNumber || '',
-                civicsTeacherEmail: schoolData.civicsTeacherEmail || '',
-                students: [],
-                eventDate: schoolData.eventDate ? schoolData.eventDate.toDate().toLocaleDateString('en-US') : null,
-                eventDateMissing: !schoolData.eventDate,
-                resourcesConfirmed: schoolData.resourcesConfirmed || false,
-                selectedResources: schoolData.selectedResources || [],
-                selectedTrainers: [
-                    schoolData.selectedTrainer1 || '',
-                    schoolData.selectedTrainer2 || ''
-                ],
-                trainers: [],
-                mediaUploads: [],
-                error: 'Media description cannot exceed 1000 words',
-                trialTests
+                emailTemplates.schoolRegistration.subject,
+                emailTemplates.schoolRegistration.text(schoolName, schoolEmail, principalNumber),
+                emailTemplates.schoolRegistration.html(schoolName, schoolEmail, principalNumber)
+            );
+
+            res.render('confirmation', {
+                schoolEmail: schoolEmail,
+                principalNumber: principalNumber
             });
-        }
-
-        // Explicitly set the bucket name
-        const bucket = admin.storage().bucket('beinglawful-ee5a4.firebasestorage.app'); // Verify this matches your bucket
-        const [exists] = await bucket.exists();
-        if (!exists) {
-            throw new Error('The specified bucket does not exist. Please check your Firebase configuration.');
-        }
-
-        const mediaUploads = [];
-        for (const file of photos) {
-            const fileName = `media/${schoolId}/photos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
-            try {
-                await fileUpload.save(file.buffer, {
-                    metadata: { contentType: file.mimetype }
-                });
-                const [url] = await fileUpload.getSignedUrl({
-                    action: 'read',
-                    expires: '03-09-2491'
-                });
-                mediaUploads.push({
-                    url,
-                    type: 'image',
-                    path: fileName,
-                    description: mediaDescription || '',
-                    link: mediaLink || '',
-                    uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (uploadError) {
-                console.error(`Error uploading photo ${fileName}:`, uploadError.message, uploadError.stack);
-                throw new Error(`Failed to upload photo: ${uploadError.message}`);
-            }
-        }
-
-        for (const file of videos) {
-            const fileName = `media/${schoolId}/videos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
-            try {
-                await fileUpload.save(file.buffer, {
-                    metadata: { contentType: file.mimetype }
-                });
-                const [url] = await fileUpload.getSignedUrl({
-                    action: 'read',
-                    expires: '03-09-2491'
-                });
-                mediaUploads.push({
-                    url,
-                    type: 'video',
-                    path: fileName,
-                    description: mediaDescription || '',
-                    link: mediaLink || '',
-                    uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (uploadError) {
-                console.error(`Error uploading video ${fileName}:`, uploadError.message, uploadError.stack);
-                throw new Error(`Failed to upload video: ${uploadError.message}`);
-            }
-        }
-
-        if (mediaUploads.length > 0) {
-            const batch = db.batch();
-            mediaUploads.forEach(upload => {
-                const mediaRef = db.collection('schools').doc(schoolId).collection('mediaUploads').doc();
-                batch.set(mediaRef, upload);
-            });
-            await batch.commit();
-        }
-
-        const trainersSnapshot = await db.collection('trainers').get();
-        const trainers = trainersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            trainerName: doc.data().trainerName || 'Unnamed',
-            district: doc.data().district || 'Not Specified'
-        }));
-
-        const updatedSchoolSnapshot = await db.collection('schools').doc(schoolId).get();
-        const updatedSchoolData = updatedSchoolSnapshot.data();
-
-        res.render('schoolDashboard', {
-            schoolName: updatedSchoolData.schoolName || '',
-            schoolEmail,
-            city: updatedSchoolData.city || '',
-            district: updatedSchoolData.district || updatedSchoolData.city || '',
-            pincode: updatedSchoolData.pincode || '',
-            schoolPhoneNumber: updatedSchoolData.schoolPhoneNumber || '',
-            principalNumber: updatedSchoolData.principalNumber || '',
-            principalEmail: updatedSchoolData.principalEmail || '',
-            civicsTeacherNumber: updatedSchoolData.civicsTeacherNumber || '',
-            civicsTeacherEmail: updatedSchoolData.civicsTeacherEmail || '',
-            students: [], // Fetch students if needed
-            eventDate: updatedSchoolData.eventDate ? updatedSchoolData.eventDate.toDate().toLocaleDateString('en-US') : null,
-            eventDateMissing: !updatedSchoolData.eventDate,
-            resourcesConfirmed: updatedSchoolData.resourcesConfirmed || false,
-            selectedResources: updatedSchoolData.selectedResources || [],
-            selectedTrainers: [
-                updatedSchoolData.selectedTrainer1 || '',
-                updatedSchoolData.selectedTrainer2 || ''
-            ],
-            trainers,
-            mediaUploads,
-            error: null,
-            trialTests
-        });
-    } catch (error) {
-        console.error('Error in school-dashboard/upload-media route:', error.message, error.stack);
-        const schoolEmail = req.body.schoolEmail || '';
-        res.status(500).render('schoolDashboard', {
-            schoolName: 'Unknown',
-            schoolEmail,
-            city: '',
-            district: '',
-            pincode: '',
-            schoolPhoneNumber: '',
-            principalNumber: '',
-            principalEmail: '',
-            civicsTeacherNumber: '',
-            civicsTeacherEmail: '',
-            students: [],
-            eventDate: null,
-            eventDateMissing: true,
-            resourcesConfirmed: false,
-            selectedResources: [],
-            selectedTrainers: [],
-            trainers: [],
-            mediaUploads: [],
-            error: `Error uploading media: ${error.message}`,
-            trialTests
-        });
-    }
-});
-// Participation form (renders participation.ejs)
-app.get('/participation', async (req, res) => {
-    try {
-        const type = req.query.type || 'Student';
-
-        const snapshot = await db.collection('schools')
-            .where('isApproved', '==', true)
-            .get();
-
-        const schoolNames = snapshot.docs.map(doc => doc.data().schoolName);
-
-        // ✅ Pass errors and values even if empty
-        res.render('participation', {
-            type,
-            schoolNames,
-            errors: {},  // ← Prevents ReferenceError
-            values: {}   // ← Keeps fields empty on first load
-        });
-    } catch (error) {
-        console.error('Error in participation route:', error.message, error.stack);
-        res.status(500).send('Error loading participation form.');
-    }
-});
-
-app.post('/participate', async (req, res) => {
-    try {
-        const participant = {
-            studentName: req.body.studentName,
-            schoolNameDropdown: req.body.schoolNameDropdown,
-            birthdate: req.body.birthdate,
-            studentClass: req.body.studentClass,
-            parentMobile1: req.body.parentMobile1,
-            parentMobile2: req.body.parentMobile2,
-            parentEmail: req.body.parentEmail,
-            address: req.body.address,
-            city: req.body.city,
-            pincode: req.body.pincode,
-            type: req.body.type,
-            
-        };
-
-        const errors = {};
-
-        // Check for duplicate email or phone number
-        const emailSnapshot = await db.collection('participants')
-            .where('parentEmail', '==', participant.parentEmail)
-            .get();
-        if (!emailSnapshot.empty) {
-            errors.parentEmail = 'User with this email already exists';
-        }
-
-        const mobileSnapshot = await db.collection('participants')
-            .where('parentMobile1', '==', participant.parentMobile1)
-            .get();
-        if (!mobileSnapshot.empty) {
-            errors.parentMobile1 = 'User with this mobile number already exists';
-        }
-
-        const requiredFields = ['studentName', 'schoolNameDropdown', 'birthdate', 'studentClass', 'parentMobile1', 'parentEmail', 'address', 'city', 'pincode', 'type'];
-        requiredFields.forEach(field => {
-            if (!participant[field]) {
-                errors[field] = 'This field is required';
-            }
-        });
-
-        if (participant.pincode && !/^\d{6}$/.test(participant.pincode)) {
-            errors.pincode = 'Pincode must be 6 digits';
-        }
-
-        if (participant.parentMobile1 && !/^\d{10}$/.test(participant.parentMobile1)) {
-            errors.parentMobile1 = 'Mobile number must be 10 digits';
-        }
-
-        if (participant.parentMobile2 && participant.parentMobile2 !== '' && !/^\d{10}$/.test(participant.parentMobile2)) {
-            errors.parentMobile2 = 'Mobile number must be 10 digits';
-        }
-
-        if (participant.parentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(participant.parentEmail)) {
-            errors.parentEmail = 'Invalid email address';
-        }
-
-        if (participant.birthdate && !/^\d{4}-\d{2}-\d{2}$/.test(participant.birthdate)) {
-            errors.birthdate = 'Birthdate must be YYYY-MM-DD';
-        }
-
-        if (Object.keys(errors).length > 0) {
-            const snapshot = await db.collection('schools')
-                .where('isApproved', '==', true)
-                .get();
-            const schoolNames = snapshot.docs.map(doc => doc.data().schoolName);
-
-            return res.render('participation', {
-                type: participant.type || 'Student',
-                schoolNames,
-                errors,
-                values: participant
-            });
-        }
-
-        await db.collection('participants').add({
-            ...participant,
-            hasCompletedTrial1: false,
-            hasCompletedTrial2: false,
-            hasCompletedMCQ: false,
-            trainerApprove : false, 
-            score: 0
-        });
-
-        const [year, month, day] = participant.birthdate.split('-');
-        const password = `${day}${month}${year}`;
-
-        res.render('studentConfirmation', {
-            studentName: participant.studentName,
-            username: participant.parentMobile1,
-            password
-        });
-
-    } catch (error) {
-        console.error('Error in participate route:', error.message, error.stack);
-        res.status(500).render('participation', {
-            type: 'Student',
-            schoolNames: [],
-            errors: { server: 'Something went wrong. Please try again.' },
-            values: req.body
-        });
-    }
-});
-// School participation form (renders schoolParticipation.ejs)
-app.get('/school-participation', async (req, res) => {
-    try {
-        const snapshot = await db.collection('schools').get();
-        const schools = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.render('schoolParticipation', { schools, errors: null });
-    } catch (error) {
-        console.error('Error in school-participation route:', error.message, error.stack);
-        res.status(500).send('Error fetching school data.');
-    }
-});
-
-app.post('/school-participate', [
-    body('schoolName').trim().notEmpty().withMessage('School name is required'),
-    body('city').trim().notEmpty().withMessage('City is required'),
-    body('district').trim().notEmpty().withMessage('District is required'),
-    body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
-    body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
-    body('schoolEmail').trim().isEmail().withMessage('Invalid school email address'),
-    body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
-    body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
-    body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
-    body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address'),
-    body('eventDate1').isDate().withMessage('Invalid date format for Event Date 1'),
-    body('eventDate2').isDate().withMessage('Invalid date format for Event Date 2'),
-    body('eventDate3').isDate().withMessage('Invalid date format for Event Date 3'),
-    body('eventDate4').isDate().withMessage('Invalid date format for Event Date 4')
-], async (req, res) => {
-    try {
-        const errors = validationResult(req).array();
-
-        // Check for duplicate entries
-        const {
-            schoolName,
-            city,
-            district,
-            pincode,
-            schoolPhoneNumber,
-            schoolEmail,
-            principalNumber,
-            principalEmail,
-            civicsTeacherNumber,
-            civicsTeacherEmail,
-            eventDate1,
-            eventDate2,
-            eventDate3,
-            eventDate4
-        } = req.body;
-
-        const checks = [
-            { field: 'schoolEmail', value: schoolEmail, message: 'School email already exists' },
-            { field: 'principalEmail', value: principalEmail, message: 'Principal email already exists' },
-            { field: 'civicsTeacherEmail', value: civicsTeacherEmail, message: 'Civics teacher email already exists' },
-            { field: 'schoolPhoneNumber', value: schoolPhoneNumber, message: 'School phone number already exists' },
-            { field: 'principalNumber', value: principalNumber, message: 'Principal phone number already exists' },
-            { field: 'civicsTeacherNumber', value: civicsTeacherNumber, message: 'Civics teacher phone number already exists' }
-        ];
-
-        for (const check of checks) {
-            const snapshot = await db.collection('schools')
-                .where(check.field, '==', check.value)
-                .get();
-            if (!snapshot.empty) {
-                errors.push({ param: check.field, msg: check.message });
-            }
-        }
-
-        if (errors.length > 0) {
+        } catch (error) {
+            console.error('Error in school-participate route:', error.message, error.stack);
             const schoolsSnapshot = await db.collection('schools').get();
             const schools = schoolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            return res.status(400).render('schoolParticipation', { schools, errors });
+            res.status(500).render('schoolParticipation', {
+                schools,
+                errors: [{ msg: 'Internal server error. Please try again later.' }]
+            });
         }
-
-        await db.collection('schools').add({
-            schoolName,
-            city,
-            district,
-            pincode,
-            schoolPhoneNumber,
-            schoolEmail,
-            principalNumber,
-            principalEmail,
-            civicsTeacherNumber,
-            civicsTeacherEmail,
-            eventDates: [eventDate1, eventDate2, eventDate3, eventDate4],
-            registeredAt: admin.firestore.FieldValue.serverTimestamp(),
-            isApproved: false,
-            resourcesConfirmed: false,
-            selectedResources: []
-        });
-
-        await sendEmail(
-            schoolEmail,
-            emailTemplates.schoolRegistration.subject,
-            emailTemplates.schoolRegistration.text(schoolName, schoolEmail, principalNumber),
-            emailTemplates.schoolRegistration.html(schoolName, schoolEmail, principalNumber)
-        );
-
-        res.render('confirmation', {
-            schoolEmail: schoolEmail,
-            principalNumber: principalNumber
-        });
-    } catch (error) {
-        console.error('Error in school-participate route:', error.message, error.stack);
-        const schoolsSnapshot = await db.collection('schools').get();
-        const schools = schoolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        res.status(500).render('schoolParticipation', {
-            schools,
-            errors: [{ msg: 'Internal server error. Please try again later.' }]
-        });
-    }
-});
-// Confirmation page (renders confirmation.ejs)
-app.get('/confirmation', (req, res) => {
-    res.render('confirmation', {
-        schoolEmail: 'Not provided',
-        principalNumber: 'Not provided'
     });
-});
+    // Confirmation page (renders confirmation.ejs)
+    app.get('/confirmation', (req, res) => {
+        res.render('confirmation', {
+            schoolEmail: 'Not provided',
+            principalNumber: 'Not provided'
+        });
+    });
 
-// School students (renders schoolStudents.ejs)
-app.get('/school-students', async (req, res) => {
+    // School students (renders schoolStudents.ejs)
+   app.get('/school-students', async (req, res) => {
     try {
         const schoolName = req.query.schoolName;
         if (!schoolName) {
@@ -2003,219 +2220,196 @@ app.get('/school-students', async (req, res) => {
         const snapshot = await db.collection('participants')
             .where('schoolName', '==', schoolName)
             .get();
+
         const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
         res.render('schoolStudents', { schoolName, students });
+
     } catch (error) {
-        console.error('Error in school-students route:', error.message, error.stack);
+        console.error('Error in /school-students route:', error.message, error.stack);
         res.status(500).send('Error fetching student data.');
     }
 });
 
-// Admin login page (renders adminLogin.ejs)
-app.get('/admin-login', (req, res) => {
-    if (req.session.isAdmin) {
-        return res.redirect('/admin-dashboard');
-    }
-    res.render('adminLogin', { error: null });
-});
 
-// Admin login (renders adminLogin.ejs on error)
-app.post('/admin-login', (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) {
-        return res.render('adminLogin', { error: 'Username and password are required.' });
-    }
+    // Admin login page (renders adminLogin.ejs)
+    app.get('/admin-login', (req, res) => {
+        if (req.session.isAdmin) {
+            return res.redirect('/admin-dashboard');
+        }
+        res.render('adminLogin', { error: null });
+    });
 
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        req.session.isAdmin = true;
+    // Admin login (renders adminLogin.ejs on error)
+    app.post('/admin-login', (req, res) => {
+        const { username, password } = req.body;
+        if (!username || !password) {
+            return res.render('adminLogin', { error: 'Username and password are required.' });
+        }
+
+        if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+            req.session.isAdmin = true;
+            res.redirect('/admin-dashboard');
+        } else {
+            res.render('adminLogin', { error: 'Invalid username or password.' });
+        }
+    });
+
+    // Admin route (redirects to /admin-dashboard for backward compatibility)
+    app.get('/admin', requireAdmin, async (req, res) => {
         res.redirect('/admin-dashboard');
-    } else {
-        res.render('adminLogin', { error: 'Invalid username or password.' });
-    }
-});
+    });
 
-// Admin route (redirects to /admin-dashboard for backward compatibility)
-app.get('/admin', requireAdmin, async (req, res) => {
-    res.redirect('/admin-dashboard');
-});
-
-// Admin dashboard (renders adminDashboard.ejs)
-
-// Admin dashboard route (unchanged from previous)
+    // Admin dashboard (renders adminDashboard.ejs)
 app.get('/admin-dashboard', requireAdmin, async (req, res) => {
     try {
         console.log('---- Admin Dashboard Route Triggered ----');
 
+        // 1️⃣ Parse Filters
         const filters = {
             schoolApproved: req.query.schoolApproved || '',
             schoolCity: req.query.schoolCity || '',
             trainerApproved: req.query.trainerApproved || '',
             trainerCity: req.query.trainerCity || '',
             studentCompleted: req.query.studentCompleted || '',
-            studentCity: req.query.studentCity || ''
+            studentCity: req.query.studentCity || '',
+            workshopCompleted: req.query.workshopCompleted || ''
         };
 
-        console.log('Filters:', filters);
-
-        // 1. Fetch Schools
+        // 2️⃣ Fetch Schools + School Media
         let schoolsQuery = db.collection('schools');
-        if (filters.schoolApproved) {
-            schoolsQuery = schoolsQuery.where('isApproved', '==', filters.schoolApproved === 'true');
-        }
-        if (filters.schoolCity) {
-            schoolsQuery = schoolsQuery.where('city', '==', filters.schoolCity);
-        }
+        if (filters.schoolApproved) schoolsQuery = schoolsQuery.where('isApproved', '==', filters.schoolApproved === 'true');
+        if (filters.schoolCity) schoolsQuery = schoolsQuery.where('city', '==', filters.schoolCity);
+        if (filters.workshopCompleted) schoolsQuery = schoolsQuery.where('workshopCompleted', '==', filters.workshopCompleted === 'true');
 
-        console.log('Fetching schools...');
         const schoolsSnapshot = await schoolsQuery.get();
-        console.log(`Fetched ${schoolsSnapshot.size} schools`);
-
         const schools = [];
+        const schoolMediaPromises = [];
 
         for (const doc of schoolsSnapshot.docs) {
             const schoolData = doc.data();
+            const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
 
-            // Convert eventDate safely
-            let eventDate = null;
-            if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
-                eventDate = schoolData.eventDate.toDate();
-            } else if (schoolData.eventDate instanceof Date) {
-                eventDate = schoolData.eventDate;
-            }
+            schoolMediaPromises.push(
+                db.collection('schools').doc(doc.id).collection('mediaUploads').get()
+                    .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                        ...mediaDoc.data(),
+                        uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                        uploadedBy: schoolData.schoolName || 'Unknown School'
+                    })))
+            );
 
-            const mediaSnapshot = await db.collection('schools').doc(doc.id).collection('mediaUploads').get();
-            const mediaUploads = mediaSnapshot.docs.map(mediaDoc => ({
-                ...mediaDoc.data(),
-                uploadedAt: mediaDoc.data().uploadedAt ? mediaDoc.data().uploadedAt.toDate() : null
-            }));
-
-            // Fetch trainer data if assigned
             let trainer1 = null, trainer2 = null;
             if (schoolData.trainerId1) {
-                const trainer1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
-                if (trainer1Doc.exists) {
-                    trainer1 = { id: trainer1Doc.id, ...trainer1Doc.data() };
-                }
+                const t1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
+                if (t1Doc.exists) trainer1 = { id: t1Doc.id, ...t1Doc.data() };
             }
             if (schoolData.trainerId2) {
-                const trainer2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
-                if (trainer2Doc.exists) {
-                    trainer2 = { id: trainer2Doc.id, ...trainer2Doc.data() };
-                }
+                const t2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
+                if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
             }
 
-            schools.push({
+            schools.push({ id: doc.id, ...schoolData, eventDate, trainer1, trainer2 });
+        }
+
+        // 3️⃣ Fetch Trainers + Trainer Media
+        let trainersQuery = db.collection('trainers');
+        if (filters.trainerApproved) trainersQuery = trainersQuery.where('isApproved', '==', filters.trainerApproved === 'true');
+        if (filters.trainerCity) trainersQuery = trainersQuery.where('city', '==', filters.trainerCity);
+
+        const trainersSnapshot = await trainersQuery.get();
+        const trainers = [];
+        const trainerMediaPromises = [];
+
+        for (const doc of trainersSnapshot.docs) {
+            const data = doc.data();
+            trainerMediaPromises.push(
+                db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
+                    .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                        ...mediaDoc.data(),
+                        uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                        uploadedBy: data.trainerName || 'Unknown Trainer'
+                    })))
+            );
+
+            trainers.push({
                 id: doc.id,
-                ...schoolData,
-                mediaUploads,
-                eventDate,
-                trainer1,
-                trainer2
+                ...data,
+                registeredAt: data.registeredAt?.toDate ? data.registeredAt.toDate() : (data.registeredAt ? new Date(data.registeredAt) : null),
+                isApproved: typeof data.isApproved === 'boolean' ? data.isApproved : false
             });
         }
 
-        // 2. Fetch Trainers
-        let trainersQuery = db.collection('trainers');
-        if (filters.trainerApproved) {
-            trainersQuery = trainersQuery.where('isApproved', '==', filters.trainerApproved === 'true');
-        }
-        if (filters.trainerCity) {
-            trainersQuery = trainersQuery.where('city', '==', filters.trainerCity);
-        }
-
-        console.log('Fetching trainers...');
-        const trainersSnapshot = await trainersQuery.get();
-        console.log(`Fetched ${trainersSnapshot.size} trainers`);
-
-        const trainers = trainersSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                registeredAt: data.registeredAt ? (data.registeredAt.toDate ? data.registeredAt.toDate() : new Date(data.registeredAt)) : null,
-                isApproved: typeof data.isApproved === 'boolean' ? data.isApproved : false
-            };
-        });
-
-        // 3. Fetch Participants
+        // 4️⃣ Fetch Participants
         let participantsQuery = db.collection('participants');
-        if (filters.studentCompleted) {
-            participantsQuery = participantsQuery.where('hasCompletedMCQ', '==', filters.studentCompleted === 'true');
-        }
-        if (filters.studentCity) {
-            participantsQuery = participantsQuery.where('city', '==', filters.studentCity);
-        }
+        if (filters.studentCompleted) participantsQuery = participantsQuery.where('hasCompletedMCQ', '==', filters.studentCompleted === 'true');
+        if (filters.studentCity) participantsQuery = participantsQuery.where('city', '==', filters.studentCity);
 
-        console.log('Fetching participants...');
         const participantsSnapshot = await participantsQuery.get();
-        console.log(`Fetched ${participantsSnapshot.size} participants`);
-
         const participants = participantsSnapshot.docs.map(doc => {
             const data = doc.data();
-            const score = data.score != null ? Number(data.score) : null;
-            const totalQuestions = data.totalQuestions != null ? Number(data.totalQuestions) : null;
-            const trial1Score = data.trial1Score != null ? Number(data.trial1Score) : null;
-            const trial1TotalQuestions = data.trial1TotalQuestions != null ? Number(data.trial1TotalQuestions) : null;
-            const trial2Score = data.trial2Score != null ? Number(data.trial2Score) : null;
-            const trial2TotalQuestions = data.trial2TotalQuestions != null ? Number(data.trial2TotalQuestions) : null;
+            const score = Number(data.score) || null;
+            const totalQuestions = Number(data.totalQuestions) || null;
+            const trial1Score = Number(data.trial1Score) || null;
+            const trial1TotalQuestions = Number(data.trial1TotalQuestions) || null;
+            const trial2Score = Number(data.trial2Score) || null;
+            const trial2TotalQuestions = Number(data.trial2TotalQuestions) || null;
 
             return {
                 id: doc.id,
                 ...data,
-                birthdate: data.birthdate ? (data.birthdate.toDate ? data.birthdate.toDate() : new Date(data.birthdate)) : null,
-                completedAt: data.completedAt ? (data.completedAt.toDate ? data.completedAt.toDate() : new Date(data.completedAt)) : null,
+                birthdate: data.birthdate?.toDate ? data.birthdate.toDate() : (data.birthdate ? new Date(data.birthdate) : null),
+                completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : (data.completedAt ? new Date(data.completedAt) : null),
                 score,
                 totalQuestions,
-                percentage: totalQuestions && !isNaN(score) && !isNaN(totalQuestions) ? ((score / totalQuestions) * 100).toFixed(2) : null,
+                percentage: score && totalQuestions ? ((score / totalQuestions) * 100).toFixed(2) : null,
                 trial1Score,
                 trial1TotalQuestions,
-                trial1Percentage: trial1TotalQuestions && !isNaN(trial1Score) && !isNaN(trial1TotalQuestions) ? ((trial1Score / trial1TotalQuestions) * 100).toFixed(2) : null,
-                trial1CorrectAnswers: data.trial1CorrectAnswers != null ? Number(data.trial1CorrectAnswers) : null,
-                trial1WrongAnswers: data.trial1WrongAnswers != null ? Number(data.trial1WrongAnswers) : null,
+                trial1Percentage: trial1Score && trial1TotalQuestions ? ((trial1Score / trial1TotalQuestions) * 100).toFixed(2) : null,
                 trial2Score,
                 trial2TotalQuestions,
-                trial2Percentage: trial2TotalQuestions && !isNaN(trial2Score) && !isNaN(trial2TotalQuestions) ? ((trial2Score / trial2TotalQuestions) * 100).toFixed(2) : null,
-                trial2CorrectAnswers: data.trial2CorrectAnswers != null ? Number(data.trial2CorrectAnswers) : null,
-                trial2WrongAnswers: data.trial2WrongAnswers != null ? Number(data.trial2WrongAnswers) : null
+                trial2Percentage: trial2Score && trial2TotalQuestions ? ((trial2Score / trial2TotalQuestions) * 100).toFixed(2) : null,
+                trial1CorrectAnswers: Number(data.trial1CorrectAnswers) || null,
+                trial1WrongAnswers: Number(data.trial1WrongAnswers) || null,
+                trial2CorrectAnswers: Number(data.trial2CorrectAnswers) || null,
+                trial2WrongAnswers: Number(data.trial2WrongAnswers) || null
             };
         });
 
-        // 4. Students completed MCQ today
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today);
-        tomorrow.setDate(today.getDate() + 1);
+        // 5️⃣ Collect All Media Uploads
+        const schoolMedia = (await Promise.all(schoolMediaPromises)).flat();
+        const trainerMedia = (await Promise.all(trainerMediaPromises)).flat();
+        const mediaUploads = [...schoolMedia, ...trainerMedia].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
 
+        // 6️⃣ Today's Participants Summary
+        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
         let studentsTodayCount = 0;
         let averageScore = 0;
 
         try {
-            console.log('Fetching participants who completed MCQ today...');
             const studentsTodaySnapshot = await db.collection('participants')
                 .where('hasCompletedMCQ', '==', true)
                 .where('completedAt', '>=', today)
                 .where('completedAt', '<', tomorrow)
                 .get();
 
-            console.log(`Fetched ${studentsTodaySnapshot.size} for today`);
             studentsTodayCount = studentsTodaySnapshot.size;
-
-            let totalScore = 0;
-            studentsTodaySnapshot.forEach(doc => {
-                totalScore += Number(doc.data().score) || 0;
-            });
-
-            averageScore = studentsTodayCount > 0
-                ? (totalScore / studentsTodayCount).toFixed(2)
-                : 0;
-
-        } catch (indexError) {
-            console.error('🔥 Firestore Index Error:', indexError.message);
-            console.warn('❗ This is likely due to a missing composite index in Firestore.');
+            const totalScore = studentsTodaySnapshot.docs.reduce((sum, doc) => sum + (Number(doc.data().score) || 0), 0);
+            averageScore = studentsTodayCount > 0 ? (totalScore / studentsTodayCount).toFixed(2) : 0;
+        } catch (indexErr) {
+            console.error('🔥 Firestore Index Error:', indexErr.message);
         }
 
-        // Render the admin dashboard
+        // 7️⃣ Fetch Trainer ZIPs
+        const zipSnapshot = await db.collection('trainerZips').get();
+        const zips = zipSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            uploadedAt: doc.data().uploadedAt?.toDate() || null
+        }));
+
+        // 8️⃣ Render Admin Dashboard View
         res.render('adminDashboard', {
             schools,
             trainers,
@@ -2223,14 +2417,14 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             filters,
             studentsTodayCount,
             averageScore,
+            zips,
+            mediaUploads,
             error: null,
             success: req.query.success || null
         });
 
-    } catch (error) {
-        console.error('❌ General Error in /admin-dashboard:', error.message);
-        console.error(error.stack);
-
+    } catch (err) {
+        console.error('❌ Error in /admin-dashboard:', err.message);
         res.render('adminDashboard', {
             schools: [],
             trainers: [],
@@ -2238,761 +2432,970 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             filters: {},
             studentsTodayCount: 0,
             averageScore: 0,
-            error: 'Failed to load dashboard data. Please try again later.',
+            zips: [],
+            mediaUploads: [],
+            error: 'Failed to load dashboard data.',
             success: null
         });
     }
 });
-
-// Approve trainer (general approval, not tied to a specific school)
-app.post('/admin/approve-trainer', requireAdmin, async (req, res) => {
+// ✅ POST mark media as seen (One-way, not toggle)
+app.post('/admin-dashboard/mark-media-seen/:mediaId', async (req, res) => {
     try {
-        const { trainerId } = req.body;
-        if (!trainerId) {
-            return res.redirect('/admin-dashboard?error=Trainer ID is required');
+        const mediaId = req.params.mediaId;
+        const mediaSnap = await db.collectionGroup('mediaUploads')
+            .where('id', '==', mediaId)
+            .limit(1)
+            .get();
+
+        if (mediaSnap.empty) {
+            return res.status(404).json({ error: 'Media not found' });
         }
 
-        const trainerRef = db.collection('trainers').doc(trainerId);
-        const trainerDoc = await trainerRef.get();
-        if (!trainerDoc.exists) {
-            return res.redirect('/admin-dashboard?error=Trainer not found');
+        const mediaDoc = mediaSnap.docs[0];
+
+        if (!mediaDoc.data().seen) {
+            await mediaDoc.ref.update({ seen: true });
         }
 
-        await trainerRef.update({ isApproved: true });
-        res.redirect('/admin-dashboard?success=Trainer approved successfully');
-    } catch (error) {
-        console.error('Error in admin/approve-trainer route:', error.message, error.stack);
-        res.redirect('/admin-dashboard?error=Error approving trainer');
+        res.json({ seen: true, message: 'Media marked as seen' });
+    } catch (err) {
+        console.error('Error marking media as seen:', err.message);
+        res.status(500).json({ error: 'Server error' });
     }
 });
 
-// Admin approve school
- app.post('/admin/approve-school/:id', requireAdmin, async (req, res) => {
+app.get('/admin-dashboard/get-media-status/:mediaId', async (req, res) => {
+    try {
+        const mediaId = req.params.mediaId;
+        const mediaSnap = await db.collectionGroup('mediaUploads').where('id', '==', mediaId).limit(1).get();
+
+        if (mediaSnap.empty) {
+            return res.status(404).json({ error: 'Media not found' });
+        }
+
+        const mediaDoc = mediaSnap.docs[0];
+        res.json({ seen: mediaDoc.data().seen || false });
+    } catch (err) {
+        console.error('Error fetching media status:', err.message);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+// POST: Toggle media seen status
+app.post('/admin-dashboard/toggle-media-seen/:mediaId', async (req, res) => {
+    try {
+        const mediaId = req.params.mediaId;
+        const mediaSnap = await db.collectionGroup('mediaUploads').where('id', '==', mediaId).limit(1).get();
+
+        if (mediaSnap.empty) {
+            return res.status(404).json({ error: 'Media not found' });
+        }
+
+        const mediaDoc = mediaSnap.docs[0];
+        const currentSeen = mediaDoc.data().seen || false;
+        const newSeen = !currentSeen;
+
+        await mediaDoc.ref.update({ seen: newSeen });
+
+        res.json({ seen: newSeen });
+    } catch (err) {
+        console.error('Error toggling media status:', err.message);
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
+
+    // Approve trainer (general approval, not tied to a specific school)
+
+
+// // Route — Approve Trainer + Upload Zip
+// app.post('/admin/approve-trainer-upload', requireAdmin, upload.single('zipFile'), async (req, res) => {
+//   try {
+//     const { trainerId } = req.body;
+//     if (!trainerId || !req.file) {
+//       return res.redirect('/admin-dashboard?error=Trainer ID and ZIP file required');
+//     }
+
+//     const trainerRef = db.collection('trainers').doc(trainerId);
+//     const trainerDoc = await trainerRef.get();
+//     if (!trainerDoc.exists) {
+//       return res.redirect('/admin-dashboard?error=Trainer not found');
+//     }
+
+//     await trainerRef.update({
+//       isApproved: true,
+//       zipFileName: req.file.filename,
+//       zipUploadedAt: new Date()
+//     });
+
+//     res.redirect('/admin-dashboard?success=Trainer approved and ZIP uploaded');
+//   } catch (error) {
+//     console.error('Error in approve-trainer-upload:', error);
+//     res.redirect('/admin-dashboard?error=Error approving trainer or uploading ZIP');
+//   }
+// });
+
+app.get('/trainer/download-zip', async (req, res) => {
+  try {
+    const { trainerId } = req.query;
+    if (!trainerId) return res.status(400).send('Trainer ID is required');
+
+    const trainerDoc = await db.collection('trainers').doc(trainerId).get();
+    if (!trainerDoc.exists) return res.status(404).send('Trainer not found');
+
+    const trainer = trainerDoc.data();
+
+    if (!trainer.isApproved || !trainer.zipFileName) {
+      return res.status(403).send('Not approved or no ZIP uploaded');
+    }
+
+    res.download(`./uploads/${trainer.zipFileName}`);
+  } catch (err) {
+    console.error('Error downloading ZIP:', err);
+    res.status(500).send('Error downloading ZIP');
+  }
+});
+
+    // Admin approve school
+  app.post('/school-dashboard/approve-student', async (req, res) => {
+    try {
+        const { studentId } = req.body;
+        if (!studentId) return res.status(400).send('Student ID is required.');
+
+        await db.collection('participants').doc(studentId).update({
+            isApproved: true
+        });
+
+        res.redirect(`/school-dashboard?username=${encodeURIComponent(req.session.schoolEmail)}`);
+    } catch (error) {
+        console.error('Error approving student:', error);
+        res.status(500).send('Error approving student.');
+    }
+});
+
+
+    // Admin reject school
+    app.post('/admin/reject-school', requireAdmin, async (req, res) => {
+    try {
+    const { schoolId } = req.body;
+    if (!schoolId) {
+    return res.redirect('/admin-dashboard?error=School ID is required');
+    }
+
+    const schoolRef = db.collection('schools').doc(schoolId);
+    const schoolDoc = await schoolRef.get();
+    if (!schoolDoc.exists) {
+    return res.redirect('/admin-dashboard?error=School not found');
+    }
+
+    await schoolRef.delete();
+    res.redirect('/admin-dashboard?success=School rejected successfully');
+    } catch (error) {
+    console.error('Error in admin/reject-school route:', error.message, error.stack);
+    res.redirect('/admin-dashboard?error=Error rejecting school');
+    }
+    });
+
+    // Admin approve trainer
+    // Approve Trainer 1 for a specific school
+    app.post('/admin/approve-trainer1/:schoolId', requireAdmin, async (req, res) => {
         try {
-            const schoolId = req.params.id;
-            await db.collection('schools').doc(schoolId).update({ isApproved: true });
-            res.redirect('/admin-dashboard');
+            const { schoolId } = req.params;
+            const schoolRef = db.collection('schools').doc(schoolId);
+            const schoolDoc = await schoolRef.get();
+            if (!schoolDoc.exists) {
+                return res.redirect('/admin-dashboard?error=School not found');
+            }
+
+            const { trainerId1, name: schoolName, eventDate, spot, facilities } = schoolDoc.data();
+            if (!trainerId1) {
+                return res.redirect('/admin-dashboard?error=No Trainer 1 assigned to approve');
+            }
+
+            const trainerRef = db.collection('trainers').doc(trainerId1);
+            const trainerDoc = await trainerRef.get();
+            if (!trainerDoc.exists) {
+                return res.redirect('/admin-dashboard?error=Trainer 1 not found');
+            }
+
+            // Check if trainer is already assigned to another school
+            const existingSchoolId = trainerDoc.data().assignedSchoolId;
+            if (existingSchoolId && existingSchoolId !== schoolId) {
+                return res.redirect('/admin-dashboard?error=Trainer 1 already assigned to another school');
+            }
+
+            // Update trainer with approval status and assigned school details
+            await trainerRef.update({
+                isApproved: true,
+                assignedSchoolId: schoolId,
+                assignedSchoolName: schoolName
+            });
+
+            // Create assignment subcollection document
+            await trainerRef.collection('assignments').doc(schoolId).set({
+                schoolId,
+                schoolName,
+                eventDate: eventDate || null,
+                spot: spot || null,
+                facilities: facilities || [],
+                assignedAt: admin.firestore.Timestamp.now()
+            });
+
+            console.log(`Approved Trainer 1 ${trainerId1} for school ${schoolId} (${schoolName})`);
+            res.redirect('/admin-dashboard?success=Trainer 1 approved successfully');
         } catch (error) {
-            console.error('Error in approve-school route:', error.message, error.stack);
-            res.status(500).send('Error approving school.');
+            console.error('Error approving Trainer 1:', error.message, error.stack);
+            res.redirect('/admin-dashboard?error=Failed to approve Trainer 1');
         }
     });
 
-// Admin reject school
-app.post('/admin/reject-school', requireAdmin, async (req, res) => {
-try {
-const { schoolId } = req.body;
-if (!schoolId) {
-return res.redirect('/admin-dashboard?error=School ID is required');
-}
-
-const schoolRef = db.collection('schools').doc(schoolId);
-const schoolDoc = await schoolRef.get();
-if (!schoolDoc.exists) {
-return res.redirect('/admin-dashboard?error=School not found');
-}
-
-await schoolRef.delete();
-res.redirect('/admin-dashboard?success=School rejected successfully');
-} catch (error) {
-console.error('Error in admin/reject-school route:', error.message, error.stack);
-res.redirect('/admin-dashboard?error=Error rejecting school');
-}
-});
-
-// Admin approve trainer
-// Approve Trainer 1 for a specific school
-app.post('/admin/approve-trainer1/:schoolId', requireAdmin, async (req, res) => {
-    try {
-        const { schoolId } = req.params;
-        const schoolRef = db.collection('schools').doc(schoolId);
-        const schoolDoc = await schoolRef.get();
-        if (!schoolDoc.exists) {
-            return res.redirect('/admin-dashboard?error=School not found');
-        }
-
-        const { trainerId1, name: schoolName, eventDate, spot, facilities } = schoolDoc.data();
-        if (!trainerId1) {
-            return res.redirect('/admin-dashboard?error=No Trainer 1 assigned to approve');
-        }
-
-        const trainerRef = db.collection('trainers').doc(trainerId1);
-        const trainerDoc = await trainerRef.get();
-        if (!trainerDoc.exists) {
-            return res.redirect('/admin-dashboard?error=Trainer 1 not found');
-        }
-
-        // Check if trainer is already assigned to another school
-        const existingSchoolId = trainerDoc.data().assignedSchoolId;
-        if (existingSchoolId && existingSchoolId !== schoolId) {
-            return res.redirect('/admin-dashboard?error=Trainer 1 already assigned to another school');
-        }
-
-        // Update trainer with approval status and assigned school details
-        await trainerRef.update({
-            isApproved: true,
-            assignedSchoolId: schoolId,
-            assignedSchoolName: schoolName
-        });
-
-        // Create assignment subcollection document
-        await trainerRef.collection('assignments').doc(schoolId).set({
-            schoolId,
-            schoolName,
-            eventDate: eventDate || null,
-            spot: spot || null,
-            facilities: facilities || [],
-            assignedAt: admin.firestore.Timestamp.now()
-        });
-
-        console.log(`Approved Trainer 1 ${trainerId1} for school ${schoolId} (${schoolName})`);
-        res.redirect('/admin-dashboard?success=Trainer 1 approved successfully');
-    } catch (error) {
-        console.error('Error approving Trainer 1:', error.message, error.stack);
-        res.redirect('/admin-dashboard?error=Failed to approve Trainer 1');
-    }
-});
-
-// Approve Trainer 2 for a specific school
-app.post('/admin/approve-trainer2/:schoolId', requireAdmin, async (req, res) => {
-    try {
-        const { schoolId } = req.params;
-        const schoolRef = db.collection('schools').doc(schoolId);
-        const schoolDoc = await schoolRef.get();
-        if (!schoolDoc.exists) {
-            return res.redirect('/admin-dashboard?error=School not found');
-        }
-
-        const { trainerId2, name: schoolName, eventDate, spot, facilities } = schoolDoc.data();
-        if (!trainerId2) {
-            return res.redirect('/admin-dashboard?error=No Trainer 2 assigned to approve');
-        }
-
-        const trainerRef = db.collection('trainers').doc(trainerId2);
-        const trainerDoc = await trainerRef.get();
-        if (!trainerDoc.exists) {
-            return res.redirect('/admin-dashboard?error=Trainer 2 not found');
-        }
-
-        // Check if trainer is.cn already assigned to another school
-        const existingSchoolId = trainerDoc.data().assignedSchoolId;
-        if (existingSchoolId && existingSchoolId !== schoolId) {
-            return res.redirect('/admin-dashboard?error=Trainer 2 already assigned to another school');
-        }
-
-        // Update trainer with approval status and assigned school details
-        await trainerRef.update({
-            isApproved: true,
-            assignedSchoolId: schoolId,
-            assignedSchoolName: schoolName
-        });
-
-        // Create assignment subcollection document
-        await trainerRef.collection('assignments').doc(schoolId).set({
-            schoolId,
-            schoolName,
-            eventDate: eventDate || null,
-            spot: spot || null,
-            facilities: facilities || [],
-            assignedAt: admin.firestore.Timestamp.now()
-        });
-
-        console.log(`Approved Trainer 2 ${trainerId2} for school ${schoolId} (${schoolName})`);
-        res.redirect('/admin-dashboard?success=Trainer 2 approved successfully');
-    } catch (error) {
-        console.error('Error approving Trainer 2:', error.message, error.stack);
-        res.redirect('/admin-dashboard?error=Failed to approve Trainer 2');
-    }
-});
-
-// Reject Trainer 1
-app.post('/admin/reject-trainer1/:schoolId', requireAdmin, async (req, res) => {
-    try {
-        const { schoolId } = req.params;
-        const schoolRef = db.collection('schools').doc(schoolId);
-        await schoolRef.update({
-            trainerId1: null
-        });
-        console.log(`Rejected Trainer 1 for school ${schoolId}`);
-        res.redirect('/admin-dashboard?success=Trainer 1 rejected successfully');
-    } catch (error) {
-        console.error('Error rejecting Trainer 1:', error);
-        res.redirect('/admin-dashboard?error=Failed to reject Trainer 1');
-    }
-});
-
-// Reject Trainer 2
-app.post('/admin/reject-trainer2/:schoolId', requireAdmin, async (req, res) => {
-    try {
-        const { schoolId } = req.params;
-        const schoolRef = db.collection('schools').doc(schoolId);
-        await schoolRef.update({
-            trainerId2: null
-        });
-        console.log(`Rejected Trainer 2 for school ${schoolId}`);
-        res.redirect('/admin-dashboard?success=Trainer 2 rejected successfully');
-    } catch (error) {
-        console.error('Error rejecting Trainer 2:', error);
-        res.redirect('/admin-dashboard?error=Failed to reject Trainer 2');
-    }
-});
-
-// Assign Trainer 1
-app.post('/admin/assign-trainer1/:schoolId', requireAdmin, async (req, res) => {
-    try {
-        const { schoolId } = req.params;
-        const { trainerId } = req.body;
-
-        if (!trainerId) {
-            return res.redirect('/admin-dashboard?error=Trainer ID is required for Trainer 1');
-        }
-
-        const schoolRef = db.collection('schools').doc(schoolId);
-        const schoolDoc = await schoolRef.get();
-        if (!schoolDoc.exists) {
-            return res.redirect('/admin-dashboard?error=School not found');
-        }
-
-        const { name: schoolName, eventDate, spot, facilities } = schoolDoc.data();
-        const trainerRef = db.collection('trainers').doc(trainerId);
-        const trainerDoc = await trainerRef.get();
-        if (!trainerDoc.exists) {
-            return res.redirect('/admin-dashboard?error=Trainer not found');
-        }
-
-        // Check if trainer is already assigned to another school
-        const existingSchoolId = trainerDoc.data().assignedSchoolId;
-        if (existingSchoolId && existingSchoolId !== schoolId) {
-            return res.redirect('/admin-dashboard?error=Trainer already assigned to another school');
-        }
-
-        // Update school with trainer ID
-        await schoolRef.update({
-            trainerId1: trainerId
-        });
-
-        // Update trainer with assigned school details
-        await trainerRef.update({
-            assignedSchoolId: schoolId,
-            assignedSchoolName: schoolName
-        });
-
-        // Create assignment subcollection document
-        await trainerRef.collection('assignments').doc(schoolId).set({
-            schoolId,
-            schoolName,
-            eventDate: eventDate || null,
-            spot: spot || null,
-            facilities: facilities || [],
-            assignedAt: admin.firestore.Timestamp.now()
-        });
-
-        console.log(`Assigned Trainer 1 ${trainerId} to school ${schoolId}`);
-        res.redirect('/admin-dashboard?success=Trainer 1 assigned successfully');
-    } catch (error) {
-        console.error('Error assigning Trainer 1:', error);
-        res.redirect('/admin-dashboard?error=Failed to assign Trainer 1');
-    }
-});
-
-// Assign Trainer 2
-app.post('/admin/assign-trainer2/:schoolId', requireAdmin, async (req, res) => {
-    try {
-        const { schoolId } = req.params;
-        const { trainerId } = req.body;
-
-        if (!trainerId) {
-            return res.redirect('/admin-dashboard?error=Trainer ID is required for Trainer 2');
-        }
-
-        const schoolRef = db.collection('schools').doc(schoolId);
-        const schoolDoc = await schoolRef.get();
-        if (!schoolDoc.exists) {
-            return res.redirect('/admin-dashboard?error=School not found');
-        }
-
-        const { name: schoolName, eventDate, spot, facilities } = schoolDoc.data();
-        const trainerRef = db.collection('trainers').doc(trainerId);
-        const trainerDoc = await trainerRef.get();
-        if (!trainerDoc.exists) {
-            return res.redirect('/admin-dashboard?error=Trainer not found');
-        }
-
-        // Check if trainer is already assigned to another school
-        const existingSchoolId = trainerDoc.data().assignedSchoolId;
-        if (existingSchoolId && existingSchoolId !== schoolId) {
-            return res.redirect('/admin-dashboard?error=Trainer already assigned to another school');
-        }
-
-        // Update school with trainer ID
-        await schoolRef.update({
-            trainerId2: trainerId
-        });
-
-        // Update trainer with assigned school details
-        await trainerRef.update({
-            assignedSchoolId: schoolId,
-            assignedSchoolName: schoolName
-        });
-
-        // Create assignment subcollection document
-        await trainerRef.collection('assignments').doc(schoolId).set({
-            schoolId,
-            schoolName,
-            eventDate: eventDate || null,
-            spot: spot || null,
-            facilities: facilities || [],
-            assignedAt: admin.firestore.Timestamp.now()
-        });
-
-        console.log(`Assigned Trainer 2 ${trainerId} to school ${schoolId}`);
-        res.redirect('/admin-dashboard?success=Trainer 2 assigned successfully');
-    } catch (error) {
-        console.error('Error assigning Trainer 2:', error);
-        res.redirect('/admin-dashboard?error=Failed to assign Trainer 2');
-    }
-});
-
-// Reject trainer and show available trainers (for assigning new trainers)
-app.post('/reject-trainer/:id', requireAdmin, async (req, res) => {
-    try {
-        const availableTrainersSnapshot = await db.collection('trainers')
-            .where('isApproved', '==', true)
-            .get();
-        const availableTrainers = availableTrainersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-        res.render('assignTrainer', {
-            rejectedTrainerId: req.params.id,
-            availableTrainers,
-            error: null,
-            schoolId: req.query.schoolId || null
-        });
-    } catch (error) {
-        console.error('Error fetching available trainers:', error);
-        res.render('assignTrainer', {
-            rejectedTrainerId: req.params.id,
-            availableTrainers: [],
-            error: 'Failed to load available trainers',
-            schoolId: req.query.schoolId || null
-        });
-    }
-});
-// Admin logout
-app.get('/admin-logout', (req, res) => {
-req.session.destroy(err => {    
-if (err) {
-console.error('Error destroying session:', err.message, err.stack);
-}
-res.redirect('/admin-login');
-});
-});
-
-
-app.post('/trainer-dashboard/upload-media', upload, async (req, res) => {
-    try {
-        const { trainerEmail, mediaDescription, mediaLink } = req.body;
-        const photos = req.files['photos'] || [];
-        const videos = req.files['videos'] || [];
-
-        if (!trainerEmail) {
-            return res.status(400).render('trainerDashboard', {
-                trainerName: 'Unknown',
-                email: '',
-                city: '',
-                district: '',
-                profession: '',
-                assignedSchools: [],
-                availableDates: [],
-                schoolsInDistrict: [],
-                mediaUploads: [],
-                error: 'Trainer email is required',
-                success: null,
-                trainerData: {}
-            });
-        }
-
-        // Fetch trainer data
-        const trainerSnapshot = await db.collection('trainers')
-            .where('email', '==', trainerEmail)
-            .get();
-        if (trainerSnapshot.empty) {
-            return res.status(404).render('trainerDashboard', {
-                trainerName: 'Unknown',
-                email: trainerEmail,
-                city: '',
-                district: '',
-                profession: '',
-                assignedSchools: [],
-                availableDates: [],
-                schoolsInDistrict: [],
-                mediaUploads: [],
-                error: 'Trainer not found',
-                success: null,
-                trainerData: {}
-            });
-        }
-
-        const trainerId = trainerSnapshot.docs[0].id;
-        const trainerData = trainerSnapshot.docs[0].data();
-
-        if (!trainerData.isApproved) {
-            return res.status(403).render('trainerDashboard', {
-                trainerName: trainerData.trainerName || 'Unknown',
-                email: trainerEmail,
-                city: trainerData.city || '',
-                district: trainerData.district || trainerData.city || '',
-                profession: trainerData.profession || '',
-                assignedSchools: [],
-                availableDates: trainerData.availableDates || [],
-                schoolsInDistrict: [],
-                mediaUploads: [],
-                error: 'You must complete the Train the Trainer program to upload media.',
-                success: null,
-                trainerData
-            });
-        }
-
-        if (mediaDescription && mediaDescription.length > 1000) {
-            return res.status(400).render('trainerDashboard', {
-                trainerName: trainerData.trainerName || 'Unknown',
-                email: trainerEmail,
-                city: trainerData.city || '',
-                district: trainerData.district || trainerData.city || '',
-                profession: trainerData.profession || '',
-                assignedSchools: [],
-                availableDates: trainerData.availableDates || [],
-                schoolsInDistrict: [],
-                mediaUploads: [],
-                error: 'Media description cannot exceed 1000 characters',
-                success: null,
-                trainerData
-            });
-        }
-
-        // Explicitly set the bucket name
-        const bucket = admin.storage().bucket('beinglawful-ee5a4.firebasestorage.app');
-        const [exists] = await bucket.exists();
-        if (!exists) {
-            throw new Error('The specified bucket does not exist. Please check your Firebase configuration.');
-        }
-
-        const mediaUploads = [];
-        for (const file of photos) {
-            const fileName = `media/trainers/${trainerId}/photos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
-            try {
-                await fileUpload.save(file.buffer, {
-                    metadata: { contentType: file.mimetype }
-                });
-                const [url] = await fileUpload.getSignedUrl({
-                    action: 'read',
-                    expires: '03-09-2491'
-                });
-                mediaUploads.push({
-                    url,
-                    type: 'image',
-                    path: fileName,
-                    description: mediaDescription || '',
-                    link: mediaLink || '',
-                    uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (uploadError) {
-                console.error(`Error uploading photo ${fileName}:`, uploadError.message, uploadError.stack);
-                throw new Error(`Failed to upload photo: ${uploadError.message}`);
-            }
-        }
-
-        for (const file of videos) {
-            const fileName = `media/trainers/${trainerId}/videos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
-            try {
-                await fileUpload.save(file.buffer, {
-                    metadata: { contentType: file.mimetype }
-                });
-                const [url] = await fileUpload.getSignedUrl({
-                    action: 'read',
-                    expires: '03-09-2491'
-                });
-                mediaUploads.push({
-                    url,
-                    type: 'video',
-                    path: fileName,
-                    description: mediaDescription || '',
-                    link: mediaLink || '',
-                    uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-                });
-            } catch (uploadError) {
-                console.error(`Error uploading video ${fileName}:`, uploadError.message, uploadError.stack);
-                throw new Error(`Failed to upload video: ${uploadError.message}`);
-            }
-        }
-
-        if (mediaUploads.length > 0) {
-            const batch = db.batch();
-            mediaUploads.forEach(upload => {
-                const mediaRef = db.collection('trainers').doc(trainerId).collection('mediaUploads').doc();
-                batch.set(mediaRef, upload);
-            });
-            await batch.commit();
-        }
-
-        // Fetch updated trainer data
-        const updatedTrainerSnapshot = await db.collection('trainers').doc(trainerId).get();
-        const updatedTrainerData = updatedTrainerSnapshot.data();
-
-        // Fetch assigned schools
-        const schoolsSnapshot1 = await db.collection('schools')
-            .where('isApproved', '==', true)
-            .where('trainerId1', '==', trainerId)
-            .get();
-        const schoolsSnapshot2 = await db.collection('schools')
-            .where('isApproved', '==', true)
-            .where('trainerId2', '==', trainerId)
-            .get();
-        const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
-            const data = doc.data();
-            return {
-                schoolName: data.schoolName || 'N/A',
-                city: data.city || 'N/A',
-                district: data.district || data.city || 'N/A',
-                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) : 'Not assigned',
-                resourcesConfirmed: data.resourcesConfirmed || false,
-                selectedResources: data.selectedResources || [],
-                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2'
-            };
-        });
-
-        // Fetch schools in the trainer's district
-        const schoolsInDistrictSnapshot = await db.collection('schools')
-            .where('district', '==', updatedTrainerData.district || updatedTrainerData.city)
-            .where('isApproved', '==', true)
-            .get();
-        const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                schoolName: data.schoolName || 'N/A',
-                schoolEmail: data.schoolEmail || 'N/A',
-                city: data.city || 'N/A',
-                district: data.district || 'N/A',
-                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) : 'Not assigned',
-                assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
-                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
-            };
-        });
-
-        // Fetch media uploads
-        const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
-        const mediaUploadsData = mediaSnapshot.docs.map(doc => ({
-            ...doc.data(),
-            uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
-        }));
-
-        res.render('trainerDashboard', {
-            trainerName: updatedTrainerData.trainerName || 'Unknown',
-            email: trainerEmail,
-            city: updatedTrainerData.city || '',
-            district: updatedTrainerData.district || updatedTrainerData.city || '',
-            profession: updatedTrainerData.profession || '',
-            assignedSchools,
-            availableDates: updatedTrainerData.availableDates || [],
-            schoolsInDistrict,
-            mediaUploads: mediaUploadsData,
-            error: null,
-            success: 'Media uploaded successfully',
-            trainerData: updatedTrainerData
-        });
-    } catch (error) {
-        console.error('Error in trainer-dashboard/upload-media route:', error.message, error.stack);
-        res.status(500).render('trainerDashboard', {
-            trainerName: 'Unknown',
-            email: trainerEmail || '',
-            city: '',
-            district: '',
-            profession: '',
-            assignedSchools: [],
-            availableDates: [],
-            schoolsInDistrict: [],
-            mediaUploads: [],
-            error: `Error uploading media: ${error.message}`,
-            success: null,
-            trainerData: {}
-        });
-    }
-})
-
-
-
-
-app.get('/trainer-dashboard', async (req, res) => {
-    try {
-        const trainerEmail = req.query.username;
-        if (!trainerEmail) {
-            return res.status(400).render('trainerDashboard', {
-                trainerName: 'Unknown',
-                email: '',
-                city: '',
-                district: '',
-                profession: '',
-                assignedSchools: [],
-                availableDates: [],
-                schoolsInDistrict: [],
-                mediaUploads: [], // Default to empty array
-                error: 'Trainer email is required',
-                success: null,
-                trainerData: {}
-            });
-        }
-
-        // Fetch trainer data
-        const trainerSnapshot = await db.collection('trainers')
-            .where('email', '==', trainerEmail)
-            .get();
-        if (trainerSnapshot.empty) {
-            return res.status(404).render('trainerDashboard', {
-                trainerName: 'Unknown',
-                email: trainerEmail,
-                city: '',
-                district: '',
-                profession: '',
-                assignedSchools: [],
-                availableDates: [],
-                schoolsInDistrict: [],
-                mediaUploads: [], // Default to empty array
-                error: 'Trainer not found',
-                success: null,
-                trainerData: {}
-            });
-        }
-
-        const trainerId = trainerSnapshot.docs[0].id;
-        const trainerData = trainerSnapshot.docs[0].data();
-
-        // Fetch assigned schools
-        const schoolsSnapshot1 = await db.collection('schools')
-            .where('isApproved', '==', true)
-            .where('trainerId1', '==', trainerId)
-            .get();
-        const schoolsSnapshot2 = await db.collection('schools')
-            .where('isApproved', '==', true)
-            .where('trainerId2', '==', trainerId)
-            .get();
-        const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
-            const data = doc.data();
-            return {
-                schoolName: data.schoolName || 'N/A',
-                city: data.city || 'N/A',
-                district: data.district || data.city || 'N/A',
-                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) : 'Not assigned',
-                resourcesConfirmed: data.resourcesConfirmed || false,
-                selectedResources: data.selectedResources || [],
-                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2'
-            };
-        });
-
-        // Fetch schools in the trainer's district
-        const schoolsInDistrictSnapshot = await db.collection('schools')
-            .where('district', '==', trainerData.district || trainerData.city)
-            .where('isApproved', '==', true)
-            .get();
-        const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                schoolName: data.schoolName || 'N/A',
-                schoolEmail: data.schoolEmail || 'N/A',
-                city: data.city || 'N/A',
-                district: data.district || 'N/A',
-                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) : 'Not assigned',
-                assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
-                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
-            };
-        });
-
-        // Fetch media uploads
-        const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
-        const mediaUploads = mediaSnapshot.docs.map(doc => ({
-            ...doc.data(),
-            uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
-        }));
-
-        res.render('trainerDashboard', {
-            trainerName: trainerData.trainerName || 'Unknown',
-            email: trainerEmail,
-            city: trainerData.city || '',
-            district: trainerData.district || trainerData.city || '',
-            profession: trainerData.profession || '',
-            assignedSchools,
-            availableDates: trainerData.availableDates || [],
-            schoolsInDistrict,
-            mediaUploads, // Include media uploads
-            error: null,
-            success: null,
-            trainerData
-        });
-    } catch (error) {
-        console.error('Error in trainer-dashboard route:', error.message, error.stack);
-        res.status(500).render('trainerDashboard', {
-            trainerName: 'Unknown',
-            email: trainerEmail || '',
-            city: '',
-            district: '',
-            profession: '',
-            assignedSchools: [],
-            availableDates: [],
-            schoolsInDistrict: [],
-            mediaUploads: [], // Default to empty array
-            error: `Error loading dashboard: ${error.message}`,
-            success: null,
-            trainerData: {}
-        });
-    }
-});
- app.post('/trainer-login', async (req, res) => {
-        const { username, password } = req.body;
+    // Approve Trainer 2 for a specific school
+    app.post('/admin/approve-trainer2/:schoolId', requireAdmin, async (req, res) => {
         try {
-            if (!username || !password) {
-                return res.render('login', { error: 'Username and password are required.' });
+            const { schoolId } = req.params;
+            const schoolRef = db.collection('schools').doc(schoolId);
+            const schoolDoc = await schoolRef.get();
+            if (!schoolDoc.exists) {
+                return res.redirect('/admin-dashboard?error=School not found');
             }
 
-            const snapshot = await db.collection('trainers')
-                .where('email', '==', username)
+            const { trainerId2, name: schoolName, eventDate, spot, facilities } = schoolDoc.data();
+            if (!trainerId2) {
+                return res.redirect('/admin-dashboard?error=No Trainer 2 assigned to approve');
+            }
+
+            const trainerRef = db.collection('trainers').doc(trainerId2);
+            const trainerDoc = await trainerRef.get();
+            if (!trainerDoc.exists) {
+                return res.redirect('/admin-dashboard?error=Trainer 2 not found');
+            }
+
+            // Check if trainer is.cn already assigned to another school
+            const existingSchoolId = trainerDoc.data().assignedSchoolId;
+            if (existingSchoolId && existingSchoolId !== schoolId) {
+                return res.redirect('/admin-dashboard?error=Trainer 2 already assigned to another school');
+            }
+
+            // Update trainer with approval status and assigned school details
+            await trainerRef.update({
+                isApproved: true,
+                assignedSchoolId: schoolId,
+                assignedSchoolName: schoolName
+            });
+
+            // Create assignment subcollection document
+            await trainerRef.collection('assignments').doc(schoolId).set({
+                schoolId,
+                schoolName,
+                eventDate: eventDate || null,
+                spot: spot || null,
+                facilities: facilities || [],
+                assignedAt: admin.firestore.Timestamp.now()
+            });
+
+            console.log(`Approved Trainer 2 ${trainerId2} for school ${schoolId} (${schoolName})`);
+            res.redirect('/admin-dashboard?success=Trainer 2 approved successfully');
+        } catch (error) {
+            console.error('Error approving Trainer 2:', error.message, error.stack);
+            res.redirect('/admin-dashboard?error=Failed to approve Trainer 2');
+        }
+    });
+
+    // Reject Trainer 1
+    app.post('/admin/reject-trainer1/:schoolId', requireAdmin, async (req, res) => {
+        try {
+            const { schoolId } = req.params;
+            const schoolRef = db.collection('schools').doc(schoolId);
+            await schoolRef.update({
+                trainerId1: null
+            });
+            console.log(`Rejected Trainer 1 for school ${schoolId}`);
+            res.redirect('/admin-dashboard?success=Trainer 1 rejected successfully');
+        } catch (error) {
+            console.error('Error rejecting Trainer 1:', error);
+            res.redirect('/admin-dashboard?error=Failed to reject Trainer 1');
+        }
+    });
+
+    // Reject Trainer 2
+    app.post('/admin/reject-trainer2/:schoolId', requireAdmin, async (req, res) => {
+        try {
+            const { schoolId } = req.params;
+            const schoolRef = db.collection('schools').doc(schoolId);
+            await schoolRef.update({
+                trainerId2: null
+            });
+            console.log(`Rejected Trainer 2 for school ${schoolId}`);
+            res.redirect('/admin-dashboard?success=Trainer 2 rejected successfully');
+        } catch (error) {
+            console.error('Error rejecting Trainer 2:', error);
+            res.redirect('/admin-dashboard?error=Failed to reject Trainer 2');
+        }
+    });
+
+    // Assign Trainer 1
+    app.post('/admin/assign-trainer1/:schoolId', requireAdmin, async (req, res) => {
+        try {
+            const { schoolId } = req.params;
+            const { trainerId } = req.body;
+
+            if (!trainerId) {
+                return res.redirect('/admin-dashboard?error=Trainer ID is required for Trainer 1');
+            }
+
+            const schoolRef = db.collection('schools').doc(schoolId);
+            const schoolDoc = await schoolRef.get();
+            if (!schoolDoc.exists) {
+                return res.redirect('/admin-dashboard?error=School not found');
+            }
+
+            const { name: schoolName, eventDate, spot, facilities } = schoolDoc.data();
+            const trainerRef = db.collection('trainers').doc(trainerId);
+            const trainerDoc = await trainerRef.get();
+            if (!trainerDoc.exists) {
+                return res.redirect('/admin-dashboard?error=Trainer not found');
+            }
+
+            // Check if trainer is already assigned to another school
+            const existingSchoolId = trainerDoc.data().assignedSchoolId;
+            if (existingSchoolId && existingSchoolId !== schoolId) {
+                return res.redirect('/admin-dashboard?error=Trainer already assigned to another school');
+            }
+
+            // Update school with trainer ID
+            await schoolRef.update({
+                trainerId1: trainerId
+            });
+
+            // Update trainer with assigned school details
+            await trainerRef.update({
+                assignedSchoolId: schoolId,
+                assignedSchoolName: schoolName
+            });
+
+            // Create assignment subcollection document
+            await trainerRef.collection('assignments').doc(schoolId).set({
+                schoolId,
+                schoolName,
+                eventDate: eventDate || null,
+                spot: spot || null,
+                facilities: facilities || [],
+                assignedAt: admin.firestore.Timestamp.now()
+            });
+
+            console.log(`Assigned Trainer 1 ${trainerId} to school ${schoolId}`);
+            res.redirect('/admin-dashboard?success=Trainer 1 assigned successfully');
+        } catch (error) {
+            console.error('Error assigning Trainer 1:', error);
+            res.redirect('/admin-dashboard?error=Failed to assign Trainer 1');
+        }
+    });
+
+    // Assign Trainer 2
+    app.post('/admin/assign-trainer2/:schoolId', requireAdmin, async (req, res) => {
+        try {
+            const { schoolId } = req.params;
+            const { trainerId } = req.body;
+
+            if (!trainerId) {
+                return res.redirect('/admin-dashboard?error=Trainer ID is required for Trainer 2');
+            }
+
+            const schoolRef = db.collection('schools').doc(schoolId);
+            const schoolDoc = await schoolRef.get();
+            if (!schoolDoc.exists) {
+                return res.redirect('/admin-dashboard?error=School not found');
+            }
+
+            const { name: schoolName, eventDate, spot, facilities } = schoolDoc.data();
+            const trainerRef = db.collection('trainers').doc(trainerId);
+            const trainerDoc = await trainerRef.get();
+            if (!trainerDoc.exists) {
+                return res.redirect('/admin-dashboard?error=Trainer not found');
+            }
+
+            // Check if trainer is already assigned to another school
+            const existingSchoolId = trainerDoc.data().assignedSchoolId;
+            if (existingSchoolId && existingSchoolId !== schoolId) {
+                return res.redirect('/admin-dashboard?error=Trainer already assigned to another school');
+            }
+
+            // Update school with trainer ID
+            await schoolRef.update({
+                trainerId2: trainerId
+            });
+
+            // Update trainer with assigned school details
+            await trainerRef.update({
+                assignedSchoolId: schoolId,
+                assignedSchoolName: schoolName
+            });
+
+            // Create assignment subcollection document
+            await trainerRef.collection('assignments').doc(schoolId).set({
+                schoolId,
+                schoolName,
+                eventDate: eventDate || null,
+                spot: spot || null,
+                facilities: facilities || [],
+                assignedAt: admin.firestore.Timestamp.now()
+            });
+
+            console.log(`Assigned Trainer 2 ${trainerId} to school ${schoolId}`);
+            res.redirect('/admin-dashboard?success=Trainer 2 assigned successfully');
+        } catch (error) {
+            console.error('Error assigning Trainer 2:', error);
+            res.redirect('/admin-dashboard?error=Failed to assign Trainer 2');
+        }
+    });
+
+    // Reject trainer and show available trainers (for assigning new trainers)
+    app.post('/reject-trainer/:id', requireAdmin, async (req, res) => {
+        try {
+            const availableTrainersSnapshot = await db.collection('trainers')
+                .where('isApproved', '==', true)
                 .get();
-            if (snapshot.empty) {
-                return res.render('login', { error: 'Invalid username or password.' });
-            }
-
-            const trainer = snapshot.docs[0].data();
-            if (password !== trainer.mobileNumber) {
-                return res.render('login', { error: 'Invalid username or password.' });
-            }
-
-            res.redirect(`/trainer-dashboard?username=${encodeURIComponent(username)}`);
+            const availableTrainers = availableTrainersSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            res.render('assignTrainer', {
+                rejectedTrainerId: req.params.id,
+                availableTrainers,
+                error: null,
+                schoolId: req.query.schoolId || null
+            });
         } catch (error) {
-            console.error('Error during trainer login:', error.message, error.stack);
-            res.render('login', { error: 'Login failed. Try again later.' });
+            console.error('Error fetching available trainers:', error);
+            res.render('assignTrainer', {
+                rejectedTrainerId: req.params.id,
+                availableTrainers: [],
+                error: 'Failed to load available trainers',
+                schoolId: req.query.schoolId || null
+            });
         }
     });
+    // Admin logout
+    app.get('/admin-logout', (req, res) => {
+    req.session.destroy(err => {    
+    if (err) {
+    console.error('Error destroying session:', err.message, err.stack);
+    }
+    res.redirect('/admin-login');
+    });
+    });
+    //traniner game zone
+app.get('/trainer-gamezone', async (req, res) => {
+    try {
+        res.render('trainer-gamezone', { trainerName: 'Demo Trainer', trainerMobile: 'N/A' });
+    } catch (error) {
+        console.error('Error in trainer-gamezone route:', error.message);
+        res.status(500).send('Error loading Trainer Game Zone.');
+    }
+});
+// trainer add date
+app.post('/trainer-dashboard/add-dates', async (req, res) => {
+    try {
+        const { trainerEmail, availableDates } = req.body;
+        if (!trainerEmail || !availableDates) return res.status(400).send('Missing data');
 
-app.get('/trainer-participation', async (req, res) => {
+        const trainerSnapshot = await db.collection('trainers').where('email', '==', trainerEmail).get();
+
+        if (trainerSnapshot.empty) return res.status(404).send('Trainer not found');
+
+        const trainerId = trainerSnapshot.docs[0].id;
+        const trainerRef = db.collection('trainers').doc(trainerId);
+        const trainerData = trainerSnapshot.docs[0].data();
+
+        const existingDates = trainerData.availableDates || [];
+        const newDates = Array.isArray(availableDates) ? availableDates : [availableDates];
+
+        await trainerRef.update({
+            availableDates: [...existingDates, ...newDates]
+        });
+
+        res.redirect(`/trainer-dashboard?username=${encodeURIComponent(trainerEmail)}`);
+    } catch (err) {
+        console.error('Error adding dates:', err);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
+    //delete date for trainer 
+  app.post('/trainer-dashboard/delete-date', async (req, res) => {
+    try {
+        const { trainerEmail, dateToDelete } = req.body;
+        const username = req.query.username;
+
+        if (!trainerEmail || trainerEmail !== username) {
+            return res.redirect(`/trainer-dashboard?username=${encodeURIComponent(username)}&error=Invalid%20trainer%20email`);
+        }
+
+        if (!dateToDelete) {
+            return res.redirect(`/trainer-dashboard?username=${encodeURIComponent(username)}&error=No%20date%20provided`);
+        }
+
+        const trainerSnapshot = await db.collection('trainers').where('email', '==', trainerEmail).get();
+
+        if (trainerSnapshot.empty) {
+            return res.redirect(`/trainer-dashboard?username=${encodeURIComponent(username)}&error=Trainer%20not%20found`);
+        }
+
+        const trainerId = trainerSnapshot.docs[0].id;
+        const trainerRef = db.collection('trainers').doc(trainerId);
+        const trainerData = trainerSnapshot.docs[0].data();
+
+        const dateToDeleteStr = new Date(dateToDelete).toISOString().split('T')[0];
+        if (!dateToDeleteStr) {
+            return res.redirect(`/trainer-dashboard?username=${encodeURIComponent(username)}&error=Invalid%20date%20format`);
+        }
+
+        const updatedDates = (trainerData.availableDates || []).filter(date => {
+            if (!date) return true;
+
+            // If stored as Firestore Timestamp
+            if (date.toDate) {
+                return date.toDate().toISOString().split('T')[0] !== dateToDeleteStr;
+            }
+
+            // If stored as string
+            const dateStr = new Date(date).toISOString().split('T')[0];
+            return dateStr !== dateToDeleteStr;
+        });
+
+        await trainerRef.update({
+            availableDates: updatedDates
+        });
+
+        return res.redirect(`/trainer-dashboard?username=${encodeURIComponent(username)}&success=Date%20deleted%20successfully`);
+    } catch (error) {
+        console.error('Error deleting date:', error);
+        return res.redirect(`/trainer-dashboard?username=${encodeURIComponent(req.query.username)}&error=Error%20deleting%20date`);
+    }
+});
+
+    //uploaded media for trainer
+    app.post('/trainer-dashboard/upload-media', upload, async (req, res) => {
+            try {
+                const { trainerEmail, mediaDescription, mediaLink } = req.body;
+                const photos = req.files['photos'] || [];
+                const videos = req.files['videos'] || [];
+
+                if (!trainerEmail) {
+                    return res.status(400).render('trainerDashboard', {
+                        trainerName: 'Unknown',
+                        email: '',
+                        city: '',
+                        district: '',
+                        profession: '',
+                        assignedSchools: [],
+                        availableDates: [],
+                        schoolsInDistrict: [],
+                        mediaUploads: [],
+                        error: 'Trainer email is required',
+                        success: null,
+                        trainerData: {}
+                    });
+                }
+
+                // Fetch trainer data
+                const trainerSnapshot = await db.collection('trainers')
+                    .where('email', '==', trainerEmail)
+                    .get();
+                if (trainerSnapshot.empty) {
+                    return res.status(404).render('trainerDashboard', {
+                        trainerName: 'Unknown',
+                        email: trainerEmail,
+                        city: '',
+                        district: '',
+                        profession: '',
+                        assignedSchools: [],
+                        availableDates: [],
+                        schoolsInDistrict: [],
+                        mediaUploads: [],
+                        error: 'Trainer not found',
+                        success: null,
+                        trainerData: {}
+                    });
+                }
+
+                const trainerId = trainerSnapshot.docs[0].id;
+                const trainerData = trainerSnapshot.docs[0].data();
+
+                if (!trainerData.isApproved) {
+                    return res.status(403).render('trainerDashboard', {
+                        trainerName: trainerData.trainerName || 'Unknown',
+                        email: trainerEmail,
+                        city: trainerData.city || '',
+                        district: trainerData.district || trainerData.city || '',
+                        profession: trainerData.profession || '',
+                        assignedSchools: [],
+                        availableDates: trainerData.availableDates || [],
+                        schoolsInDistrict: [],
+                        mediaUploads: [],
+                        error: 'You must complete the Train the Trainer program to upload media.',
+                        success: null,
+                        trainerData
+                    });
+                }
+
+                if (mediaDescription && mediaDescription.length > 1000) {
+                    return res.status(400).render('trainerDashboard', {
+                        trainerName: trainerData.trainerName || 'Unknown',
+                        email: trainerEmail,
+                        city: trainerData.city || '',
+                        district: trainerData.district || trainerData.city || '',
+                        profession: trainerData.profession || '',
+                        assignedSchools: [],
+                        availableDates: trainerData.availableDates || [],
+                        schoolsInDistrict: [],
+                        mediaUploads: [],
+                        error: 'Media description cannot exceed 1000 characters',
+                        success: null,
+                        trainerData
+                    });
+                }
+
+                // Explicitly set the bucket name
+                const bucket = admin.storage().bucket('beinglawful-ee5a4.firebasestorage.app');
+                const [exists] = await bucket.exists();
+                if (!exists) {
+                    throw new Error('The specified bucket does not exist. Please check your Firebase configuration.');
+                }
+
+                const mediaUploads = [];
+                for (const file of photos) {
+                    const fileName = `media/trainers/${trainerId}/photos/${Date.now()}_${file.originalname}`;
+                    const fileUpload = bucket.file(fileName);
+                    try {
+                        await fileUpload.save(file.buffer, {
+                            metadata: { contentType: file.mimetype }
+                        });
+                        const [url] = await fileUpload.getSignedUrl({
+                            action: 'read',
+                            expires: '03-09-2491'
+                        });
+                        mediaUploads.push({
+                            url,
+                            type: 'image',
+                            path: fileName,
+                            description: mediaDescription || '',
+                            link: mediaLink || '',
+                            uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                    } catch (uploadError) {
+                        console.error(`Error uploading photo ${fileName}:`, uploadError.message, uploadError.stack);
+                        throw new Error(`Failed to upload photo: ${uploadError.message}`);
+                    }
+                }
+
+                for (const file of videos) {
+                    const fileName = `media/trainers/${trainerId}/videos/${Date.now()}_${file.originalname}`;
+                    const fileUpload = bucket.file(fileName);
+                    try {
+                        await fileUpload.save(file.buffer, {
+                            metadata: { contentType: file.mimetype }
+                        });
+                        const [url] = await fileUpload.getSignedUrl({
+                            action: 'read',
+                            expires: '03-09-2491'
+                        });
+                        mediaUploads.push({
+                            url,
+                            type: 'video',
+                            path: fileName,
+                            description: mediaDescription || '',
+                            link: mediaLink || '',
+                            uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+                        });
+                    } catch (uploadError) {
+                        console.error(`Error uploading video ${fileName}:`, uploadError.message, uploadError.stack);
+                        throw new Error(`Failed to upload video: ${uploadError.message}`);
+                    }
+                }
+
+                if (mediaUploads.length > 0) {
+                    const batch = db.batch();
+                    mediaUploads.forEach(upload => {
+                        const mediaRef = db.collection('trainers').doc(trainerId).collection('mediaUploads').doc();
+                        batch.set(mediaRef, upload);
+                    });
+                    await batch.commit();
+                }
+
+                // Fetch updated trainer data
+                const updatedTrainerSnapshot = await db.collection('trainers').doc(trainerId).get();
+                const updatedTrainerData = updatedTrainerSnapshot.data();
+
+                // Fetch assigned schools
+                const schoolsSnapshot1 = await db.collection('schools')
+                    .where('isApproved', '==', true)
+                    .where('trainerId1', '==', trainerId)
+                    .get();
+                const schoolsSnapshot2 = await db.collection('schools')
+                    .where('isApproved', '==', true)
+                    .where('trainerId2', '==', trainerId)
+                    .get();
+                const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
+                    const data = doc.data();
+                    return {
+                        schoolName: data.schoolName || 'N/A',
+                        city: data.city || 'N/A',
+                        district: data.district || data.city || 'N/A',
+                        eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        }) : 'Not assigned',
+                        resourcesConfirmed: data.resourcesConfirmed || false,
+                        selectedResources: data.selectedResources || [],
+                        trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2'
+                    };
+                });
+
+                // Fetch schools in the trainer's district
+                const schoolsInDistrictSnapshot = await db.collection('schools')
+                    .where('district', '==', updatedTrainerData.district || updatedTrainerData.city)
+                    .where('isApproved', '==', true)
+                    .get();
+                const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        schoolName: data.schoolName || 'N/A',
+                        schoolEmail: data.schoolEmail || 'N/A',
+                        city: data.city || 'N/A',
+                        district: data.district || 'N/A',
+                        eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        }) : 'Not assigned',
+                        assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
+                        trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
+                    };
+                });
+
+                // Fetch media uploads
+                const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
+                const mediaUploadsData = mediaSnapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
+                }));
+
+                res.render('trainerDashboard', {
+                    trainerName: updatedTrainerData.trainerName || 'Unknown',
+                    email: trainerEmail,
+                    city: updatedTrainerData.city || '',
+                    district: updatedTrainerData.district || updatedTrainerData.city || '',
+                    profession: updatedTrainerData.profession || '',
+                    assignedSchools,
+                    availableDates: updatedTrainerData.availableDates || [],
+                    schoolsInDistrict,
+                    mediaUploads: mediaUploadsData,
+                    error: null,
+                    success: 'Media uploaded successfully',
+                    trainerData: updatedTrainerData
+                });
+            } catch (error) {
+                console.error('Error in trainer-dashboard/upload-media route:', error.message, error.stack);
+                res.status(500).render('trainerDashboard', {
+                    trainerName: 'Unknown',
+                    email: trainerEmail || '',
+                    city: '',
+                    district: '',
+                    profession: '',
+                    assignedSchools: [],
+                    availableDates: [],
+                    schoolsInDistrict: [],
+                    mediaUploads: [],
+                    error: `Error uploading media: ${error.message}`,
+                    success: null,
+                    trainerData: {}
+                });
+            }
+        })
+    app.get('/trainer-dashboard', async (req, res) => {
+        try {
+            const trainerEmail = req.query.username;
+            if (!trainerEmail) {
+                return res.status(400).render('trainerDashboard', {
+                    trainerName: 'Unknown',
+                    email: '',
+                    city: '',
+                    district: '',
+                    profession: '',
+                    assignedSchools: [],
+                    availableDates: [],
+                    schoolsInDistrict: [],
+                    mediaUploads: [],
+                    approvedZips: [],
+                    error: 'Trainer email is required',
+                    success: null,
+                    trainerData: {}
+                });
+            }
+
+            // Fetch trainer data
+            const trainerSnapshot = await db.collection('trainers')
+                .where('email', '==', trainerEmail)
+                .get();
+
+            if (trainerSnapshot.empty) {
+                return res.status(404).render('trainerDashboard', {
+                    trainerName: 'Unknown',
+                    email: trainerEmail,
+                    city: '',
+                    district: '',
+                    profession: '',
+                    assignedSchools: [],
+                    availableDates: [],
+                    schoolsInDistrict: [],
+                    mediaUploads: [],
+                    approvedZips: [],
+                    error: 'Trainer not found',
+                    success: null,
+                    trainerData: {}
+                });
+            }
+
+            const trainerId = trainerSnapshot.docs[0].id;
+            const trainerData = trainerSnapshot.docs[0].data();
+
+            // Fetch assigned schools
+            const schoolsSnapshot1 = await db.collection('schools')
+                .where('isApproved', '==', true)
+                .where('trainerId1', '==', trainerId)
+                .get();
+
+            const schoolsSnapshot2 = await db.collection('schools')
+                .where('isApproved', '==', true)
+                .where('trainerId2', '==', trainerId)
+                .get();
+
+            const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
+                const data = doc.data();
+                return {
+                    schoolName: data.schoolName || 'N/A',
+                    city: data.city || 'N/A',
+                    district: data.district || data.city || 'N/A',
+                    eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    }) : 'Not assigned',
+                    resourcesConfirmed: data.resourcesConfirmed || false,
+                    selectedResources: data.selectedResources || [],
+                    trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2'
+                };
+            });
+
+            // Fetch schools in trainer's district
+            const schoolsInDistrictSnapshot = await db.collection('schools')
+                .where('district', '==', trainerData.district || trainerData.city)
+                .where('isApproved', '==', true)
+                .get();
+
+            const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    schoolName: data.schoolName || 'N/A',
+                    schoolEmail: data.schoolEmail || 'N/A',
+                    city: data.city || 'N/A',
+                    district: data.district || 'N/A',
+                    eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    }) : 'Not assigned',
+                    assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
+                    trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
+                };
+            });
+
+            // Fetch media uploads
+            const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
+            const mediaUploads = mediaSnapshot.docs.map(doc => ({
+                ...doc.data(),
+                uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
+            }));
+
+            // Fetch approved ZIP files for trainers
+            const zipSnapshot = await db.collection('trainerZips')
+                .where('trainerId', '==', trainerId)
+                .where('approved', '==', true)
+                .get();
+
+            const approvedZips = zipSnapshot.docs.map(doc => ({
+                ...doc.data(),
+                uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
+            }));
+
+            // Render Dashboard with all data
+            res.render('trainerDashboard', {
+                trainerName: trainerData.trainerName || 'Unknown',
+                email: trainerEmail,
+                city: trainerData.city || '',
+                district: trainerData.district || trainerData.city || '',
+                profession: trainerData.profession || '',
+                assignedSchools,
+                availableDates: trainerData.availableDates || [],
+                schoolsInDistrict,
+                mediaUploads,
+                approvedZips,
+                error: null,
+                success: null,
+                trainerData
+            });
+
+        } catch (error) {
+            console.error('Error in trainer-dashboard route:', error.message, error.stack);
+            res.status(500).render('trainerDashboard', {
+                trainerName: 'Unknown',
+                email: req.query.username || '',
+                city: '',
+                district: '',
+                profession: '',
+                assignedSchools: [],
+                availableDates: [],
+                schoolsInDistrict: [],
+                mediaUploads: [],
+                approvedZips: [],
+                error: `Error loading dashboard: ${error.message}`,
+                success: null,
+                trainerData: {}
+            });
+        }
+    });    
+app.post('/trainer-login', async (req, res) => {
+            const { username, password } = req.body;
+            try {
+                if (!username || !password) {
+                    return res.render('login', { error: 'Username and password are required.' });
+                }
+
+                const snapshot = await db.collection('trainers')
+                    .where('email', '==', username)
+                    .get();
+                if (snapshot.empty) {
+                    return res.render('login', { error: 'Invalid username or password.' });
+                }
+
+                const trainer = snapshot.docs[0].data();
+                if (password !== trainer.mobileNumber) {
+                    return res.render('login', { error: 'Invalid username or password.' });
+                }
+
+                res.redirect(`/trainer-dashboard?username=${encodeURIComponent(username)}`);
+            } catch (error) {
+                console.error('Error during trainer login:', error.message, error.stack);
+                res.render('login', { error: 'Login failed. Try again later.' });
+            }
+        });
+
+  app.get('/trainer-participation', async (req, res) => {
     try {
         const schoolsSnapshot = await db.collection('schools')
             .where('isApproved', '==', true)
@@ -3000,6 +3403,7 @@ app.get('/trainer-participation', async (req, res) => {
         const schools = schoolsSnapshot.docs.map(doc => doc.data().schoolName);
 
         const trainersSnapshot = await db.collection('trainers')
+            .where('isApproved', '==', true) // Filter for approved trainers
             .get();
         const trainers = trainersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -3009,6 +3413,8 @@ app.get('/trainer-participation', async (req, res) => {
         res.status(500).send('Error loading trainer participation form.');
     }
 });
+   
+
 
 app.post('/trainer-participate', [
     body('trainerName').trim().notEmpty().withMessage('Trainer name is required'),
@@ -3021,46 +3427,28 @@ app.post('/trainer-participate', [
     body('referenceName').trim().notEmpty().withMessage('Reference name is required')
 ], async (req, res) => {
     try {
-        const errors = validationResult(req).array();
+        const validationErrors = validationResult(req);
+        const errors = validationErrors.isEmpty() ? [] : validationErrors.array();
 
         const {
-            trainerName,
-            email,
-            city,
-            district,
-            profession,
-            mobileNumber,
-            whatsappNumber,
-            referenceName
+            trainerName, email, city, district, profession, mobileNumber, whatsappNumber, referenceName
         } = req.body;
 
-        // Check for duplicate entries
-        const checks = [
+        const duplicateChecks = [
             { field: 'email', value: email, message: 'Email already exists' },
             { field: 'mobileNumber', value: mobileNumber, message: 'Mobile number already exists' },
             { field: 'whatsappNumber', value: whatsappNumber, message: 'WhatsApp number already exists' }
         ];
 
-        for (const check of checks) {
-            const snapshot = await db.collection('trainers')
-                .where(check.field, '==', check.value)
-                .get();
+        for (const check of duplicateChecks) {
+            const snapshot = await db.collection('trainers').where(check.field, '==', check.value).get();
             if (!snapshot.empty) {
                 errors.push({ param: check.field, msg: check.message });
             }
         }
 
         if (errors.length > 0) {
-            const schoolsSnapshot = await db.collection('schools')
-                .where('isApproved', '==', true)
-                .get();
-            const schools = schoolsSnapshot.docs.map(doc => doc.data().schoolName);
-
-            const trainersSnapshot = await db.collection('trainers')
-                .get();
-            const trainers = trainersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            return res.status(400).render('trainerParticipation', { schools, trainers, errors });
+            return await renderFormWithErrors(res, errors);
         }
 
         await db.collection('trainers').add({
@@ -3087,68 +3475,67 @@ app.post('/trainer-participate', [
             schoolEmail: email,
             principalNumber: mobileNumber
         });
+
     } catch (error) {
         console.error('Error in trainer-participate route:', error.message, error.stack);
-        const schoolsSnapshot = await db.collection('schools')
-            .where(' isApproved', '==', true)
-            .get();
-        const schools = schoolsSnapshot.docs.map(doc => doc.data().schoolName);
-
-        const trainersSnapshot = await db.collection('trainers')
-            .get();
-        const trainers = trainersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        res.status(500).render('trainerParticipation', {
-            schools,
-            trainers,
-            errors: [{ msg: 'Internal server error. Please try again later.' }]
-        });
+        await renderFormWithErrors(res, [{ msg: 'Internal server error. Please try again later.' }]);
     }
 });
 
-// Assign trainer to school
-app.post('/admin/assign-trainer', requireAdmin, async (req, res) => {
-try {
-const { schoolId, trainerId } = req.body;
-if (!schoolId || !trainerId) {
-return res.redirect('/admin-dashboard?error=School ID and Trainer ID are required');
+// Helper function to render form with data and errors
+async function renderFormWithErrors(res, errors) {
+    const schoolsSnapshot = await db.collection('schools').where('isApproved', '==', true).get();
+    const schools = schoolsSnapshot.docs.map(doc => doc.data().schoolName);
+
+    const trainersSnapshot = await db.collection('trainers').get();
+    const trainers = trainersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+    res.status(400).render('trainerParticipation', { schools, trainers, errors });
 }
 
-const schoolRef = db.collection('schools').doc(schoolId);
-const schoolDoc = await schoolRef.get();
-if (!schoolDoc.exists) {
-return res.redirect('/admin-dashboard?error=School not found');
-}
+    // Assign trainer to school
+    app.post('/admin/assign-trainer', requireAdmin, async (req, res) => {
+    try {
+    const { schoolId, trainerId } = req.body;
+    if (!schoolId || !trainerId) {
+    return res.redirect('/admin-dashboard?error=School ID and Trainer ID are required');
+    }
 
-const trainerRef = db.collection('trainers').doc(trainerId);
-const trainerDoc = await trainerRef.get();
-if (!trainerDoc.exists) {
-return res.redirect('/admin-dashboard?error=Trainer not found');
-}
+    const schoolRef = db.collection('schools').doc(schoolId);
+    const schoolDoc = await schoolRef.get();
+    if (!schoolDoc.exists) {
+    return res.redirect('/admin-dashboard?error=School not found');
+    }
 
-await schoolRef.update({ assignedTrainerId: trainerId });
-res.redirect('/admin-dashboard?success=Trainer assigned successfully');
-} catch (error) {
-console.error('Error in admin/assign-trainer route:', error.message, error.stack);
-res.redirect('/admin-dashboard?error=Error assigning trainer');
-}
-});
+    const trainerRef = db.collection('trainers').doc(trainerId);
+    const trainerDoc = await trainerRef.get();
+    if (!trainerDoc.exists) {
+    return res.redirect('/admin-dashboard?error=Trainer not found');
+    }
+
+    await schoolRef.update({ assignedTrainerId: trainerId });
+    res.redirect('/admin-dashboard?success=Trainer assigned successfully');
+    } catch (error) {
+    console.error('Error in admin/assign-trainer route:', error.message, error.stack);
+    res.redirect('/admin-dashboard?error=Error assigning trainer');
+    }
+    });
+
+    // Logout
+    app.get('/logout', (req, res) => {
+    req.session.destroy(err => {
+    if (err) {
+    console.error('Error destroying session:', err.message, err.stack);
+    }
+    res.redirect('/login');
+    });
+    });
+
+  
 
 
-
-
-// Logout
-app.get('/logout', (req, res) => {
-req.session.destroy(err => {
-if (err) {
-console.error('Error destroying session:', err.message, err.stack);
-}
-res.redirect('/login');
-});
-});
-
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-console.log(`Server running on port ${PORT}`);
-});
+    // Start the server
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    });

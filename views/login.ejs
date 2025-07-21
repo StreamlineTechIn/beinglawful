@@ -110,7 +110,17 @@
       text-align: center;
       margin-bottom: 15px;
       font-size: 14px;
-      display: <%= error ? 'block' : 'none' %>; /* Show only if error exists */
+    }
+
+    /* Ensure responsive styles for small screens */
+    @media (max-width: 600px) {
+      .login-container {
+        padding: 20px;
+      }
+
+      h2 {
+        font-size: 1.5em;
+      }
     }
   </style>
 </head>
@@ -118,7 +128,13 @@
 
   <div class="login-container">
     <h2>Login to Being Lawful</h2>
-    <div class="error-message"><%= error || '' %></div> <!-- Error message display -->
+
+    <% if (error) { %>
+      <div class="error-message">
+        <%= error %>
+      </div>
+    <% } %>
+
     <div class="tabs">
       <div class="tab active" data-tab="student">Student</div>
       <div class="tab" data-tab="school">School</div>

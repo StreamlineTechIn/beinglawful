@@ -26,8 +26,9 @@
     "firebase-functions": "^6.1.0",
     "multer": "^2.0.1",
     "node-schedule": "^2.1.1",
-    "nodemailer": "^7.0.3",
-    "path": "^0.12.7"
+    "nodemailer": "^7.0.5",
+    "path": "^0.12.7",
+    "razorpay": "^2.9.6"
   },
   "devDependencies": {
     "firebase-tools": "^14.4.0"

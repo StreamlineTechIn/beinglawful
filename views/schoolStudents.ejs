@@ -19,7 +19,7 @@
             border-radius: 8px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        .container h2 {
+        h2 {
             text-align: center;
             color: #333;
         }
@@ -28,55 +28,73 @@
             border-collapse: collapse;
             margin-top: 20px;
         }
-        table th, table td {
+        th, td {
             padding: 10px;
             border: 1px solid #ddd;
             text-align: left;
         }
-        table th {
+        th {
             background-color: #4CAF50;
             color: white;
         }
-        table tr:nth-child(even) {
+        tr:nth-child(even) {
             background-color: #f9f9f9;
+        }
+        .approve-btn {
+            background: green;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .approved-text {
+            color: green;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Students of <%= schoolName %></h2>
-        <% if (students.length > 0) { %>
-            <table>
-                <thead>
+
+<div class="container">
+    <h2>Students of <%= schoolName %></h2>
+
+    <% if (students.length > 0) { %>
+        <table>
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Class</th>
+                    <th>Parent Mobile 1</th>
+                    <th>Parent Mobile 2</th>
+                    <th>Parent Email</th>
+                    <th>Address</th>
+                    <th>City</th>
+                    <th>Pincode</th>
+                    <th>Approval Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% students.forEach(student => { %>
                     <tr>
-                        <th>Student Name</th>
-                        <th>Class</th>
-                        <th>Parent Mobile 1</th>
-                        <th>Parent Mobile 2</th>
-                        <th>Parent Email</th>
-                        <th>Address</th>
-                        <th>City</th>
-                        <th>Pincode</th>
+                        <td><%= student.studentName %></td>
+                        <td><%= student.studentClass %></td>
+                        <td><%= student.parentMobile1 %></td>
+                        <td><%= student.parentMobile2 || 'N/A' %></td>
+                        <td><%= student.parentEmail %></td>
+                        <td><%= student.address %></td>
+                        <td><%= student.city %></td>
+                        <td><%= student.pincode %></td>
+              
                     </tr>
-                </thead>
-                <tbody>
-                    <% students.forEach(student => { %>
-                        <tr>
-                            <td><%= student.studentName %></td>
-                            <td><%= student.studentClass %></td>
-                            <td><%= student.parentMobile1 %></td>
-                            <td><%= student.parentMobile2 || 'N/A' %></td>
-                            <td><%= student.parentEmail %></td>
-                            <td><%= student.address %></td>
-                            <td><%= student.city %></td>
-                            <td><%= student.pincode %></td>
-                        </tr>
-                    <% }) %>
-                </tbody>
-            </table>
-        <% } else { %>
-            <p>No students found for this school.</p>
-        <% } %>
-    </div>
+                <% }) %>
+            </tbody>
+        </table>
+    <% } else { %>
+        <p>No students found for this school.</p>
+    <% } %>
+
+</div>
+
 </body>
 </html>

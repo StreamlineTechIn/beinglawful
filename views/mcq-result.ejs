@@ -1,64 +1,34 @@
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCQ Test Answers - Being Lawful</title>
+    <title>MCQ Results - Being Lawful</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-        }
-        .results-container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .results-container h2 {
-            text-align: center;
-            color: #333;
-        }
-        .question {
-            margin-bottom: 15px;
-        }
-        .question p {
-            font-weight: bold;
-        }
-        .correct-answer {
-            color: #4CAF50;
-            font-weight: bold;
-        }
-        .back-to-dashboard {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #3498db;
-            color: #fff;
-            text-decoration: none;
-            border-radius: 5px;
-            margin-top: 20px;
-        }
-        .back-to-dashboard:hover {
-            background: #2980b9;
-        }
+        body { font-family: Arial, sans-serif; background: #f4f4f4; padding: 20px; }
+        .result-container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; }
+        .question { margin-bottom: 15px; }
+        .correct { color: green; }
+        .wrong { color: red; }
     </style>
 </head>
 <body>
-    <div class="results-container">
-        <h2>MCQ Test Answers</h2>
-        <% mcqs.forEach((mcq, index) => { %>
+    <div class="result-container">
+        <h2>MCQ Exam Results</h2>
+        <% result.forEach((item, index) => { %>
             <div class="question">
-                <p><%= index + 1 %>. <%= mcq.question %></p>
-                <p class="correct-answer">Correct Answer: <%= mcq.correctAnswer %></p>
+                <p><%= index + 1 %>. <%= item.question %></p>
+                <p>Your Answer: 
+                    <strong class="<%= item.isCorrect ? 'correct' : 'wrong' %>">
+                        <%= item.submittedAnswer || 'Not Answered' %>
+                    </strong>
+                </p>
+                <% if (!item.isCorrect) { %>
+                    <p>Correct Answer: <strong class="correct"><%= item.correctAnswer %></strong></p>
+                <% } %>
+                <hr>
             </div>
         <% }) %>
-        <a href="/dashboard" class="back-to-dashboard">Back to Dashboard</a>
     </div>
 </body>
 </html>
-```

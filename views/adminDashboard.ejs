@@ -7,6 +7,7 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script>
+        // Existing functions (unchanged except for media and new completion-related ones)
         function openTab(tabName) {
             const tabContents = document.querySelectorAll('.tab-content');
             tabContents.forEach(content => content.classList.add('hidden'));
@@ -28,10 +29,6 @@
 
             table.querySelectorAll('.filter-select').forEach(select => {
                 filters[select.dataset.column] = select.value.trim();
-            });
-
-            rows.forEach(row => {
-                row.style.display = '';
             });
 
             rows.forEach(row => {
@@ -60,7 +57,7 @@
             headers.forEach(header => {
                 const column = header.dataset.filter;
                 const select = header.querySelector('.filter-select');
-                
+
                 const values = new Set(['All']);
                 rows.forEach(row => {
                     const cell = row.querySelector(`td[data-column="${column}"]`);
@@ -110,10 +107,112 @@
             window.location.href = redirectUrl.toString();
         }
 
-        window.onload = function() {
+    async function markSchoolCompleted(schoolId, button, row) {
+    try {
+        const response = await fetch(`/admin/complete-school/${schoolId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+
+        if (response.ok) {
+            const completedTable = document.querySelector('#completed-schools tbody');
+            const completedStatusCell = row.querySelector('td[data-column="isCompleted"]');
+            completedStatusCell.textContent = 'Yes';
+            if (button) {
+                button.remove();
+            }
+            completedTable.appendChild(row);
+            applyFilters('completed-schools');
+            console.log(`School ${schoolId} marked as completed`);
+        } else {
+            const errorData = await response.json();
+            console.error('Failed to mark school as completed:', errorData.error);
+            alert(`Failed to mark school as completed: ${errorData.error}`);
+        }
+    } catch (err) {
+        console.error('Error marking school:', err);
+        alert('Error marking school. Please check your connection and try again.');
+    }
+}
+
+        // Filter media by uploader type and seen status
+        function filterMedia() {
+            const uploaderFilter = document.getElementById('uploaderFilter').value;
+            const seenFilter = document.getElementById('seenFilter').value;
+            const mediaCards = document.querySelectorAll('#mediaSection .media-card');
+
+            mediaCards.forEach(card => {
+                const uploader = card.dataset.uploaderType;
+                const seen = card.dataset.seen === 'true';
+                let show = true;
+
+                if (uploaderFilter !== 'All' && uploader !== uploaderFilter) {
+                    show = false;
+                }
+
+                if (seenFilter === 'Seen' && !seen) {
+                    show = false;
+                } else if (seenFilter === 'Unseen' && seen) {
+                    show = false;
+                }
+
+                card.style.display = show ? '' : 'none';
+            });
+        }
+
+        async function markMediaSeen(mediaId, checkbox, cardElement) {
+            const isSeen = checkbox.checked;
+
+            try {
+                const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seen: isSeen })
+                });
+
+                if (response.ok) {
+                    cardElement.dataset.seen = isSeen;
+                    checkbox.classList.toggle('bg-green-500', isSeen);
+                    checkbox.classList.toggle('border-green-500', isSeen);
+                    filterMedia();
+                    console.log(`Media ${mediaId} marked as ${isSeen ? 'seen' : 'unseen'}`);
+                } else {
+                    console.error('Failed to update seen status:', await response.text());
+                    checkbox.checked = !isSeen;
+                    alert('Failed to update seen status. Please try again.');
+                }
+            } catch (err) {
+                console.error('Error marking media:', err);
+                checkbox.checked = !isSeen;
+                alert('Error marking media. Please check your connection and try again.');
+            }
+        }
+
+        function openMediaModal(mediaId, mediaUrl, mediaType) {
+            const modal = document.getElementById('mediaModal');
+            const content = document.getElementById('mediaContent');
+
+            content.innerHTML = '';
+
+            if (mediaType === 'image') {
+                content.innerHTML = `<img src="${mediaUrl}" alt="Media" class="w-full rounded shadow">`;
+            } else if (mediaType === 'video') {
+                content.innerHTML = `
+                    <video controls class="w-full rounded shadow">
+                        <source src="${mediaUrl}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        window.onload = function () {
             openTab('visualization');
 
-            ['not-approved', 'approved-no-date', 'approved-with-date', 'trainers', 'students'].forEach(tableId => {
+            ['not-approved', 'approved-no-date', 'approved-with-date', 'trainers', 'students', 'completed-schools'].forEach(tableId => {
                 initializeFilters(tableId);
             });
 
@@ -154,80 +253,64 @@
                 options: { responsive: true, plugins: { legend: { position: 'top' } } }
             });
 
-            document.querySelectorAll('#approved-with-date tbody tr').forEach(row => {
-                const schoolId = row.querySelector('td[data-column="id"]').textContent;
-                const trainer1Cell = row.querySelector('td[data-column="trainer1"]');
-                const trainer2Cell = row.querySelector('td[data-column="trainer2"]');
-                const trainer1Text = trainer1Cell ? trainer1Cell.textContent.trim() : 'Not Assigned';
-                const trainer2Text = trainer2Cell ? trainer2Cell.textContent.trim() : 'Not Assigned';
+            const uploaderFilter = document.getElementById('uploaderFilter');
+            const seenFilter = document.getElementById('seenFilter');
+            if (uploaderFilter && seenFilter) {
+                uploaderFilter.addEventListener('change', filterMedia);
+                seenFilter.addEventListener('change', filterMedia);
+                filterMedia();
+            }
 
-                console.log(`School ID: ${schoolId}`);
-                console.log(`Trainer 1: ${trainer1Text}`);
-                console.log(`Trainer 2: ${trainer2Text}`);
-
-                if (trainer1Text.includes('Pending')) {
-                    console.log(`Approve/Reject buttons should be visible for Trainer 1: ${trainer1Text}`);
-                } else if (trainer1Text === 'Not Assigned') {
-                    console.log(`Assign button should be visible for Trainer 1 for School ID: ${schoolId}`);
-                }
-
-                if (trainer2Text.includes('Pending')) {
-                    console.log(`Approve/Reject buttons should be visible for Trainer 2: ${trainer2Text}`);
-                } else if (trainer2Text === 'Not Assigned') {
-                    console.log(`Assign button should be visible for Trainer 2 for School ID: ${schoolId}`);
-                }
+            document.querySelectorAll('.mark-seen-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('change', (event) => {
+                    event.stopPropagation();
+                    const mediaId = checkbox.dataset.mediaId;
+                    const cardElement = checkbox.closest('.media-card');
+                    markMediaSeen(mediaId, checkbox, cardElement);
+                });
             });
 
-            document.querySelectorAll('.approve-trainer1-btn').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const schoolId = button.dataset.schoolId;
-                    handleTrainerAction(event, '/admin/approve-trainer1/:schoolId', schoolId, 'Trainer 1 approved successfully', 'Failed to approve Trainer 1');
+            document.querySelectorAll('.mark-seen-checkbox').forEach(checkbox => {
+                checkbox.addEventListener('click', (event) => {
+                    event.stopPropagation();
                 });
             });
-            document.querySelectorAll('.approve-trainer2-btn').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const schoolId = button.dataset.schoolId;
-                    handleTrainerAction(event, '/admin/approve-trainer2/:schoolId', schoolId, 'Trainer 2 approved successfully', 'Failed to approve Trainer 2');
-                });
+
+            document.getElementById('closeModal').addEventListener('click', () => {
+                document.getElementById('mediaModal').classList.add('hidden');
             });
-            document.querySelectorAll('.reject-trainer1-btn').forEach(button => {
+
+            // Initialize complete school buttons
+            document.querySelectorAll('.complete-school-btn').forEach(button => {
                 button.addEventListener('click', (event) => {
+                    event.preventDefault();
                     const schoolId = button.dataset.schoolId;
-                    handleTrainerAction(event, '/admin/reject-trainer1/:schoolId', schoolId, 'Trainer 1 rejected successfully', 'Failed to reject Trainer 1');
-                });
-            });
-            document.querySelectorAll('.reject-trainer2-btn').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const schoolId = button.dataset.schoolId;
-                    handleTrainerAction(event, '/admin/reject-trainer2/:schoolId', schoolId, 'Trainer 2 rejected successfully', 'Failed to reject Trainer 2');
-                });
-            });
-            document.querySelectorAll('.assign-trainer1-btn').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const schoolId = button.dataset.schoolId;
-                    const select = document.querySelector(`.assign-trainer1[data-school-id="${schoolId}"]`);
-                    if (!select.value) {
-                        alert('Please select a trainer for Trainer 1');
-                        event.preventDefault();
-                        return;
-                    }
-                    handleTrainerAction(event, '/admin/assign-trainer1/:schoolId', schoolId, 'Trainer 1 assigned successfully', 'Failed to assign Trainer 1');
-                });
-            });
-            document.querySelectorAll('.assign-trainer2-btn').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    const schoolId = button.dataset.schoolId;
-                    const select = document.querySelector(`.assign-trainer2[data-school-id="${schoolId}"]`);
-                    if (!select.value) {
-                        alert('Please select a trainer for Trainer 2');
-                        event.preventDefault();
-                        return;
-                    }
-                    handleTrainerAction(event, '/admin/assign-trainer2/:schoolId', schoolId, 'Trainer 2 assigned successfully', 'Failed to assign Trainer 2');
+                    const row = button.closest('tr');
+                    markSchoolCompleted(schoolId, button, row);
                 });
             });
         };
     </script>
+    <style>
+        .mark-seen-checkbox:checked {
+            background-color: #10B981;
+            border-color: #10B981;
+        }
+        .mark-seen-checkbox:checked::before {
+            background-color: white;
+        }
+        .mark-seen-checkbox {
+            height: 1.25rem;
+            width: 1.25rem;
+            cursor: pointer;
+        }
+        .media-card-content {
+            pointer-events: none;
+        }
+        .media-card-content input {
+            pointer-events: auto;
+        }
+    </style>
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="container mx-auto p-6">
@@ -251,6 +334,8 @@
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('schools')">Schools</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('trainers')">Trainers</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('students')">Students</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('media')">View Media</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('detail-summary')">Detailed Summary</button>
         </div>
 
         <div id="visualization" class="tab-content">
@@ -311,7 +396,6 @@
 
         <div id="schools" class="tab-content hidden">
             <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Schools</h2>
-
             <% if (schools && schools.length > 0) { %>
                 <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Not Approved</h3>
                 <div class="overflow-x-auto mb-6">
@@ -485,6 +569,7 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer1">Trainer 1<br><select class="filter-select text-sm w-full" data-column="trainer1"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer2">Trainer 2<br><select class="filter-select text-sm w-full" data-column="trainer2"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isCompleted">Completed<br><select class="filter-select text-sm w-full" data-column="isCompleted"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
@@ -498,7 +583,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <% schools.filter(school => school.isApproved && school.eventDate).forEach(school => { %>
+                            <% schools.filter(school => school.isApproved && school.eventDate && !school.isCompleted).forEach(school => { %>
                                 <tr class="hover:bg-gray-50">
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
@@ -530,6 +615,7 @@
                                             Not Assigned
                                         <% } %>
                                     </td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isCompleted">No</td>
                                     <td class="py-2 px-4 border-b">
                                         <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
                                             <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
@@ -595,8 +681,90 @@
                                                     <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded assign-trainer2-btn" data-school-id="<%= school.id %>">Assign Trainer 2</button>
                                                 </form>
                                             <% } %>
+                                            <button class="complete-school-btn bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded" data-school-id="<%= school.id %>">Complete</button>
                                         </div>
                                     </td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= school.registeredAt ? school.registeredAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3 class="text-xl font-semibold mb-2 text-gray-600">Completed Schools</h3>
+                <div class="overflow-x-auto mb-6">
+                    <table id="completed-schools" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer1">Trainer 1<br><select class="filter-select text-sm w-full" data-column="trainer1"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer2">Trainer 2<br><select class="filter-select text-sm w-full" data-column="trainer2"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isCompleted">Completed<br><select class="filter-select text-sm w-full" data-column="isCompleted"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% schools.filter(school => school.isApproved && school.eventDate && school.isCompleted).forEach(school => { %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">
+                                        <%= school.eventDate ? school.eventDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer1">
+                                        <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
+                                        <% if (school.trainerApproved === false) { %>
+                                            <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city}) - Pending` : 'Not Assigned' %>
+                                        <% } else if (school.trainerApproved === true) { %>
+                                            <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city}) - Approved` : 'Not Assigned' %>
+                                        <% } else { %>
+                                            Not Assigned
+                                        <% } %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer2">
+                                        <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
+                                        <% if (school.trainerApproved === false) { %>
+                                            <%= trainer2 ? `${trainer2.trainerName} (${trainer2.city}) - Pending` : 'Not Assigned' %>
+                                        <% } else if (school.trainerApproved === true) { %>
+                                            <%= trainer2 ? `${trainer2.trainerName} (${trainer2.city}) - Approved` : 'Not Assigned' %>
+                                        <% } else { %>
+                                            Not Assigned
+                                        <% } %>
+                                    </td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isCompleted">Yes</td>
+                                    <td class="py-2 px-4 border-b text-gray-700"></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
@@ -680,68 +848,174 @@
             <% } %>
         </div>
 
-        <div id="students" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Students</h2>
-            <% if (participants && participants.length > 0) { %>
-                <div class="overflow-x-auto">
-                    <table id="students" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-                        <thead class="bg-gray-100 sticky top-0">
-                            <tr>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">Name<br><select class="filter-select text-sm w-full" data-column="studentName"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolNameDropdown">School<br><select class="filter-select text-sm w-full" data-column="schoolNameDropdown"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentClass">Class<br><select class="filter-select text-sm w-full" data-column="studentClass"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="parentEmail">Parent Email<br><select class="filter-select text-sm w-full" data-column="parentEmail"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 1</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 2</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Address</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Pincode</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Birthdate</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="hasCompletedMCQ">MCQ Completed<br><select class="filter-select text-sm w-full" data-column="hasCompletedMCQ"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Score</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Total Questions</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Percentage</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Completed At</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% participants.forEach(participant => { %>
-                                <tr class="hover:bg-gray-50">
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= participant.id %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="studentName"><%= participant.studentName %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolNameDropdown"><%= participant.schoolNameDropdown %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="studentClass"><%= participant.studentClass %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="parentEmail"><%= participant.parentEmail %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile1 || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile2 || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.address || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= participant.city || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.pincode || 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.birthdate ? participant.birthdate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' }) : 'N/A' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="hasCompletedMCQ">
-                                        <%= participant.hasCompletedMCQ ? 'Yes' : 'No' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= participant.hasCompletedMCQ ? `${participant.score}/${participant.totalQuestions}` : 'N/A' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= participant.totalQuestions || 'N/A' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= participant.percentage ? `${participant.percentage}%` : 'N/A' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= participant.completedAt ? participant.completedAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
-                                    </td>
+            <div id="students" class="tab-content hidden">
+                <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Students</h2>
+                <% if (participants && participants.length > 0) { %>
+                    <div class="overflow-x-auto">
+                        <table id="students" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                            <thead class="bg-gray-100 sticky top-0">
+                                <tr>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">Name<br><select class="filter-select text-sm w-full" data-column="studentName"></select></th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolNameDropdown">School<br><select class="filter-select text-sm w-full" data-column="schoolNameDropdown"></select></th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentClass">Class<br><select class="filter-select text-sm w-full" data-column="studentClass"></select></th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="parentEmail">Parent Email<br><select class="filter-select text-sm w-full" data-column="parentEmail"></select></th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 1</th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 2</th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600">Address</th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600">Pincode</th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600">Birthdate</th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="hasCompletedMCQ">MCQ Completed<br><select class="filter-select text-sm w-full" data-column="hasCompletedMCQ"></select></th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600">Score</th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600">Total Questions</th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600">Percentage</th>
+                                    <th class="py-2 px-4 border-b text-left text-gray-600">Completed At</th>
                                 </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <% participants.forEach(participant => { %>
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= participant.id %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700" data-column="studentName"><%= participant.studentName %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700" data-column="schoolNameDropdown"><%= participant.schoolNameDropdown %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700" data-column="studentClass"><%= participant.studentClass %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700" data-column="parentEmail"><%= participant.parentEmail %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile1 || 'N/A' %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile2 || 'N/A' %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700"><%= participant.address || 'N/A' %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= participant.city || 'N/A' %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700"><%= participant.pincode || 'N/A' %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700"><%= participant.birthdate ? participant.birthdate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' }) : 'N/A' %></td>
+                                        <td class="py-2 px-4 border-b text-gray-700" data-column="hasCompletedMCQ">
+                                            <%= participant.hasCompletedMCQ ? 'Yes' : 'No' %>
+                                        </td>
+                                        <td class="py-2 px-4 border-b text-gray-700">
+                                            <%= participant.hasCompletedMCQ ? `${participant.score}/${participant.totalQuestions}` : 'N/A' %>
+                                        </td>
+                                        <td class="py-2 px-4 border-b text-gray-700">
+                                            <%= participant.totalQuestions || 'N/A' %>
+                                        </td>
+                                        <td class="py-2 px-4 border-b text-gray-700">
+                                            <%= participant.percentage ? `${participant.percentage}%` : 'N/A' %>
+                                        </td>
+                                        <td class="py-2 px-4 border-b text-gray-700">
+                                            <%= participant.completedAt ? participant.completedAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } else { %>
+                    <p class="text-gray-700">No students registered yet.</p>
+                <% } %>
+            </div>
+
+        <div id="detail-summary" class="tab-content hidden bg-white p-4 rounded shadow">
+            <h2 class="text-xl font-bold mb-4 text-gray-700">Training Schedule: Detailed Summary</h2>
+            <div class="overflow-x-auto">
+                <table id="detailedSummaryTable" class="min-w-full bg-white border border-gray-300 rounded">
+                    <thead class="bg-gray-100">
+                        <tr>
+                            <th class="px-3 py-2 border-b">Date</th>
+                            <th class="px-3 py-2 border-b">Day</th>
+                            <th class="px-3 py-2 border-b">School Name</th>
+                            <th class="px-3 py-2 border-b">Trainer Name</th>
+                            <th class="px-3 py-2 border-b">Time Slot</th>
+                            <th class="px-3 py-2 border-b">Trainer Occupied</th>
+                            <th class="px-3 py-2 border-b">School Confirmed?</th>
+                            <th class="px-3 py-2 border-b">Logistics Done?</th>
+                            <th class="px-3 py-2 border-b">Materials Sent?</th>
+                            <th class="px-3 py-2 border-b">Venue Ready?</th>
+                            <th class="px-3 py-2 border-b">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Populated via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="media" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Media Uploads</h2>
+            <!-- Filter Dropdowns -->
+            <div class="flex flex-col sm:flex-row sm:space-x-4 mb-4">
+                <div>
+                    <label for="uploaderFilter" class="text-gray-600 font-semibold mr-2">Filter by Uploader:</label>
+                    <select id="uploaderFilter" class="border rounded py-1 px-2 text-gray-700">
+                        <option value="All">All</option>
+                        <option value="Trainer">Trainer</option>
+                        <option value="Student">Student</option>
+                        <option value="School">School</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="seenFilter" class="text-gray-600 font-semibold mr-2">Filter by Status:</label>
+                    <select id="seenFilter" class="border rounded py-1 px-2 text-gray-700">
+                        <option value="All">All</option>
+                        <option value="Seen">Seen</option>
+                        <option value="Unseen">Unseen</option>
+                    </select>
+                </div>
+            </div>
+
+            <% if (typeof mediaUploads !== 'undefined' && mediaUploads.length > 0) { %>
+                <div id="mediaSection" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+                    <% mediaUploads.forEach(upload => { %>
+                        <div class="media-card bg-white p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 cursor-pointer" 
+                             data-uploader-type="<%= upload.uploaderType || 'Unknown' %>" 
+                             data-seen="<%= upload.seen ? 'true' : 'false' %>"
+                             onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', '<%= upload.type %>')">
+                            <div class="media-card-content">
+                                <div class="flex items-center mb-2">
+                                    <input type="checkbox" class="mark-seen-checkbox mr-2 h-5 w-5" 
+                                           data-media-id="<%= upload.id %>" <%= upload.seen ? 'checked' : '' %>>
+                                    <label class="text-gray-600 text-sm">Mark as Seen</label>
+                                </div>
+                                <h3 class="text-lg font-semibold text-gray-600 mb-2">
+                                    <%= upload.type ? upload.type.charAt(0).toUpperCase() + upload.type.slice(1) : 'Media' %>
+                                </h3>
+                                <% if (upload.type === 'image') { %>
+                                    <img src="<%= upload.url %>" alt="Media" class="w-full h-48 object-cover rounded mb-2 shadow">
+                                <% } else if (upload.type === 'video') { %>
+                                    <video class="w-full h-48 object-cover rounded mb-2 shadow">
+                                        <source src="<%= upload.url %>" type="video/mp4">
+                                    </video>
+                                <% } else { %>
+                                    <p class="text-red-500 text-sm">Unknown media type</p>
+                                <% } %>
+                                <p class="text-gray-700 text-sm mb-1"><strong>Description:</strong> <%= upload.description || 'No description provided' %></p>
+                                <% if (upload.link) { %>
+                                    <p class="text-gray-700 text-sm mb-1">
+                                        <strong>Link:</strong> <a href="<%= upload.link %>" target="_blank" class="text-blue-500 hover:underline"><%= upload.link %></a>
+                                    </p>
+                                <% } %>
+                                <p class="text-gray-700 text-sm mb-1"><strong>Uploaded At:</strong> 
+                                    <%= upload.uploadedAt 
+                                        ? upload.uploadedAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
+                                        : 'N/A' %>
+                                </p>
+                                <p class="text-gray-700 text-sm"><strong>Uploaded By:</strong> <%= upload.uploadedBy || 'Unknown' %></p>
+                            </div>
+                        </div>
+                    <% }) %>
                 </div>
             <% } else { %>
-                <p class="text-gray-700">No students registered yet.</p>
+                <p class="text-gray-500">No media uploads available.</p>
             <% } %>
+        </div>
+
+        <!-- Media Modal -->
+        <div id="mediaModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+            <div class="bg-white p-6 rounded-lg shadow-lg max-w-3xl w-full">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-gray-700">Media Preview</h2>
+                    <button id="closeModal" class="text-gray-600 hover:text-gray-800 text-2xl">×</button>
+                </div>
+                <div id="mediaContent"></div>
+            </div>
         </div>
 
         <div class="flex justify-center mt-6">

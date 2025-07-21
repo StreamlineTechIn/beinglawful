@@ -510,7 +510,7 @@ function requireStudentAuth(req, res, next) {
     });
 
     // Student login (renders login.ejs or dashboard.ejs)
-    app.post('/student-login', async (req, res) => {
+      app.post('/student-login', async (req, res) => {
         const { username, password } = req.body;
         try {
             if (!username || !password) {

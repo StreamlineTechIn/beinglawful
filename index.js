@@ -510,52 +510,71 @@ function requireStudentAuth(req, res, next) {
     });
 
     // Student login (renders login.ejs or dashboard.ejs)
-  // Student login
-// Student login
-app.post('/student-login', async (req, res) => {
-    try {
-        const { studentId, password } = req.body;
-        console.log(`Student login attempt: studentId=${studentId}`);
+    app.post('/student-login', async (req, res) => {
+        const { username, password } = req.body;
+        try {
+            if (!username || !password) {
+                return res.render('login', { error: 'Username and password are required.' });
+            }
 
-        // Validate inputs
-        if (!studentId || !password) {
-            console.log('Missing studentId or password');
-            return res.render('studentLogin', { error: 'Student ID and password are required.' });
+            console.log(`Student login attempt for username: ${username}`);
+            const { user, userId } = await getUserByParentMobile(username);
+
+            if (!user.birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(user.birthdate)) {
+                console.error(`Invalid birthdate format for user ${username}: ${user.birthdate}`);
+                return res.render('login', { error: 'Invalid user data. Contact administrator.' });
+            }
+
+            const [year, month, day] = user.birthdate.split('-');
+            const expectedPassword = `${day}${month}${year}`;
+            if (password !== expectedPassword) {
+                console.log(`Invalid password for username: ${username}. Expected: ${expectedPassword}, Got: ${password}`);
+                return res.render('login', { error: 'Invalid username or password.' });
+            }
+
+            req.session.parentMobile1 = username;
+
+            let mcqs = [];
+            const hasCompletedMCQ = user.hasCompletedMCQ || false;
+            if (!hasCompletedMCQ) {
+                await db.runTransaction(async (transaction) => {
+                    const userRef = db.collection('participants').doc(userId);
+                    const userDoc = await transaction.get(userRef);
+                    const userData = userDoc.data();
+                    mcqs = userData.currentMcqs || [];
+                    if (mcqs.length === 0) {
+                        mcqs = await getRandomQuestions(30);
+                        transaction.update(userRef, { currentMcqs: mcqs });
+                    }
+                });
+            }
+
+            const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(user.schoolNameDropdown || '');
+
+            res.render('dashboard', {
+                studentName: user.studentName || 'Unknown Student',
+                parentMobile1: username,
+                hasCompletedMCQ: hasCompletedMCQ,
+                hasCompletedTrial1: user.hasCompletedTrial1 || false,
+                hasCompletedTrial2: user.hasCompletedTrial2 || false,
+                mcqs: mcqs,
+                trial1: trialTests.trial1,
+                trial2: trialTests.trial2,
+                isEventDate: isEventDate,
+                isOnOrAfterEventDate: isOnOrAfterEventDate,
+                eventDateMissing: eventDateMissing,
+                eventDate: eventDate,
+                showResults: hasCompletedMCQ,
+                score: user.score || 0,
+                totalQuestions: user.totalQuestions || 30,
+                percentage: user.percentage || 0
+            });
+        } catch (error) {
+            console.error('Error during student login:', error.message, error.stack);
+            res.render('login', { error: 'Login failed. Please try again later.' });
         }
+    });
 
-        // Fetch student document
-        const studentDoc = await db.collection('participants').doc(studentId).get();
-
-        if (!studentDoc.exists) {
-            console.log(`No student found for studentId: ${studentId}`);
-            return res.render('studentLogin', { error: 'Invalid student ID or password.' });
-        }
-
-        const studentData = studentDoc.data();
-
-        // Check if student is approved
-        if (!studentData.isApproved) {
-            console.log(`Student not approved: studentId=${studentId}`);
-            return res.render('studentLogin', { error: 'Your account is not approved by the school. Please contact your school administrator.' });
-        }
-
-        // Verify password (assuming parentMobile1 is used as password)
-        if (password !== studentData.parentMobile1) {
-            console.log(`Invalid password for studentId: ${studentId}`);
-            return res.render('studentLogin', { error: 'Invalid student ID or password.' });
-        }
-
-        // Store studentId in session
-        req.session.studentId = studentId;
-        req.session.schoolEmail = studentData.schoolEmail || '';
-        console.log(`Login successful for studentId: ${studentId}, redirecting to student dashboard`);
-        res.redirect(`/student-dashboard?studentId=${encodeURIComponent(studentId)}`);
-
-    } catch (error) {
-        console.error('Error during student login:', error.message, error.stack);
-        res.render('studentLogin', { error: 'Login failed. Please try again later.' });
-    }
-});
     // Dashboard (renders dashboard.ejs)
 app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
@@ -622,6 +641,7 @@ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (
         res.redirect('/login?error=Error%20loading%20dashboard');
     }
 });
+
 
 
     // MCQ test (renders mcq.ejs)
@@ -1198,17 +1218,159 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
 // School dashboard (renders schoolDashboard.ejs)
 
 // GET route for school dashboard
-  app.get('/school-dashboard', async (req, res) => {
-    try {
-        const schoolEmail = req.query.username;
+    app.get('/school-dashboard', async (req, res) => {
+        try {
+            const schoolEmail = req.query.username;
+            console.log('Request query:', req.query); // Debug log
 
-        if (!schoolEmail) {
-            return res.render('schoolDashboard', {
+            if (!schoolEmail) {
+                return res.render('schoolDashboard', {
+                    schoolName: 'Unknown',
+                    schoolEmail: '',
+                    city: '',
+                    district: '',
+                    pincode: '',
+                    schoolPhoneNumber: '',
+                    principalNumber: '',
+                    principalEmail: '',
+                    civicsTeacherNumber: '',
+                    civicsTeacherEmail: '',
+                    students: [],
+                    eventDate: null,
+                    eventDateMissing: true,
+                    resourcesConfirmed: false,
+                    selectedResources: [],
+                    selectedTrainers: [],
+                    error: 'Please login first',
+                    trialTests,
+                    trainers: [],
+                    mediaUploads: []
+                });
+            }
+
+            const schoolSnapshot = await db.collection('schools')
+                .where('schoolEmail', '==', schoolEmail)
+                .get();
+
+            if (schoolSnapshot.empty || schoolSnapshot.docs.length === 0) {
+                return res.render('schoolDashboard', {
+                    schoolName: 'Unknown',
+                    schoolEmail: '',
+                    city: '',
+                    district: '',
+                    pincode: '',
+                    schoolPhoneNumber: '',
+                    principalNumber: '',
+                    principalEmail: '',
+                    civicsTeacherNumber: '',
+                    civicsTeacherEmail: '',
+                    students: [],
+                    eventDate: null,
+                    eventDateMissing: true,
+                    resourcesConfirmed: false,
+                    selectedResources: [],
+                    selectedTrainers: [],
+                    error: 'School not found',
+                    trialTests,
+                    trainers: [],
+                    mediaUploads: []
+                });
+            }
+
+            const schoolData = schoolSnapshot.docs[0].data();
+            const schoolName = schoolData.schoolName;
+
+            // Format event date
+            let eventDate = null;
+            let eventDateMissing = true;
+            if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
+                eventDate = schoolData.eventDate.toDate().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+                eventDateMissing = false;
+            }
+
+            // Fetch students
+            const studentsSnapshot = await db.collection('participants')
+                .where('schoolNameDropdown', '==', schoolName)
+                .get();
+
+            const students = studentsSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    studentName: data.studentName || 'N/A',
+                    studentClass: data.studentClass || 'N/A',
+                    hasCompletedMCQ: data.hasCompletedMCQ || false,
+                    trial1Percentage: data.trial1Percentage || 'N/A',
+                    trial2Percentage: data.trial2Percentage || 'N/A',
+                    score: data.score || 0,
+                    totalQuestions: data.totalQuestions || 0,
+                    percentage: data.percentage || 0,
+                    completedAt: data.completedAt ? data.completedAt.toDate().toLocaleDateString() : 'N/A'
+                };
+            });
+
+            // Fetch trainers with transformed availableDates
+            const trainersSnapshot = await db.collection('trainers').get();
+            const trainers = trainersSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    trainerName: data.trainerName || 'Unnamed',
+                    district: data.district || 'Not Specified',
+                    availableDates: Array.isArray(data.availableDates) ? data.availableDates.map(dateObj => 
+                        dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
+                    ) : [] // Transform objects to date strings
+                };
+            });
+
+            // Fetch media uploads (optional, placeholder)
+            const mediaUploads = []; // Replace with actual fetch if needed
+
+            // ✅ Fixed selectedTrainers
+            const selectedTrainers = [
+                schoolData.selectedTrainer1 || '',
+                schoolData.selectedTrainer2 || ''
+            ].map(trainerId => {
+                const trainer = trainers.find(t => t.id === trainerId);
+                return trainer ? { ...trainer, isOtherDistrict: trainer.district !== schoolData.district } : '';
+            });
+
+            res.render('schoolDashboard', {
+                schoolName,
+                mediaUploads,
+                schoolEmail: schoolData.schoolEmail || '',
+                city: schoolData.city || '',
+                district: schoolData.district || '',
+                pincode: schoolData.pincode || '',
+                schoolPhoneNumber: schoolData.schoolPhoneNumber || '',
+                principalNumber: schoolData.principalNumber || '',
+                principalEmail: schoolData.principalEmail || '',
+                civicsTeacherNumber: schoolData.civicsTeacherNumber || '',
+                civicsTeacherEmail: schoolData.civicsTeacherEmail || '',
+                students,
+                eventDate,
+                eventDateMissing,
+                resourcesConfirmed: schoolData.resourcesConfirmed || false,
+                selectedResources: schoolData.selectedResources || [],
+                selectedTrainers,
+                error: null,
+                trialTests,
+                trainers,
+                 workshopStartTime: schoolData.workshopStartTime || null,
+                workshopEndTime: schoolData.workshopEndTime || null
+            });
+
+        } catch (error) {
+            console.error('Error in /school-dashboard route:', error.message, error.stack);
+            res.render('schoolDashboard', {
                 schoolName: 'Unknown',
                 schoolEmail: '',
                 city: '',
                 district: '',
-                pincode: '',
+                pincode: '',    
                 schoolPhoneNumber: '',
                 principalNumber: '',
                 principalEmail: '',
@@ -1220,173 +1382,13 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
                 resourcesConfirmed: false,
                 selectedResources: [],
                 selectedTrainers: [],
-                error: 'Please login first. School email is missing.',
+                error: 'Error loading school data.',
                 trialTests,
                 trainers: [],
-                mediaUploads: [],
-                workshopStartTime: null,
-                workshopEndTime: null
+                mediaUploads: []
             });
         }
-
-        const schoolSnapshot = await db.collection('schools')
-            .where('schoolEmail', '==', schoolEmail)
-            .get();
-
-        if (schoolSnapshot.empty) {
-            return res.render('schoolDashboard', {
-                schoolName: 'Unknown',
-                schoolEmail: '',
-                city: '',
-                district: '',
-                pincode: '',
-                schoolPhoneNumber: '',
-                principalNumber: '',
-                principalEmail: '',
-                civicsTeacherNumber: '',
-                civicsTeacherEmail: '',
-                students: [],
-                eventDate: null,
-                eventDateMissing: true,
-                resourcesConfirmed: false,
-                selectedResources: [],
-                selectedTrainers: [],
-                error: 'School not found.',
-                trialTests,
-                trainers: [],
-                mediaUploads: [],
-                workshopStartTime: null,
-                workshopEndTime: null
-            });
-        }
-
-        const schoolData = schoolSnapshot.docs[0].data();
-        const schoolName = schoolData.schoolName;
-
-        // Format Event Date
-        let eventDate = null;
-        let eventDateMissing = true;
-        if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
-            eventDate = schoolData.eventDate.toDate().toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            eventDateMissing = false;
-        }
-
-        // Fetch Students
-        const studentsSnapshot = await db.collection('participants')
-            .where('schoolNameDropdown', '==', schoolName)
-            .get();
-
-        const students = studentsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                studentName: data.studentName || 'N/A',
-                studentClass: data.studentClass || 'N/A',
-                parentMobile1: data.parentMobile1 || 'N/A',
-                parentMobile2: data.parentMobile2 || 'N/A',
-                parentEmail: data.parentEmail || 'N/A',
-                address: data.address || 'N/A',
-                city: data.city || 'N/A',
-                pincode: data.pincode || 'N/A',
-                hasCompletedMCQ: data.hasCompletedMCQ || false,
-                isApproved: data.isApproved || false,
-                trial1Percentage: data.trial1Percentage || 'N/A',
-                trial2Percentage: data.trial2Percentage || 'N/A',
-                score: data.score || 0,
-                totalQuestions: data.totalQuestions || 0,
-                percentage: data.percentage || 0,
-                completedAt: data.completedAt ? data.completedAt.toDate().toLocaleDateString() : 'N/A'
-            };
-        });
-
-        // Fetch Trainers
-        const trainersSnapshot = await db.collection('trainers').get();
-        const trainers = trainersSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                trainerName: data.trainerName || 'Unnamed',
-                district: data.district || 'Not Specified',
-                availableDates: Array.isArray(data.availableDates)
-                    ? data.availableDates.map(dateObj =>
-                        dateObj.date || dateObj.toDate
-                            ? dateObj.toDate().toISOString().split('T')[0]
-                            : 'N/A'
-                    )
-                    : []
-            };
-        });
-
-        // Fetch Media Uploads — You can fetch real data if needed
-        const mediaUploads = [];
-
-        // Prepare Selected Trainers
-        const selectedTrainers = [
-            schoolData.selectedTrainer1 || '',
-            schoolData.selectedTrainer2 || ''
-        ].map(trainerId => {
-            const trainer = trainers.find(t => t.id === trainerId);
-            return trainer ? { ...trainer, isOtherDistrict: trainer.district !== schoolData.district } : '';
-        });
-
-        res.render('schoolDashboard', {
-            schoolName,
-            mediaUploads,
-            schoolEmail: schoolData.schoolEmail || '',
-            city: schoolData.city || '',
-            district: schoolData.district || '',
-            pincode: schoolData.pincode || '',
-            schoolPhoneNumber: schoolData.schoolPhoneNumber || '',
-            principalNumber: schoolData.principalNumber || '',
-            principalEmail: schoolData.principalEmail || '',
-            civicsTeacherNumber: schoolData.civicsTeacherNumber || '',
-            civicsTeacherEmail: schoolData.civicsTeacherEmail || '',
-            students,
-            eventDate,
-            eventDateMissing,
-            resourcesConfirmed: schoolData.resourcesConfirmed || false,
-            selectedResources: schoolData.selectedResources || [],
-            selectedTrainers,
-            error: null,
-            trialTests,
-            trainers,
-            workshopStartTime: schoolData.workshopStartTime || null,
-            workshopEndTime: schoolData.workshopEndTime || null
-        });
-
-    } catch (error) {
-        console.error('Error loading /school-dashboard:', error);
-        res.render('schoolDashboard', {
-            schoolName: 'Unknown',
-            schoolEmail: '',
-            city: '',
-            district: '',
-            pincode: '',
-            schoolPhoneNumber: '',
-            principalNumber: '',
-            principalEmail: '',
-            civicsTeacherNumber: '',
-            civicsTeacherEmail: '',
-            students: [],
-            eventDate: null,
-            eventDateMissing: true,
-            resourcesConfirmed: false,
-            selectedResources: [],
-            selectedTrainers: [],
-            error: 'Error loading dashboard. Please try again later.',
-            trialTests,
-            trainers: [],
-            mediaUploads: [],
-            workshopStartTime: null,
-            workshopEndTime: null
-        });
-    }
-});
-
+    });
 // POST route for submitting resources
     app.post('/school-dashboard/submit-resources', async (req, res) => {
         try {
@@ -1934,7 +1936,27 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
         }
     });
 
+    app.post('/school-dashboard/approve-student', async (req, res) => {
+    try {
+        const { studentId } = req.body;
+        await db.collection('participants').doc(studentId).update({ isApproved: true });
+        res.redirect('back');
+    } catch (err) {
+        console.error('Error approving student:', err);
+        res.redirect('back');
+    }
+});
 
+app.post('/school-dashboard/delete-student', async (req, res) => {
+    try {
+        const { studentId } = req.body;
+        await db.collection('participants').doc(studentId).delete();
+        res.redirect('back');
+    } catch (err) {
+        console.error('Error deleting student:', err);
+        res.redirect('back');
+    }
+});
 
 
     // Participation form (renders participation.ejs)
@@ -2210,27 +2232,24 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
     });
 
     // School students (renders schoolStudents.ejs)
-   app.get('/school-students', async (req, res) => {
-    try {
-        const schoolName = req.query.schoolName;
-        if (!schoolName) {
-            return res.status(400).send('School name is required.');
+    app.get('/school-students', async (req, res) => {
+        try {
+            const schoolName = req.query.schoolName;
+            if (!schoolName) {
+                return res.status(400).send('School name is required.');
+            }
+
+            const snapshot = await db.collection('participants')
+                .where('schoolName', '==', schoolName)
+                .get();
+            const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            res.render('schoolStudents', { schoolName, students });
+        } catch (error) {
+            console.error('Error in school-students route:', error.message, error.stack);
+            res.status(500).send('Error fetching student data.');
         }
-
-        const snapshot = await db.collection('participants')
-            .where('schoolName', '==', schoolName)
-            .get();
-
-        const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-        res.render('schoolStudents', { schoolName, students });
-
-    } catch (error) {
-        console.error('Error in /school-students route:', error.message, error.stack);
-        res.status(500).send('Error fetching student data.');
-    }
-});
-
+    });
 
     // Admin login page (renders adminLogin.ejs)
     app.get('/admin-login', (req, res) => {
@@ -2507,73 +2526,38 @@ app.post('/admin-dashboard/toggle-media-seen/:mediaId', async (req, res) => {
 
 
     // Approve trainer (general approval, not tied to a specific school)
+    app.post('/admin/approve-trainer', requireAdmin, async (req, res) => {
+        try {
+            const { trainerId } = req.body;
+            if (!trainerId) {
+                return res.redirect('/admin-dashboard?error=Trainer ID is required');
+            }
 
+            const trainerRef = db.collection('trainers').doc(trainerId);
+            const trainerDoc = await trainerRef.get();
+            if (!trainerDoc.exists) {
+                return res.redirect('/admin-dashboard?error=Trainer not found');
+            }
 
-// // Route — Approve Trainer + Upload Zip
-// app.post('/admin/approve-trainer-upload', requireAdmin, upload.single('zipFile'), async (req, res) => {
-//   try {
-//     const { trainerId } = req.body;
-//     if (!trainerId || !req.file) {
-//       return res.redirect('/admin-dashboard?error=Trainer ID and ZIP file required');
-//     }
-
-//     const trainerRef = db.collection('trainers').doc(trainerId);
-//     const trainerDoc = await trainerRef.get();
-//     if (!trainerDoc.exists) {
-//       return res.redirect('/admin-dashboard?error=Trainer not found');
-//     }
-
-//     await trainerRef.update({
-//       isApproved: true,
-//       zipFileName: req.file.filename,
-//       zipUploadedAt: new Date()
-//     });
-
-//     res.redirect('/admin-dashboard?success=Trainer approved and ZIP uploaded');
-//   } catch (error) {
-//     console.error('Error in approve-trainer-upload:', error);
-//     res.redirect('/admin-dashboard?error=Error approving trainer or uploading ZIP');
-//   }
-// });
-
-app.get('/trainer/download-zip', async (req, res) => {
-  try {
-    const { trainerId } = req.query;
-    if (!trainerId) return res.status(400).send('Trainer ID is required');
-
-    const trainerDoc = await db.collection('trainers').doc(trainerId).get();
-    if (!trainerDoc.exists) return res.status(404).send('Trainer not found');
-
-    const trainer = trainerDoc.data();
-
-    if (!trainer.isApproved || !trainer.zipFileName) {
-      return res.status(403).send('Not approved or no ZIP uploaded');
-    }
-
-    res.download(`./uploads/${trainer.zipFileName}`);
-  } catch (err) {
-    console.error('Error downloading ZIP:', err);
-    res.status(500).send('Error downloading ZIP');
-  }
-});
+            await trainerRef.update({ isApproved: true });
+            res.redirect('/admin-dashboard?success=Trainer approved successfully');
+        } catch (error) {
+            console.error('Error in admin/approve-trainer route:', error.message, error.stack);
+            res.redirect('/admin-dashboard?error=Error approving trainer');
+        }
+    });
 
     // Admin approve school
-  app.post('/school-dashboard/approve-student', async (req, res) => {
-    try {
-        const { studentId } = req.body;
-        if (!studentId) return res.status(400).send('Student ID is required.');
-
-        await db.collection('participants').doc(studentId).update({
-            isApproved: true
+    app.post('/admin/approve-school/:id', requireAdmin, async (req, res) => {
+            try {
+                const schoolId = req.params.id;
+                await db.collection('schools').doc(schoolId).update({ isApproved: true });
+                res.redirect('/admin-dashboard');
+            } catch (error) {
+                console.error('Error in approve-school route:', error.message, error.stack);
+                res.status(500).send('Error approving school.');
+            }
         });
-
-        res.redirect(`/school-dashboard?username=${encodeURIComponent(req.session.schoolEmail)}`);
-    } catch (error) {
-        console.error('Error approving student:', error);
-        res.status(500).send('Error approving student.');
-    }
-});
-
 
     // Admin reject school
     app.post('/admin/reject-school', requireAdmin, async (req, res) => {
@@ -3530,9 +3514,6 @@ async function renderFormWithErrors(res, errors) {
     res.redirect('/login');
     });
     });
-
-  
-
 
     // Start the server
     const PORT = process.env.PORT || 3000;

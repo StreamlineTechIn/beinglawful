@@ -30,6 +30,8 @@ const storage = multer.memoryStorage();const upload = multer({
 
 const app = express();
 
+app.use('/zipfiles', express.static(path.join(__dirname, 'uploads', 'zipfiles')));
+
 // Set view engine to EJS and specify the views directory
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -2972,246 +2974,309 @@ app.post('/trainer-dashboard/add-dates', async (req, res) => {
 });
 
     //uploaded media for trainer
-    app.post('/trainer-dashboard/upload-media', upload, async (req, res) => {
-            try {
-                const { trainerEmail, mediaDescription, mediaLink } = req.body;
-                const photos = req.files['photos'] || [];
-                const videos = req.files['videos'] || [];
+   app.post('/trainer-dashboard/upload-media', upload, async (req, res) => {
+    try {
+        const { trainerEmail, mediaDescription, mediaLink } = req.body;
+        const photos = req.files['photos'] || [];
+        const videos = req.files['videos'] || [];
+        const zipFiles = req.files['zipFiles'] || []; // Add ZIP file handling
 
-                if (!trainerEmail) {
-                    return res.status(400).render('trainerDashboard', {
-                        trainerName: 'Unknown',
-                        email: '',
-                        city: '',
-                        district: '',
-                        profession: '',
-                        assignedSchools: [],
-                        availableDates: [],
-                        schoolsInDistrict: [],
-                        mediaUploads: [],
-                        error: 'Trainer email is required',
-                        success: null,
-                        trainerData: {}
-                    });
-                }
+        if (!trainerEmail) {
+            return res.status(400).render('trainerDashboard', {
+                trainerName: 'Unknown',
+                email: '',
+                city: '',
+                district: '',
+                profession: '',
+                assignedSchools: [],
+                availableDates: [],
+                schoolsInDistrict: [],
+                mediaUploads: [],
+                approvedZips: [],
+                error: 'Trainer email is required',
+                success: null,
+                trainerData: {}
+            });
+        }
 
-                // Fetch trainer data
-                const trainerSnapshot = await db.collection('trainers')
-                    .where('email', '==', trainerEmail)
-                    .get();
-                if (trainerSnapshot.empty) {
-                    return res.status(404).render('trainerDashboard', {
-                        trainerName: 'Unknown',
-                        email: trainerEmail,
-                        city: '',
-                        district: '',
-                        profession: '',
-                        assignedSchools: [],
-                        availableDates: [],
-                        schoolsInDistrict: [],
-                        mediaUploads: [],
-                        error: 'Trainer not found',
-                        success: null,
-                        trainerData: {}
-                    });
-                }
+        // Fetch trainer data
+        const trainerSnapshot = await db.collection('trainers')
+            .where('email', '==', trainerEmail)
+            .get();
+        if (trainerSnapshot.empty) {
+            return res.status(404).render('trainerDashboard', {
+                trainerName: 'Unknown',
+                email: trainerEmail,
+                city: '',
+                district: '',
+                profession: '',
+                assignedSchools: [],
+                availableDates: [],
+                schoolsInDistrict: [],
+                mediaUploads: [],
+                approvedZips: [],
+                error: 'Trainer not found',
+                success: null,
+                trainerData: {}
+            });
+        }
 
-                const trainerId = trainerSnapshot.docs[0].id;
-                const trainerData = trainerSnapshot.docs[0].data();
+        const trainerId = trainerSnapshot.docs[0].id;
+        const trainerData = trainerSnapshot.docs[0].data();
 
-                if (!trainerData.isApproved) {
-                    return res.status(403).render('trainerDashboard', {
-                        trainerName: trainerData.trainerName || 'Unknown',
-                        email: trainerEmail,
-                        city: trainerData.city || '',
-                        district: trainerData.district || trainerData.city || '',
-                        profession: trainerData.profession || '',
-                        assignedSchools: [],
-                        availableDates: trainerData.availableDates || [],
-                        schoolsInDistrict: [],
-                        mediaUploads: [],
-                        error: 'You must complete the Train the Trainer program to upload media.',
-                        success: null,
-                        trainerData
-                    });
-                }
+        if (!trainerData.isApproved) {
+            return res.status(403).render('trainerDashboard', {
+                trainerName: trainerData.trainerName || 'Unknown',
+                email: trainerEmail,
+                city: trainerData.city || '',
+                district: trainerData.district || trainerData.city || '',
+                profession: trainerData.profession || '',
+                assignedSchools: [],
+                availableDates: trainerData.availableDates || [],
+                schoolsInDistrict: [],
+                mediaUploads: [],
+                approvedZips: [],
+                error: 'You must complete the Train the Trainer program to upload media.',
+                success: null,
+                trainerData
+            });
+        }
 
-                if (mediaDescription && mediaDescription.length > 1000) {
-                    return res.status(400).render('trainerDashboard', {
-                        trainerName: trainerData.trainerName || 'Unknown',
-                        email: trainerEmail,
-                        city: trainerData.city || '',
-                        district: trainerData.district || trainerData.city || '',
-                        profession: trainerData.profession || '',
-                        assignedSchools: [],
-                        availableDates: trainerData.availableDates || [],
-                        schoolsInDistrict: [],
-                        mediaUploads: [],
-                        error: 'Media description cannot exceed 1000 characters',
-                        success: null,
-                        trainerData
-                    });
-                }
+        if (mediaDescription && mediaDescription.length > 1000) {
+            return res.status(400).render('trainerDashboard', {
+                trainerName: trainerData.trainerName || 'Unknown',
+                email: trainerEmail,
+                city: trainerData.city || '',
+                district: trainerData.district || trainerData.city || '',
+                profession: trainerData.profession || '',
+                assignedSchools: [],
+                availableDates: trainerData.availableDates || [],
+                schoolsInDistrict: [],
+                mediaUploads: [],
+                approvedZips: [],
+                error: 'Media description cannot exceed 1000 characters',
+                success: null,
+                trainerData
+            });
+        }
 
-                // Explicitly set the bucket name
-                const bucket = admin.storage().bucket('beinglawful-ee5a4.firebasestorage.app');
-                const [exists] = await bucket.exists();
-                if (!exists) {
-                    throw new Error('The specified bucket does not exist. Please check your Firebase configuration.');
-                }
+        // Explicitly set the bucket name
+        const bucket = admin.storage().bucket('beinglawful-ee5a4.firebasestorage.app');
+        const [exists] = await bucket.exists();
+        if (!exists) {
+            throw new Error('The specified bucket does not exist. Please check your Firebase configuration.');
+        }
 
-                const mediaUploads = [];
-                for (const file of photos) {
-                    const fileName = `media/trainers/${trainerId}/photos/${Date.now()}_${file.originalname}`;
-                    const fileUpload = bucket.file(fileName);
-                    try {
-                        await fileUpload.save(file.buffer, {
-                            metadata: { contentType: file.mimetype }
-                        });
-                        const [url] = await fileUpload.getSignedUrl({
-                            action: 'read',
-                            expires: '03-09-2491'
-                        });
-                        mediaUploads.push({
-                            url,
-                            type: 'image',
-                            path: fileName,
-                            description: mediaDescription || '',
-                            link: mediaLink || '',
-                            uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-                        });
-                    } catch (uploadError) {
-                        console.error(`Error uploading photo ${fileName}:`, uploadError.message, uploadError.stack);
-                        throw new Error(`Failed to upload photo: ${uploadError.message}`);
-                    }
-                }
+        const mediaUploads = [];
+        const zipUploads = [];
 
-                for (const file of videos) {
-                    const fileName = `media/trainers/${trainerId}/videos/${Date.now()}_${file.originalname}`;
-                    const fileUpload = bucket.file(fileName);
-                    try {
-                        await fileUpload.save(file.buffer, {
-                            metadata: { contentType: file.mimetype }
-                        });
-                        const [url] = await fileUpload.getSignedUrl({
-                            action: 'read',
-                            expires: '03-09-2491'
-                        });
-                        mediaUploads.push({
-                            url,
-                            type: 'video',
-                            path: fileName,
-                            description: mediaDescription || '',
-                            link: mediaLink || '',
-                            uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-                        });
-                    } catch (uploadError) {
-                        console.error(`Error uploading video ${fileName}:`, uploadError.message, uploadError.stack);
-                        throw new Error(`Failed to upload video: ${uploadError.message}`);
-                    }
-                }
+        // Handle photos
+        for (const file of photos) {
+            const fileName = `media/trainers/${trainerId}/photos/${Date.now()}_${file.originalname}`;
+            const fileUpload = bucket.file(fileName);
+            await fileUpload.save(file.buffer, {
+                metadata: { contentType: file.mimetype }
+            });
+            const [url] = await fileUpload.getSignedUrl({
+                action: 'read',
+                expires: '03-09-2491'
+            });
+            mediaUploads.push({
+                url,
+                type: 'image',
+                path: fileName,
+                description: mediaDescription || '',
+                link: mediaLink || '',
+                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
 
-                if (mediaUploads.length > 0) {
-                    const batch = db.batch();
-                    mediaUploads.forEach(upload => {
-                        const mediaRef = db.collection('trainers').doc(trainerId).collection('mediaUploads').doc();
-                        batch.set(mediaRef, upload);
-                    });
-                    await batch.commit();
-                }
+        // Handle videos
+        for (const file of videos) {
+            const fileName = `media/trainers/${trainerId}/videos/${Date.now()}_${file.originalname}`;
+            const fileUpload = bucket.file(fileName);
+            await fileUpload.save(file.buffer, {
+                metadata: { contentType: file.mimetype }
+            });
+            const [url] = await fileUpload.getSignedUrl({
+                action: 'read',
+                expires: '03-09-2491'
+            });
+            mediaUploads.push({
+                url,
+                type: 'video',
+                path: fileName,
+                description: mediaDescription || '',
+                link: mediaLink || '',
+                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
 
-                // Fetch updated trainer data
-                const updatedTrainerSnapshot = await db.collection('trainers').doc(trainerId).get();
-                const updatedTrainerData = updatedTrainerSnapshot.data();
+        // Handle ZIP files
+        for (const file of zipFiles) {
+            const fileName = `zipfiles/trainers/${trainerId}/${Date.now()}_${file.originalname}`;
+            const fileUpload = bucket.file(fileName);
+            await fileUpload.save(file.buffer, {
+                metadata: { contentType: file.mimetype }
+            });
+            const [url] = await fileUpload.getSignedUrl({
+                action: 'read',
+                expires: '03-09-2491'
+            });
+            zipUploads.push({
+                trainerId,
+                fileName: file.originalname,
+                url,
+                path: fileName,
+                approved: false, // Initially not approved
+                uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+                description: mediaDescription || '',
+                link: mediaLink || ''
+            });
+        }
 
-                // Fetch assigned schools
-                const schoolsSnapshot1 = await db.collection('schools')
-                    .where('isApproved', '==', true)
-                    .where('trainerId1', '==', trainerId)
-                    .get();
-                const schoolsSnapshot2 = await db.collection('schools')
-                    .where('isApproved', '==', true)
-                    .where('trainerId2', '==', trainerId)
-                    .get();
-                const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
-                    const data = doc.data();
-                    return {
-                        schoolName: data.schoolName || 'N/A',
-                        city: data.city || 'N/A',
-                        district: data.district || data.city || 'N/A',
-                        eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        }) : 'Not assigned',
-                        resourcesConfirmed: data.resourcesConfirmed || false,
-                        selectedResources: data.selectedResources || [],
-                        trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2'
-                    };
-                });
+        // Save media uploads to Firestore
+        if (mediaUploads.length > 0) {
+            const batch = db.batch();
+            mediaUploads.forEach(upload => {
+                const mediaRef = db.collection('trainers').doc(trainerId).collection('mediaUploads').doc();
+                batch.set(mediaRef, upload);
+            });
+            await batch.commit();
+        }
 
-                // Fetch schools in the trainer's district
-                const schoolsInDistrictSnapshot = await db.collection('schools')
-                    .where('district', '==', updatedTrainerData.district || updatedTrainerData.city)
-                    .where('isApproved', '==', true)
-                    .get();
-                const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
-                    const data = doc.data();
-                    return {
-                        id: doc.id,
-                        schoolName: data.schoolName || 'N/A',
-                        schoolEmail: data.schoolEmail || 'N/A',
-                        city: data.city || 'N/A',
-                        district: data.district || 'N/A',
-                        eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                        }) : 'Not assigned',
-                        assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
-                        trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
-                    };
-                });
+        // Save ZIP uploads to Firestore
+        if (zipUploads.length > 0) {
+            const batch = db.batch();
+            zipUploads.forEach(upload => {
+                const zipRef = db.collection('trainerZips').doc();
+                batch.set(zipRef, upload);
+            });
+            await batch.commit();
+        }
 
-                // Fetch media uploads
-                const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
-                const mediaUploadsData = mediaSnapshot.docs.map(doc => ({
-                    ...doc.data(),
-                    uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
-                }));
+        // Fetch updated trainer data
+        const updatedTrainerSnapshot = await db.collection('trainers').doc(trainerId).get();
+        const updatedTrainerData = updatedTrainerSnapshot.data();
 
-                res.render('trainerDashboard', {
-                    trainerName: updatedTrainerData.trainerName || 'Unknown',
-                    email: trainerEmail,
-                    city: updatedTrainerData.city || '',
-                    district: updatedTrainerData.district || updatedTrainerData.city || '',
-                    profession: updatedTrainerData.profession || '',
-                    assignedSchools,
-                    availableDates: updatedTrainerData.availableDates || [],
-                    schoolsInDistrict,
-                    mediaUploads: mediaUploadsData,
-                    error: null,
-                    success: 'Media uploaded successfully',
-                    trainerData: updatedTrainerData
-                });
-            } catch (error) {
-                console.error('Error in trainer-dashboard/upload-media route:', error.message, error.stack);
-                res.status(500).render('trainerDashboard', {
-                    trainerName: 'Unknown',
-                    email: trainerEmail || '',
-                    city: '',
-                    district: '',
-                    profession: '',
-                    assignedSchools: [],
-                    availableDates: [],
-                    schoolsInDistrict: [],
-                    mediaUploads: [],
-                    error: `Error uploading media: ${error.message}`,
-                    success: null,
-                    trainerData: {}
-                });
-            }
-        })
+        // Fetch assigned schools
+        const schoolsSnapshot1 = await db.collection('schools')
+            .where('isApproved', '==', true)
+            .where('trainerId1', '==', trainerId)
+            .get();
+        const schoolsSnapshot2 = await db.collection('schools')
+            .where('isApproved', '==', true)
+            .where('trainerId2', '==', trainerId)
+            .get();
+        const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
+            const data = doc.data();
+            return {
+                schoolName: data.schoolName || 'N/A',
+                city: data.city || 'N/A',
+                district: data.district || data.city || 'N/A',
+                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : 'Not assigned',
+                resourcesConfirmed: data.resourcesConfirmed || false,
+                selectedResources: data.selectedResources || [],
+                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2'
+            };
+        });
+
+        // Fetch schools in the trainer's district
+        const schoolsInDistrictSnapshot = await db.collection('schools')
+            .where('district', '==', updatedTrainerData.district || updatedTrainerData.city)
+            .where('isApproved', '==', true)
+            .get();
+        const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                schoolName: data.schoolName || 'N/A',
+                schoolEmail: data.schoolEmail || 'N/A',
+                city: data.city || 'N/A',
+                district: data.district || 'N/A',
+                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : 'Not assigned',
+                assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
+                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
+            };
+        });
+
+        // Fetch media uploads
+        const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
+        const mediaUploadsData = mediaSnapshot.docs.map(doc => ({
+            ...doc.data(),
+            uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
+        }));
+
+        // Fetch approved ZIP files
+        const zipSnapshot = await db.collection('trainerZips')
+            .where('trainerId', '==', trainerId)
+            .where('approved', '==', true)
+            .get();
+        const approvedZips = zipSnapshot.docs.map(doc => ({
+            ...doc.data(),
+            downloadUrl: `/zipfiles/${doc.data().fileName}`,
+            uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
+        }));
+
+        res.render('trainerDashboard', {
+            trainerName: updatedTrainerData.trainerName || 'Unknown',
+            email: trainerEmail,
+            city: updatedTrainerData.city || '',
+            district: updatedTrainerData.district || updatedTrainerData.city || '',
+            profession: updatedTrainerData.profession || '',
+            assignedSchools,
+            availableDates: updatedTrainerData.availableDates || [],
+            schoolsInDistrict,
+            mediaUploads: mediaUploadsData,
+            approvedZips,
+            error: null,
+            success: 'Media and/or ZIP files uploaded successfully',
+            trainerData: updatedTrainerData
+        });
+    } catch (error) {
+        console.error('Error in trainer-dashboard/upload-media route:', error.message, error.stack);
+        res.status(500).render('trainerDashboard', {
+            trainerName: 'Unknown',
+            email: trainerEmail || '',
+            city: '',
+            district: '',
+            profession: '',
+            assignedSchools: [],
+            availableDates: [],
+            schoolsInDistrict: [],
+            mediaUploads: [],
+            approvedZips: [],
+            error: `Error uploading media: ${error.message}`,
+            success: null,
+            trainerData: {}
+        });
+    }
+});
+app.post('/admin/approve-zip/:zipId', requireAdmin, async (req, res) => {
+    try {
+        const zipId = req.params.zipId;
+        const zipRef = db.collection('trainerZips').doc(zipId);
+        const zipDoc = await zipRef.get();
+
+        if (!zipDoc.exists) {
+            return res.redirect('/admin-dashboard?error=ZIP file not found');
+        }
+
+        await zipRef.update({ approved: true });
+        res.redirect('/admin-dashboard?success=ZIP file approved successfully');
+    } catch (error) {
+        console.error('Error in admin/approve-zip route:', error.message, error.stack);
+        res.redirect('/admin-dashboard?error=Error approving ZIP file');
+    }
+});
     app.get('/trainer-dashboard', async (req, res) => {
         try {
             const trainerEmail = req.query.username;
@@ -3324,10 +3389,15 @@ app.post('/trainer-dashboard/add-dates', async (req, res) => {
                 .where('approved', '==', true)
                 .get();
 
-            const approvedZips = zipSnapshot.docs.map(doc => ({
-                ...doc.data(),
-                uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
-            }));
+                 const approvedZips = zipSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    ...data,
+                    downloadUrl: `/zipfiles/${data.fileName}`, // Path for downloading
+                    uploadedAt: data.uploadedAt ? data.uploadedAt.toDate() : null
+                };
+            });
+
 
             // Render Dashboard with all data
             res.render('trainerDashboard', {

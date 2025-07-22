@@ -18,17 +18,18 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            position: relative;
         }
         .dashboard-container h2 {
             text-align: center;
             color: #333;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
         .event-date {
             text-align: center;
             color: #555;
             font-size: 1.1em;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .event-date.missing {
             color: #e74c3c;
@@ -37,10 +38,10 @@
         .error {
             color: #e74c3c;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         .tab-container {
-            margin-top: 20px;
+            margin-top: 15px;
         }
         .tab-buttons {
             display: flex;
@@ -48,7 +49,7 @@
         }
         .tab-button {
             flex: 1;
-            padding: 12px;
+            padding: 10px;
             text-align: center;
             background-color: #f1f1f1;
             color: #555;
@@ -66,7 +67,7 @@
         }
         .tab-content {
             display: none;
-            padding: 20px;
+            padding: 15px;
             border: 1px solid #ddd;
             border-top: none;
             border-radius: 0 0 4px 4px;
@@ -79,15 +80,15 @@
             overflow-x: auto;
         }
         #studentTable {
-            width: 1200px;
+            width: 100%;
             border-collapse: collapse;
-            margin: 20px 0;
+            margin: 15px 0;
             background-color: #fff;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
         #studentTable th,
         #studentTable td {
-            padding: 12px;
+            padding: 10px;
             border: 1px solid #ddd;
             text-align: left;
         }
@@ -100,46 +101,28 @@
             background-color: #f9f9f9;
         }
         #studentTable th:nth-child(1),
-        #studentTable td:nth-child(1) {
-            width: 180px;
-        }
+        #studentTable td:nth-child(1) { width: 180px; }
         #studentTable th:nth-child(2),
-        #studentTable td:nth-child(2) {
-            width: 90px;
-        }
+        #studentTable td:nth-child(2) { width: 90px; }
         #studentTable th:nth-child(3),
-        #studentTable td:nth-child(3) {
-            width: 140px;
-        }
+        #studentTable td:nth-child(3) { width: 140px; }
         #studentTable th:nth-child(4),
-        #studentTable td:nth-child(4) {
-            width: 140px;
-        }
+        #studentTable td:nth-child(4) { width: 140px; }
         #studentTable th:nth-child(5),
-        #studentTable td:nth-child(5) {
-            width: 140px;
-        }
+        #studentTable td:nth-child(5) { width: 140px; }
         #studentTable th:nth-child(6),
-        #studentTable td:nth-child(6) {
-            width: 140px;
-        }
+        #studentTable td:nth-child(6) { width: 140px; }
         #studentTable th:nth-child(7),
-        #studentTable td:nth-child(7) {
-            width: 140px;
-        }
+        #studentTable td:nth-child(7) { width: 140px; }
         #studentTable th:nth-child(8),
-        #studentTable td:nth-child(8) {
-            width: 140px;
-        }
+        #studentTable td:nth-child(8) { width: 140px; }
         #studentTable th:nth-child(9),
-        #studentTable td:nth-child(9) {
-            width: 100px;
-        }
+        #studentTable td:nth-child(9) { width: 100px; }
         .filter-select {
             padding: 5px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            width: 200px;
+            width: 180px;
             margin-top: 5px;
             background: linear-gradient(135deg, #f5f7fa, #e4e7eb);
             transition: border-color 0.3s, box-shadow 0.3s;
@@ -161,14 +144,9 @@
             background: linear-gradient(135deg, #ffffff, #e0f7fa);
             color: #333;
             font-size: 14px;
-            font-family: 'Arial', sans-serif;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             cursor: pointer;
-            position: relative;
-            appearance: none;
-            -webkit-appearance: none;
-            -moz-appearance: none;
         }
         .timepicker:hover {
             border-color: #4CAF50;
@@ -179,12 +157,6 @@
             border-color: #4CAF50;
             box-shadow: 0 0 10px rgba(76, 175, 80, 0.4);
             outline: none;
-            transform: translateY(-1px);
-        }
-        .timepicker::-webkit-calendar-picker-indicator {
-            filter: invert(48%) sepia(13%) saturate(3207%) hue-rotate(130deg) brightness(95%) contrast(80%);
-            cursor: pointer;
-            padding: 5px;
         }
         .timepicker-container {
             position: relative;
@@ -222,7 +194,6 @@
         .timepicker-save-button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
-            transform: none;
         }
         .approve-button {
             background-color: #4CAF50;
@@ -244,7 +215,7 @@
         .resources-form label,
         .media-form label {
             display: block;
-            margin: 10px 0 5px;
+            margin: 8px 0 4px;
             font-weight: bold;
             color: #333;
         }
@@ -255,7 +226,7 @@
         .media-form textarea {
             width: 100%;
             padding: 8px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
             box-sizing: border-box;
@@ -266,10 +237,9 @@
             background-color: #4CAF50;
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: 8px 16px;
             cursor: pointer;
             border-radius: 4px;
-            width: auto;
         }
         .edit-form input[type="submit"]:hover,
         .resources-form input[type="submit"]:hover,
@@ -277,51 +247,50 @@
             background-color: #45a049;
         }
         .resources-form .resource-item {
-            margin: 10px 0;
+            margin: 8px 0;
             display: flex;
             align-items: center;
         }
         .resources-form input[type="checkbox"] {
-            margin-right: 10px;
+            margin-right: 8px;
         }
         .confirmation-message {
-            margin-top: 20px;
-            padding: 15px;
+            margin-top: 15px;
+            padding: 12px;
             background-color: #e8f5e9;
             border-left: 4px solid #4CAF50;
             color: #333;
         }
         .confirmation-message ul {
-            margin: 10px 0 0 20px;
+            margin: 8px 0 0 16px;
             padding: 0;
         }
         .confirmation-message li {
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
         .trainer-select-container {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin: 20px 0;
-            padding: 10px;
+            gap: 8px;
+            margin: 15px 0;
+            padding: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
         }
         .trainer-select-container > div {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-wrap: wrap;
         }
         .trainer-note {
             color: #e74c3c;
             font-style: italic;
-            margin-top: 5px;
+            margin-top: 4px;
             grid-column: 1 / -1;
         }
         .date-list {
             color: #2ecc71;
-            font-style: normal;
         }
         .no-dates {
             color: #f1c40f;
@@ -333,26 +302,18 @@
             display: none;
         }
         .media-form textarea {
-            height: 150px;
+            height: 120px;
             resize: vertical;
         }
         .media-form input[type="file"] {
-            padding: 5px;
+            padding: 4px;
         }
         .media-preview img,
         .media-preview video {
-            max-width: 150px;
-            margin: 10px;
+            max-width: 120px;
+            margin: 8px;
             border: 1px solid #ddd;
             border-radius: 4px;
-        }
-        @media (max-width: 1200px) {
-            .table-container {
-                max-width: 100%;
-            }
-            .trainer-select-container {
-                grid-template-columns: 1fr;
-            }
         }
         .logout-button {
             background-color: #e74c3c;
@@ -366,21 +327,12 @@
             position: absolute;
             top: 20px;
             right: 20px;
-            display: inline-block;
         }
         .logout-button:hover {
             background-color: #c0392b;
         }
-        @media (max-width: 1200px) {
-            .logout-button {
-                padding: 6px 12px;
-                font-size: 12px;
-                top: 10px;
-                right: 10px;
-            }
-        }
         .approve-btn {
-            background-color: #4CAF50; /* Green for active state */
+            background-color: #4CAF50;
             color: white;
             border: none;
             padding: 5px 10px;
@@ -390,11 +342,97 @@
             transition: background-color 0.3s;
         }
         .approve-btn:hover {
-            background-color: #45a049; /* Slightly darker green on hover */
+            background-color: #45a049;
         }
         .approve-btn:disabled {
-            background-color: #cccccc; /* Grey for disabled state */
+            background-color: #cccccc;
             cursor: not-allowed;
+        }
+        /* Roadmap Styles */
+        .roadmap-container {
+            margin: 15px 0;
+            padding: 15px;
+            background: linear-gradient(135deg, #e8f5e9, #f1f9f4);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+        .roadmap {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: relative;
+            padding: 10px 0;
+            min-width: 800px;
+        }
+        .roadmap::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: #ddd;
+            z-index: 1;
+        }
+        .roadmap-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 12%;
+            text-align: center;
+            position: relative;
+            z-index: 2;
+        }
+        .roadmap-step.completed::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: #4CAF50;
+            z-index: 1;
+        }
+        .roadmap-step .icon {
+            width: 40px;
+            height: 40px;
+            background: #ddd;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: white;
+            margin-bottom: 8px;
+            transition: background 0.3s;
+        }
+        .roadmap-step.completed .icon {
+            background: #4CAF50;
+        }
+        .roadmap-step.active .icon {
+            background: #2196F3;
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+        }
+        .roadmap-step .label {
+            font-size: 12px;
+            color: #333;
+            font-weight: bold;
+        }
+        .roadmap-step.completed .label {
+            color: #4CAF50;
+        }
+        .roadmap-step.active .label {
+            color: #2196F3;
+        }
+        @media (max-width: 1200px) {
+            .dashboard-container { padding: 15px; }
+            .table-container { max-width: 100%; }
+            .trainer-select-container { grid-template-columns: 1fr; }
+            .logout-button { padding: 6px 12px; font-size: 12px; top: 10px; right: 10px; }
+            .roadmap { min-width: 600px; }
+            .roadmap-step { width: 12%; }
+            .roadmap-step .label { font-size: 10px; }
         }
     </style>
 </head>
@@ -412,7 +450,43 @@
             <div class="error"><%= error %></div>
         <% } %>
         <a href="/logout" class="logout-button">Logout</a>
-        <div style="margin-bottom: 15px;"></div>
+        <!-- Roadmap Section -->
+        <div class="roadmap-container">
+            <div class="roadmap">
+                <div class="roadmap-step completed">
+                    <div class="icon">📝</div>
+                    <div class="label">School Register</div>
+                </div>
+                <div class="roadmap-step completed">
+                    <div class="icon">✔️</div>
+                    <div class="label">School Approved</div>
+                </div>
+                <div class="roadmap-step <%= students.length > 0 ? 'completed' : 'active' %>">
+                    <div class="icon">📚</div>
+                    <div class="label">Student MCQ Test</div>
+                </div>
+                <div class="roadmap-step <%= students.some(s => s.isApproved) ? 'completed' : '' %>">
+                    <div class="icon">🎓</div>
+                    <div class="label">Certificate</div>
+                </div>
+                <div class="roadmap-step <%= resourcesConfirmed ? 'completed' : '' %>">
+                    <div class="icon">🌟</div>
+                    <div class="label">Civic Activities</div>
+                </div>
+                <div class="roadmap-step <%= mediaUploads && mediaUploads.length > 0 ? 'completed' : '' %>">
+                    <div class="icon">📸</div>
+                    <div class="label">Photo Upload</div>
+                </div>
+                <div class="roadmap-step">
+                    <div class="icon">⚖️</div>
+                    <div class="label">Judiciary Select</div>
+                </div>
+                <div class="roadmap-step">
+                    <div class="icon">🏆</div>
+                    <div class="label">State Felicitation</div>
+                </div>
+            </div>
+        </div>
         <div class="tab-container">
             <div class="tab-buttons">
                 <button class="tab-button active" onclick="openTab('resources')">Resource Arrangement</button>
@@ -640,9 +714,9 @@
                             <% mediaUploads.forEach(upload => { %>
                                 <div>
                                     <% if (upload.type === 'image') { %>
-                                        <img src="<%= upload.url %>" alt="Uploaded Photo" style="max-width: 150px;">
+                                        <img src="<%= upload.url %>" alt="Uploaded Photo" style="max-width: 120px;">
                                     <% } else { %>
-                                        <video src="<%= upload.url %>" controls style="max-width: 150px;"></video>
+                                        <video src="<%= upload.url %>" controls style="max-width: 120px;"></video>
                                     <% } %>
                                     <p><%= upload.description ? upload.description.substring(0, 100) + '...' : 'No description' %></p>
                                     <% if (upload.link) { %>

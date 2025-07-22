@@ -229,6 +229,11 @@
 
                         <% if (trainerData && trainerData.isApproved) { %>
                             <p style="color: green;">Congratulations! You have completed the workshop.</p>
+                                                          <h2>Training Materials</h2>
+            <p>Access training materials from the following link:</p>
+            <a href="https://drive.google.com/drive/folders/1eLAp8bFnKbsqTa7jEApylckT0X91fivS?usp=sharing" target="_blank">
+                <button>Download Training Materials</button>
+            </a>
 
                             <h2>Add Available Dates</h2>
                             <form action="/trainer-dashboard/add-dates?username=<%= email %>" method="POST">
@@ -346,37 +351,7 @@
                                                         <p>You have not completed the Train the Trainer yet!</p>
                                                         <% } %>
 
-                                                            <h2>My Approved ZIP File</h2>
-
-                                                            <% if (approvedZips && approvedZips.length> 0) { %>
-                                                                <table>
-                                                                    <tr>
-                                                                        <th>File Name</th>
-                                                                        <th>Download Link</th>
-                                                                        <th>Uploaded At</th>
-                                                                    </tr>
-
-                                                                    <% approvedZips.forEach(zip=> { %>
-                                                                        <% if (zip.trainerId===trainerData.id) { %>
-                                                                            <tr>
-                                                                                <td>
-                                                                                    <%= zip.fileName || 'ZIP File' %>
-                                                                                </td>
-                                                                                <td><a href="<%= zip.zipUrl %>"
-                                                                                        target="_blank">Download</a>
-                                                                                </td>
-                                                                                <td>
-                                                                                    <%= zip.uploadedAt ? new
-                                                                                        Date(zip.uploadedAt).toLocaleDateString()
-                                                                                        : 'N/A' %>
-                                                                                </td>
-                                                                            </tr>
-                                                                            <% } %>
-                                                                                <% }) %>
-
-                                                                                    <% } else { %>
-                                                                                        <p>No ZIP file uploaded yet.</p>
-                                                                                        <% } %>
+                              
 
                                                                                             <h2>Schools in Your District
                                                                                                 (<%= district %>)

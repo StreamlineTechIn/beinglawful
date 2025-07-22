@@ -637,33 +637,36 @@ genres-form input[type="time"] {
         </div>
     </div>
     <script>
-     document.addEventListener('DOMContentLoaded', function () {
-    // Initialize the first tab as active
-    openTab('student-data');
-});
-
-function openTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
+    document.addEventListener('DOMContentLoaded', function () {
+        openTab('student-data');
+        populateTrainerSelects(); // ✅ Populate trainers on load
     });
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('active');
-    });
-    document.getElementById(tabId).classList.add('active');
-    document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`).classList.add('active');
-    
-    if (tabId === 'student-data') {
-        initializeFilters('studentTable');
-    }
-    if (tabId === 'resources') {
-        updateTrainerSelection();
-    }
-}
 
-function initializeFilters(tableId) {
+    function openTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(tab => {
+            tab.classList.remove('active');
+        });
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.classList.remove('active');
+        });
+        document.getElementById(tabId).classList.add('active');
+        document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`).classList.add('active');
+
+        if (tabId === 'student-data') {
+            initializeFilters('studentTable');
+        }
+        if (tabId === 'resources') {
+            updateTrainerSelection();
+        }
+    }
+
+ function initializeFilters(tableId) {
     const table = document.getElementById(tableId);
+    if (!table) return;  // ✅ Safe exit if table not found
+
     const headers = table.querySelectorAll('th[data-filter]');
     const rows = table.querySelectorAll('tbody tr');
+
     headers.forEach(header => {
         const column = header.dataset.filter;
         const select = header.querySelector('.filter-select');
@@ -677,6 +680,7 @@ function initializeFilters(tableId) {
                 }
             }
         });
+
         select.innerHTML = '';
         let isAllSet = false;
         [...values].sort().forEach(value => {
@@ -692,127 +696,144 @@ function initializeFilters(tableId) {
     });
 }
 
-function applyFilters(tableId) {
-    const table = document.getElementById(tableId);
-    const rows = table.querySelectorAll('tbody tr');
-    const filters = {};
-    table.querySelectorAll('.filter-select').forEach(select => {
-        filters[select.dataset.column] = select.value.trim();
-    });
-    rows.forEach(row => {
-        let show = true;
-        for (const [column, value] of Object.entries(filters)) {
-            if (value && value !== 'All' && value !== '') {
-                const cell = row.querySelector(`td[data-column="${column}"]`);
-                if (cell) {
-                    let cellText = cell.textContent.trim();
-                    if (cellText !== value) {
-                        show = false;
-                        break;
+    function applyFilters(tableId) {
+        const table = document.getElementById(tableId);
+        const rows = table.querySelectorAll('tbody tr');
+        const filters = {};
+        table.querySelectorAll('.filter-select').forEach(select => {
+            filters[select.dataset.column] = select.value.trim();
+        });
+        rows.forEach(row => {
+            let show = true;
+            for (const [column, value] of Object.entries(filters)) {
+                if (value && value !== 'All' && value !== '') {
+                    const cell = row.querySelector(`td[data-column="${column}"]`);
+                    if (cell) {
+                        let cellText = cell.textContent.trim();
+                        if (cellText !== value) {
+                            show = false;
+                            break;
+                        }
                     }
                 }
             }
-        }
-        row.style.display = show ? '' : 'none';
-    });
-}
-
-function updateTrainerSelection() {
-    const trainer1Select = document.getElementById('trainerId1');
-    const trainer2Select = document.getElementById('trainerId2');
-    const showAllTrainers = document.getElementById('showAllTrainers').checked;
-    const schoolDistrict = '<%= district %>'.trim();
-    const trainer1Value = trainer1Select.value;
-    const trainer2Value = trainer2Select.value;
-    const trainer1DatesDiv = document.getElementById('trainer1-dates');
-    const trainer2DatesDiv = document.getElementById('trainer2-dates');
-    const trainer1DatesList = document.getElementById('trainer1-dates-list');
-    const trainer2DatesList = document.getElementById('trainer2-dates-list');
-    const costNote = document.getElementById('trainer-cost-note');
-    const originalOptions = Array.from(trainer1Select.options).slice(1);
-    const sortedOptions = originalOptions.sort((a, b) => {
-        const districtA = a.getAttribute('data-district');
-        const districtB = b.getAttribute('data-district');
-        if (districtA === schoolDistrict && districtB !== schoolDistrict) return -1;
-        if (districtA !== schoolDistrict && districtB === schoolDistrict) return 1;
-        return districtA.localeCompare(districtB);
-    });
-
-    [trainer1Select, trainer2Select].forEach(select => {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Select a trainer</option>';
-        const filteredOptions = showAllTrainers ? sortedOptions : sortedOptions.filter(option => option.getAttribute('data-district') === schoolDistrict);
-        filteredOptions.forEach(option => {
-            const newOption = option.cloneNode(true);
-            select.appendChild(newOption);
-            if (newOption.value === currentValue) {
-                newOption.selected = true;
-            }
+            row.style.display = show ? '' : 'none';
         });
-    });
-
-    if (trainer1Value && trainer2Value && trainer1Value === trainer2Value) {
-        alert('Please select different trainers for Trainer 1 and Trainer 2.');
-        if (trainer1Select.value === trainer2Value) trainer1Select.value = '';
-        if (trainer2Select.value === trainer1Value) trainer2Select.value = '';
     }
 
-    if (trainer1Select.value) {
-        const selectedOption1 = trainer1Select.options[trainer1Select.selectedIndex];
-        const dates1 = JSON.parse(selectedOption1.getAttribute('data-dates'));
-        trainer1DatesList.textContent = dates1.length > 0 ? dates1.join(', ') : 'No dates available';
-        trainer1DatesList.className = dates1.length > 0 ? 'date-list' : 'no-dates';
-        trainer1DatesDiv.style.display = 'block';
-    } else {
-        trainer1DatesDiv.style.display = 'none';
+    const allTrainers = <%- JSON.stringify(trainers) %>;
+    const schoolDistrict = "<%= district %>".trim();
+
+    function populateTrainerSelects() {
+        updateTrainerSelection();
     }
 
-    if (trainer2Select.value) {
-        const selectedOption2 = trainer2Select.options[trainer2Select.selectedIndex];
-        const dates2 = JSON.parse(selectedOption2.getAttribute('data-dates'));
-        trainer2DatesList.textContent = dates2.length > 0 ? dates2.join(', ') : 'No dates available';
-        trainer2DatesList.className = dates2.length > 0 ? 'date-list' : 'no-dates';
-        trainer2DatesDiv.style.display = 'block';
-    } else {
-        trainer2DatesDiv.style.display = 'none';
+    function updateTrainerSelection() {
+        const trainer1Select = document.getElementById('trainerId1');
+        const trainer2Select = document.getElementById('trainerId2');
+        const showAllTrainers = document.getElementById('showAllTrainers').checked;
+
+        const trainer1Value = trainer1Select.value;
+        const trainer2Value = trainer2Select.value;
+
+        const filteredTrainers = showAllTrainers
+            ? allTrainers
+            : allTrainers.filter(t => t.district === schoolDistrict);
+
+        [trainer1Select, trainer2Select].forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="">Select a trainer</option>';
+            filteredTrainers.forEach(trainer => {
+                const option = document.createElement('option');
+                option.value = trainer.id;
+                option.text = `${trainer.trainerName} (${trainer.district})`;
+                option.setAttribute('data-district', trainer.district);
+                option.setAttribute('data-dates', JSON.stringify(trainer.availableDates || []));
+                select.appendChild(option);
+            });
+            select.value = currentValue;
+        });
+
+        if (trainer1Value && trainer2Value && trainer1Value === trainer2Value) {
+            alert('Please select different trainers for Trainer 1 and Trainer 2.');
+            if (trainer1Select.value === trainer2Value) trainer1Select.value = '';
+            if (trainer2Select.value === trainer1Value) trainer2Select.value = '';
+        }
+
+        updateTrainerDatesDisplay();
+        updateCostNoteDisplay();
     }
 
-    const trainer1District = trainer1Select.value ? trainer1Select.options[trainer1Select.selectedIndex].getAttribute('data-district') : '';
-    const trainer2District = trainer2Select.value ? trainer2Select.options[trainer2Select.selectedIndex].getAttribute('data-district') : '';
-    if ((trainer1District && trainer1District !== schoolDistrict) || (trainer2District && trainer2District !== schoolDistrict)) {
-        costNote.style.display = 'block';
-    } else {
-        costNote.style.display = 'none';
+    function updateTrainerDatesDisplay() {
+        const trainer1Select = document.getElementById('trainerId1');
+        const trainer2Select = document.getElementById('trainerId2');
+        const trainer1DatesDiv = document.getElementById('trainer1-dates');
+        const trainer2DatesDiv = document.getElementById('trainer2-dates');
+        const trainer1DatesList = document.getElementById('trainer1-dates-list');
+        const trainer2DatesList = document.getElementById('trainer2-dates-list');
+
+        if (trainer1Select.value) {
+            const selectedOption1 = trainer1Select.options[trainer1Select.selectedIndex];
+            const dates1 = JSON.parse(selectedOption1.getAttribute('data-dates'));
+            trainer1DatesList.textContent = dates1.length > 0 ? dates1.join(', ') : 'No dates available';
+            trainer1DatesDiv.style.display = 'block';
+        } else {
+            trainer1DatesDiv.style.display = 'none';
+        }
+
+        if (trainer2Select.value) {
+            const selectedOption2 = trainer2Select.options[trainer2Select.selectedIndex];
+            const dates2 = JSON.parse(selectedOption2.getAttribute('data-dates'));
+            trainer2DatesList.textContent = dates2.length > 0 ? dates2.join(', ') : 'No dates available';
+            trainer2DatesDiv.style.display = 'block';
+        } else {
+            trainer2DatesDiv.style.display = 'none';
+        }
     }
-}
 
-function enableSaveButton() {
-    const startTimeInput = document.getElementById('workshopStartTime');
-    const saveButton = document.getElementById('timepickerSaveButton');
-    saveButton.disabled = !startTimeInput.value;
-}
+    function updateCostNoteDisplay() {
+        const trainer1Select = document.getElementById('trainerId1');
+        const trainer2Select = document.getElementById('trainerId2');
+        const costNote = document.getElementById('trainer-cost-note');
 
-function updateEndTime() {
-    const startTimeInput = document.getElementById('workshopStartTime');
-    const endTimeInput = document.getElementById('workshopEndTime');
-    const endTimeDisplay = document.getElementById('workshopEndTimeDisplay');
-    const durationMessage = document.getElementById('durationMessage');
-    if (startTimeInput.value) {
-        const startTime = new Date(`1970-01-01T${startTimeInput.value}:00`);
-        startTime.setHours(startTime.getHours() + 4);
-        const hours = String(startTime.getHours()).padStart(2, '0');
-        const minutes = String(startTime.getMinutes()).padStart(2, '0');
-        const endTime = `${hours}:${minutes}`;
-        endTimeInput.value = endTime;
-        endTimeDisplay.textContent = endTime;
-        durationMessage.style.display = 'block';
-    } else {
-        endTimeInput.value = '';
-        endTimeDisplay.textContent = '';
-        durationMessage.style.display = 'none';
+        const trainer1District = trainer1Select.selectedOptions[0]?.getAttribute('data-district') || '';
+        const trainer2District = trainer2Select.selectedOptions[0]?.getAttribute('data-district') || '';
+
+        if ((trainer1District && trainer1District !== schoolDistrict) || (trainer2District && trainer2District !== schoolDistrict)) {
+            costNote.style.display = 'block';
+        } else {
+            costNote.style.display = 'none';
+        }
     }
-}
 
-    </script>
+    function enableSaveButton() {
+        const startTimeInput = document.getElementById('workshopStartTime');
+        const saveButton = document.getElementById('timepickerSaveButton');
+        saveButton.disabled = !startTimeInput.value;
+    }
+
+    function updateEndTime() {
+        const startTimeInput = document.getElementById('workshopStartTime');
+        const endTimeInput = document.getElementById('workshopEndTime');
+        const endTimeDisplay = document.getElementById('workshopEndTimeDisplay');
+        const durationMessage = document.getElementById('durationMessage');
+
+        if (startTimeInput.value) {
+            const startTime = new Date(`1970-01-01T${startTimeInput.value}:00`);
+            startTime.setHours(startTime.getHours() + 4);
+            const hours = String(startTime.getHours()).padStart(2, '0');
+            const minutes = String(startTime.getMinutes()).padStart(2, '0');
+            const endTime = `${hours}:${minutes}`;
+            endTimeInput.value = endTime;
+            endTimeDisplay.textContent = endTime;
+            durationMessage.style.display = 'block';
+        } else {
+            endTimeInput.value = '';
+            endTimeDisplay.textContent = '';
+            durationMessage.style.display = 'none';
+        }
+    }
+</script>
+
 </body>
 </html>

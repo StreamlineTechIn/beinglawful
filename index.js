@@ -511,69 +511,81 @@ function requireStudentAuth(req, res, next) {
 
     // Student login (renders login.ejs or dashboard.ejs)
       app.post('/student-login', async (req, res) => {
-        const { username, password } = req.body;
-        try {
-            if (!username || !password) {
-                return res.render('login', { error: 'Username and password are required.' });
-            }
-
-            console.log(`Student login attempt for username: ${username}`);
-            const { user, userId } = await getUserByParentMobile(username);
-
-            if (!user.birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(user.birthdate)) {
-                console.error(`Invalid birthdate format for user ${username}: ${user.birthdate}`);
-                return res.render('login', { error: 'Invalid user data. Contact administrator.' });
-            }
-
-            const [year, month, day] = user.birthdate.split('-');
-            const expectedPassword = `${day}${month}${year}`;
-            if (password !== expectedPassword) {
-                console.log(`Invalid password for username: ${username}. Expected: ${expectedPassword}, Got: ${password}`);
-                return res.render('login', { error: 'Invalid username or password.' });
-            }
-
-            req.session.parentMobile1 = username;
-
-            let mcqs = [];
-            const hasCompletedMCQ = user.hasCompletedMCQ || false;
-            if (!hasCompletedMCQ) {
-                await db.runTransaction(async (transaction) => {
-                    const userRef = db.collection('participants').doc(userId);
-                    const userDoc = await transaction.get(userRef);
-                    const userData = userDoc.data();
-                    mcqs = userData.currentMcqs || [];
-                    if (mcqs.length === 0) {
-                        mcqs = await getRandomQuestions(30);
-                        transaction.update(userRef, { currentMcqs: mcqs });
-                    }
-                });
-            }
-
-            const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(user.schoolNameDropdown || '');
-
-            res.render('dashboard', {
-                studentName: user.studentName || 'Unknown Student',
-                parentMobile1: username,
-                hasCompletedMCQ: hasCompletedMCQ,
-                hasCompletedTrial1: user.hasCompletedTrial1 || false,
-                hasCompletedTrial2: user.hasCompletedTrial2 || false,
-                mcqs: mcqs,
-                trial1: trialTests.trial1,
-                trial2: trialTests.trial2,
-                isEventDate: isEventDate,
-                isOnOrAfterEventDate: isOnOrAfterEventDate,
-                eventDateMissing: eventDateMissing,
-                eventDate: eventDate,
-                showResults: hasCompletedMCQ,
-                score: user.score || 0,
-                totalQuestions: user.totalQuestions || 30,
-                percentage: user.percentage || 0
-            });
-        } catch (error) {
-            console.error('Error during student login:', error.message, error.stack);
-            res.render('login', { error: 'Login failed. Please try again later.' });
+    const { username, password } = req.body;
+    try {
+        if (!username || !password) {
+            return res.render('login', { error: 'Username and password are required.' });
         }
-    });
+
+        console.log(`Student login attempt for username: ${username}`);
+        const { user, userId } = await getUserByParentMobile(username);
+
+        if (!user) {
+            return res.render('login', { error: 'Student not found.' });
+        }
+
+        // ✅ Approval Check
+        if (!user.isApproved) {
+            return res.render('login', { error: 'Approval pending. Please contact your school.' });
+        }
+
+        // ✅ Birthdate-based password check
+        if (!user.birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(user.birthdate)) {
+            console.error(`Invalid birthdate format for user ${username}: ${user.birthdate}`);
+            return res.render('login', { error: 'Invalid user data. Contact administrator.' });
+        }
+
+        const [year, month, day] = user.birthdate.split('-');
+        const expectedPassword = `${day}${month}${year}`;
+        if (password !== expectedPassword) {
+            console.log(`Invalid password for username: ${username}. Expected: ${expectedPassword}, Got: ${password}`);
+            return res.render('login', { error: 'Invalid username or password.' });
+        }
+
+        req.session.parentMobile1 = username;
+
+        let mcqs = [];
+        const hasCompletedMCQ = user.hasCompletedMCQ || false;
+        if (!hasCompletedMCQ) {
+            await db.runTransaction(async (transaction) => {
+                const userRef = db.collection('participants').doc(userId);
+                const userDoc = await transaction.get(userRef);
+                const userData = userDoc.data();
+                mcqs = userData.currentMcqs || [];
+                if (mcqs.length === 0) {
+                    mcqs = await getRandomQuestions(30);
+                    transaction.update(userRef, { currentMcqs: mcqs });
+                }
+            });
+        }
+
+        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(user.schoolNameDropdown || '');
+
+        res.render('dashboard', {
+            studentName: user.studentName || 'Unknown Student',
+            parentMobile1: username,
+            hasCompletedMCQ: hasCompletedMCQ,
+            hasCompletedTrial1: user.hasCompletedTrial1 || false,
+            hasCompletedTrial2: user.hasCompletedTrial2 || false,
+            mcqs: mcqs,
+            trial1: trialTests.trial1,
+            trial2: trialTests.trial2,
+            isEventDate: isEventDate,
+            isOnOrAfterEventDate: isOnOrAfterEventDate,
+            eventDateMissing: eventDateMissing,
+            eventDate: eventDate,
+            showResults: hasCompletedMCQ,
+            score: user.score || 0,
+            totalQuestions: user.totalQuestions || 30,
+            percentage: user.percentage || 0
+        });
+
+    } catch (error) {
+        console.error('Error during student login:', error.message, error.stack);
+        res.render('login', { error: 'Login failed. Please try again later.' });
+    }
+});
+
 
     // Dashboard (renders dashboard.ejs)
 app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
@@ -1297,20 +1309,22 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
                 .where('schoolNameDropdown', '==', schoolName)
                 .get();
 
-            const students = studentsSnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    studentName: data.studentName || 'N/A',
-                    studentClass: data.studentClass || 'N/A',
-                    hasCompletedMCQ: data.hasCompletedMCQ || false,
-                    trial1Percentage: data.trial1Percentage || 'N/A',
-                    trial2Percentage: data.trial2Percentage || 'N/A',
-                    score: data.score || 0,
-                    totalQuestions: data.totalQuestions || 0,
-                    percentage: data.percentage || 0,
-                    completedAt: data.completedAt ? data.completedAt.toDate().toLocaleDateString() : 'N/A'
-                };
-            });
+          const students = studentsSnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+        id: doc.id,   // ✅ This is required for approve-student route
+        studentName: data.studentName || 'N/A',
+        studentClass: data.studentClass || 'N/A',
+        hasCompletedMCQ: data.hasCompletedMCQ || false,
+        trial1Percentage: data.trial1Percentage || 'N/A',
+        trial2Percentage: data.trial2Percentage || 'N/A',
+        score: data.score || 0,
+        totalQuestions: data.totalQuestions || 0,
+        percentage: data.percentage || 0,
+        completedAt: data.completedAt ? data.completedAt.toDate().toLocaleDateString() : 'N/A',
+        isApproved: data.isApproved || false   // ✅ You need this also for button disable logic
+    };
+});
 
             // Fetch trainers with transformed availableDates
             const trainersSnapshot = await db.collection('trainers').get();
@@ -1936,27 +1950,25 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
         }
     });
 
-    app.post('/school-dashboard/approve-student', async (req, res) => {
+app.post('/school-dashboard/approve-student/:id', async (req, res) => {
     try {
-        const { studentId } = req.body;
+        const studentId = req.params.id;
+        const schoolEmail = req.query.username;
+        if (!studentId || !schoolEmail) return res.status(400).send('Missing required fields');
+
         await db.collection('participants').doc(studentId).update({ isApproved: true });
-        res.redirect('back');
+
+        res.redirect(`/school-dashboard?username=${encodeURIComponent(schoolEmail)}`);
     } catch (err) {
         console.error('Error approving student:', err);
-        res.redirect('back');
+        res.status(500).send('Error approving student.');
     }
 });
 
-app.post('/school-dashboard/delete-student', async (req, res) => {
-    try {
-        const { studentId } = req.body;
-        await db.collection('participants').doc(studentId).delete();
-        res.redirect('back');
-    } catch (err) {
-        console.error('Error deleting student:', err);
-        res.redirect('back');
-    }
-});
+
+
+
+
 
 
     // Participation form (renders participation.ejs)
@@ -3514,6 +3526,46 @@ async function renderFormWithErrors(res, errors) {
     res.redirect('/login');
     });
     });
+
+
+    // Dashboard route
+app.get("/logistic-dashboard", async (req, res) => {
+  const snapshot = await db.collection("schools").where("isApproved", "==", true).get();
+  const schools = [];
+
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    schools.push({
+      id: doc.id,
+      name: data.schoolName,
+  civicsSirNumber: data.civicsTeacherNumber,
+    schoolPhoneNumber: data.schoolPhoneNumber,
+    principalNumber: data.principalNumber,            
+      city: data.city,
+      district: data.district,
+      eventDate: data.eventDates?.[0],
+      status: data.isCompleted ? "delivered" : "pending",
+    });
+  });
+
+  res.render("logistic-dashboard", { schools });
+});
+
+// New POST route to update status
+app.post("/update-status", async (req, res) => {
+  const { id, status } = req.body;
+
+  try {
+    await db.collection("schools").doc(id).update({
+      status: status,
+      isCompleted: status === "delivered"
+    });
+    res.redirect("/logistic-dashboard");
+  } catch (error) {
+    console.error("Status update failed:", error);
+    res.status(500).send("Error updating status");
+  }
+});
 
     // Start the server
     const PORT = process.env.PORT || 3000;

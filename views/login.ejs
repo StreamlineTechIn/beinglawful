@@ -142,19 +142,24 @@
     </div>
 
     <!-- Student Login -->
-    <div class="tab-content active" id="student">
-      <form action="/student-login" method="POST">
-        <div class="form-group">
-          <label for="student-username">Username (Parent Mobile Number):</label>
-          <input type="text" id="student-username" name="username" required>
-        </div>
-        <div class="form-group">
-          <label for="student-password">Password (Birthdate - DDMMYYYY):</label>
-          <input type="password" id="student-password" name="password" required>
-        </div>
-        <button type="submit">Login as Student</button>
-      </form>
+   <div class="tab-content active" id="student">
+  <form action="/student-login" method="POST">
+    <div class="form-group">
+      <label for="student-username">Username (Parent Mobile Number):</label>
+      <input type="text" id="student-username" name="username" required>
     </div>
+    <div class="form-group">
+      <label for="student-password">Password (Birthdate - DDMMYYYY):</label>
+      <input type="password" id="student-password" name="password" required>
+    </div>
+    <button type="submit">Login as Student</button>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <p style="color: red;"><%= error %></p>
+    <% } %>
+  </form>
+</div>
+
 
     <!-- School Login -->
     <div class="tab-content" id="school">

@@ -379,6 +379,23 @@
                 right: 10px;
             }
         }
+        .approve-btn {
+            background-color: #4CAF50; /* Green for active state */
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        .approve-btn:hover {
+            background-color: #45a049; /* Slightly darker green on hover */
+        }
+        .approve-btn:disabled {
+            background-color: #cccccc; /* Grey for disabled state */
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -395,6 +412,7 @@
             <div class="error"><%= error %></div>
         <% } %>
         <a href="/logout" class="logout-button">Logout</a>
+        <div style="margin-bottom: 15px;"></div>
         <div class="tab-container">
             <div class="tab-buttons">
                 <button class="tab-button active" onclick="openTab('resources')">Resource Arrangement</button>
@@ -412,9 +430,9 @@
                                 <li><%= resource %></li>
                             <% }) %>
                         </ul>
-                       <% if (typeof workshopStartTime !== 'undefined' && typeof workshopEndTime !== 'undefined' && workshopStartTime && workshopEndTime) { %>
-    <p>Workshop Schedule: <%= workshopStartTime %> to <%= workshopEndTime %> (4-hour duration)</p>
-<% } %>
+                        <% if (typeof workshopStartTime !== 'undefined' && typeof workshopEndTime !== 'undefined' && workshopStartTime && workshopEndTime) { %>
+                            <p>Workshop Schedule: <%= workshopStartTime %> to <%= workshopEndTime %> (4-hour duration)</p>
+                        <% } %>
                         <% if (selectedTrainers && selectedTrainers.length > 0) { %>
                             <% selectedTrainers.forEach((trainer, index) => { %>
                                 <p>Selected Trainer <%= index + 1 %>: <%= trainer.trainerName %> (<%= trainer.district %>)</p>
@@ -490,9 +508,6 @@
                                                 <%= trainer.trainerName %> (<%= trainer.district %>)
                                             </option>
                                         <% }) %>
-genres-form input[type="time"] {
-                                            width: 160px;
-                                        }
                                     </select>
                                 </div>
                                 <div>
@@ -551,8 +566,15 @@ genres-form input[type="time"] {
                                         <td data-column="score"><%= student.score !== undefined && student.totalQuestions !== undefined ? `${student.score} / ${student.totalQuestions}` : 'N/A' %></td>
                                         <td data-column="percentage"><%= student.percentage !== undefined ? `${student.percentage}%` : 'N/A' %></td>
                                         <td data-column="completedAt"><%= student.completedAt || 'N/A' %></td>
-                               
-
+                                        <td>
+                                            <form action="/school-dashboard/approve-student/<%= student.id %>?username=<%= schoolEmail %>" method="POST" style="display:inline;">
+                                                <% if (!student.isApproved) { %>
+                                                    <button type="submit" class="approve-btn">Approve</button>
+                                                <% } else { %>
+                                                    <button type="button" class="approve-btn" disabled>Approved</button>
+                                                <% } %>
+                                            </form>
+                                        </td>
                                     </tr>
                                 <% }) %>
                             </tbody>
@@ -639,7 +661,7 @@ genres-form input[type="time"] {
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         openTab('student-data');
-        populateTrainerSelects(); // ✅ Populate trainers on load
+        populateTrainerSelects();
     });
 
     function openTab(tabId) {
@@ -660,41 +682,41 @@ genres-form input[type="time"] {
         }
     }
 
- function initializeFilters(tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) return;  // ✅ Safe exit if table not found
+    function initializeFilters(tableId) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
 
-    const headers = table.querySelectorAll('th[data-filter]');
-    const rows = table.querySelectorAll('tbody tr');
+        const headers = table.querySelectorAll('th[data-filter]');
+        const rows = table.querySelectorAll('tbody tr');
 
-    headers.forEach(header => {
-        const column = header.dataset.filter;
-        const select = header.querySelector('.filter-select');
-        const values = new Set(['All']);
-        rows.forEach(row => {
-            const cell = row.querySelector(`td[data-column="${column}"]`);
-            if (cell) {
-                let cellText = cell.textContent.trim();
-                if (cellText && !values.has(cellText)) {
-                    values.add(cellText);
+        headers.forEach(header => {
+            const column = header.dataset.filter;
+            const select = header.querySelector('.filter-select');
+            const values = new Set(['All']);
+            rows.forEach(row => {
+                const cell = row.querySelector(`td[data-column="${column}"]`);
+                if (cell) {
+                    let cellText = cell.textContent.trim();
+                    if (cellText && !values.has(cellText)) {
+                        values.add(cellText);
+                    }
                 }
-            }
-        });
+            });
 
-        select.innerHTML = '';
-        let isAllSet = false;
-        [...values].sort().forEach(value => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            if (value === 'All' && !isAllSet) {
-                option.selected = true;
-                isAllSet = true;
-            }
-            select.appendChild(option);
+            select.innerHTML = '';
+            let isAllSet = false;
+            [...values].sort().forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                if (value === 'All' && !isAllSet) {
+                    option.selected = true;
+                    isAllSet = true;
+                }
+                select.appendChild(option);
+            });
         });
-    });
-}
+    }
 
     function applyFilters(tableId) {
         const table = document.getElementById(tableId);
@@ -833,7 +855,6 @@ genres-form input[type="time"] {
             durationMessage.style.display = 'none';
         }
     }
-</script>
-
+    </script>
 </body>
 </html>

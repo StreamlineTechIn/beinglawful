@@ -85,7 +85,15 @@
                         <td><%= student.address %></td>
                         <td><%= student.city %></td>
                         <td><%= student.pincode %></td>
-              
+               <td>
+                <form action="/school-dashboard/approve-student/<%= student.id %>?username=<%= schoolEmail %>" method="POST">
+                    <% if (!student.isApproved) { %>
+                        <button type="submit" class="approve-btn">Approve</button>
+                    <% } else { %>
+                        <span class="approved-text">Approved</span>
+                    <% } %>
+                </form>
+            </td>
                     </tr>
                 <% }) %>
             </tbody>

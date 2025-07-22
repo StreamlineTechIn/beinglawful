@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Logistic Admin Panel</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f8f9fa;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+    }
+
+    .sidebar {
+      width: 250px;
+      background-color: #343a40;
+      color: white;
+      padding: 20px 0;
+      position: fixed;
+      height: 100%;
+    }
+
+    .sidebar h2 {
+      padding: 10px 20px;
+      font-size: 1.5rem;
+      border-bottom: 1px solid #495057;
+    }
+
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .sidebar ul li {
+      padding: 12px 20px;
+    }
+
+    .sidebar ul li a {
+      color: #f8f9fa;
+      text-decoration: none;
+      display: block;
+      font-weight: 500;
+    }
+
+    .sidebar ul li a:hover {
+      background-color: #495057;
+      border-radius: 4px;
+    }
+
+    .content {
+      margin-left: 270px;
+      padding: 20px;
+      width: calc(100% - 270px);
+    }
+
+    .status-pending {
+      color: #fd7e14; /* Orange */
+      font-weight: 600;
+    }
+
+    .status-pack {
+      color: #007bff; /* Bootstrap Blue */
+      font-weight: 600;
+    }
+
+    .status-delivered {
+      color: #28a745; /* Bootstrap Green */
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      background-color: #0069d9;
+      border: none;
+    }
+
+    .btn-primary:hover {
+      background-color: #0056b3;
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+      }
+
+      .content {
+        margin-left: 0;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>Logistic Portal</h2>
+  <ul>
+    <li><a href="/logistic-dashboard">Dashboard</a></li>
+    <li><a href="/logout">Logout</a></li>
+  </ul>
+</div>
+
+<div class="content">
+  <h3 class="mb-4">Approved Schools</h3>
+
+  <table class="table table-bordered table-striped">
+  <thead class="thead-dark">
+    <tr>
+      <th>School Name</th>
+      <th>Civics Sir Number</th>
+      <th>School Phone Number</th>
+      <th>Principal Number</th>
+      <th>City</th>
+      <th>District</th>
+      <th>Event Date</th>
+      <th>Status</th>
+      <th>Change Status</th>
+    </tr>
+  </thead>
+  <tbody>
+    <% if (schools.length === 0) { %>
+      <tr><td colspan="9">No schools found.</td></tr>
+    <% } else { %>
+      <% schools.forEach(school => { %>
+        <tr>
+          <td><%= school.name %></td>
+          <td><%= school.civicsSirNumber %></td>
+          <td><%= school.schoolPhoneNumber %></td>
+          <td><%= school.principalNumber %></td>
+          <td><%= school.city %></td>
+          <td><%= school.district %></td>
+          <td><%= school.eventDate %></td>
+          <td class="status-cell" data-id="<%= school.id %>">
+            <% if (school.status === 'delivered') { %>
+              <span class="status-delivered">Delivered</span>
+            <% } else if (school.status === 'pack') { %>
+              <span class="status-pack">Pack</span>
+            <% } else { %>
+              <span class="status-pending">Pending</span>
+            <% } %>
+          </td>
+          <td>
+            <form method="POST" action="/update-status" class="form-inline update-status-form" data-id="<%= school.id %>">
+              <input type="hidden" name="id" value="<%= school.id %>">
+              <select name="status" class="form-control mr-2">
+                <option value="pending" <%= school.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                <option value="pack" <%= school.status === 'pack' ? 'selected' : '' %>>Pack</option>
+                <option value="delivered" <%= school.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+              </select>
+              <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+            </form>
+          </td>
+        </tr>
+      <% }); %>
+    <% } %>
+  </tbody>
+</table>
+</div>
+
+<script>
+  document.querySelectorAll('.update-status-form').forEach(form => {
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const id = this.getAttribute('data-id');
+      const status = this.querySelector('select[name="status"]').value;
+
+      try {
+        const response = await fetch('/update-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams({ id, status })
+        });
+
+        if (response.ok) {
+          const statusCell = document.querySelector(`.status-cell[data-id="${id}"]`);
+          let statusHTML = '';
+
+          if (status === 'delivered') {
+            statusHTML = '<span class="status-delivered">Delivered</span>';
+          } else if (status === 'pack') {
+            statusHTML = '<span class="status-pack">Pack</span>';
+          } else {
+            statusHTML = '<span class="status-pending">Pending</span>';
+          }
+
+          statusCell.innerHTML = statusHTML;
+        } else {
+          alert('Failed to update status.');
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        alert('Error updating status.');
+      }
+    });
+  });
+</script>
+
+</body>
+</html>

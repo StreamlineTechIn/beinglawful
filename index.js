@@ -580,7 +580,8 @@ function requireStudentAuth(req, res, next) {
             showResults: hasCompletedMCQ,
             score: user.score || 0,
             totalQuestions: user.totalQuestions || 30,
-            percentage: user.percentage || 0
+            percentage: user.percentage || 0,
+             championMessage: user.championMessage || null
         });
 
     } catch (error) {
@@ -1971,41 +1972,29 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         res.status(500).send('Error approving student.');
     }
 });
-
 app.post('/school-dashboard/mark-champ/:id', async (req, res) => {
-    const studentId = req.params.id;
-    const { username } = req.query;
+  const studentId = req.params.id;
+  const { username } = req.query;
 
-    try {
-        // 1. Get all students for this school who are already marked as champion
-        const champSnapshot = await db.collection('participants')
-            .where('schoolEmail', '==', username)
-            .where('isChampion', '==', true)
-            .get();
+  // Count total champions first (to limit to 50)
+  const championsSnapshot = await db.collection('participants')
+    .where('isChampion', '==', true)
+    .get();
 
-        if (champSnapshot.size >= 55) {
-            // 2. Limit reached — don't update, send message via query param
-            return res.redirect(`/school-dashboard?username=${username}&champLimit=true`);
-        }
+  if (championsSnapshot.size >= 50) {
+    return res.send('❌ Only 50 students can be marked as Champion.');
+  }
 
-        // 3. Mark student as champion and add message
-        await db.collection('participants').doc(studentId).update({
-            isChampion: true,
-            championMessage: '🎉 Congratulations! You have been selected as a Being Lawful Champ!',
-            updatedAt: new Date() // Optional: track when the update occurred
-        });
-
-        res.redirect(`/school-dashboard?username=${username}&champSuccess=true`);
-    } catch (err) {
-        console.error('Error marking champ:', err);
-        res.redirect(`/school-dashboard?username=${username}&champError=true`);
-    }
+  await db.collection('participants').doc(studentId).update({
+    isChampion: true,
+    championMessage: '🎉 Congratulations! You have been selected as a Being Lawful Champ!'
+  });
+  console.log(participant.championMessage)
+  res.redirect(`/school-dashboard?username=${username}`);
 });
 
 
-
-
-    // Participation form (renders participation.ejs)
+// Participation form (renders participation.ejs)
     app.get('/participation', async (req, res) => {
         try {
             const type = req.query.type || 'Student';
@@ -2520,6 +2509,32 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
         });
     }
 });
+
+app.post('/admin-dashboard/delete-trainer/:id', requireAdmin, async (req, res) => {
+    const trainerId = req.params.id;
+
+    try {
+        await db.collection('trainers').doc(trainerId).delete();
+        res.redirect('/admin-dashboard?success=Trainer deleted successfully');
+    } catch (err) {
+        console.error('❌ Error deleting trainer:', err.message);
+        res.redirect('/admin-dashboard?error=Failed to delete trainer');
+    }
+});
+
+
+// Delete a participant by ID
+app.post('/admin-dashboard/delete-student/:id', requireAdmin, async (req, res) => {
+    const participantId = req.params.id;
+
+    try {
+        await db.collection('participants').doc(participantId).delete();
+        res.redirect('/admin-dashboard?success=Student deleted successfully');
+    } catch (err) {
+        console.error('❌ Error deleting student:', err.message);
+        res.redirect('/admin-dashboard?error=Failed to delete student');
+    }
+});
 // ✅ POST mark media as seen (One-way, not toggle)
 app.post('/admin-dashboard/mark-media-seen/:mediaId', async (req, res) => {
     try {
@@ -2585,7 +2600,6 @@ app.post('/admin-dashboard/toggle-media-seen/:mediaId', async (req, res) => {
         res.status(500).json({ error: 'Server error' });
     }
 });
-
 
     // Approve trainer (general approval, not tied to a specific school)
     app.post('/admin/approve-trainer', requireAdmin, async (req, res) => {
@@ -3512,8 +3526,6 @@ app.post('/trainer-login', async (req, res) => {
     }
 });
    
-
-
 app.post('/trainer-participate', [
     body('trainerName').trim().notEmpty().withMessage('Trainer name is required'),
     body('email').trim().isEmail().withMessage('Invalid email address'),
@@ -3631,7 +3643,26 @@ async function renderFormWithErrors(res, errors) {
 
 
     // Dashboard route
+app.get("/logistic-dashboard", async (req, res) => {
+  const snapshot = await db.collection("schools").where("isApproved", "==", true).get();
+  const schools = [];
 
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    schools.push({
+      id: doc.id,
+      name: data.schoolName,
+  civicsSirNumber: data.civicsTeacherNumber,
+         
+      city: data.city,
+      district: data.district,
+     eventDate: data.eventDate?.toDate().toLocaleDateString("en-IN"),
+      status: data.isCompleted ? "delivered" : "pending",
+    });
+  });
+
+  res.render("logistic-dashboard", { schools });
+});
 app.get("/logistic-dashboard", async (req, res) => {
   const snapshot = await db
     .collection("schools")

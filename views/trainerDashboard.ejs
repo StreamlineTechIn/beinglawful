@@ -2,411 +2,386 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trainer Dashboard - Being Lawful</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f4f4f4;
-            display: flex;
-            height: 100vh;
-            overflow: hidden;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Trainer Dashboard - Being Lawful</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
 
-        .sidebar {
-            width: 250px;
-            background: linear-gradient(180deg, #1e7e34, #145a32);
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            padding-top: 20px;
-            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
-        }
+    .sidebar {
+      width: 250px;
+      background: linear-gradient(180deg, #1e7e34, #145a32);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      padding-top: 20px;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+    }
 
-        .sidebar h2 {
-            padding: 10px 20px;
-            margin: 0;
-            font-size: 1.5em;
-        }
+    .sidebar h2 {
+      padding: 10px 20px;
+      margin: 0;
+      font-size: 1.5em;
+    }
 
-        .sidebar ul {
-            list-style: none;
-            padding: 0;
-            margin-top: 20px;
-        }
+    .sidebar ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 20px;
+    }
 
-        .sidebar ul li {
-            padding: 12px 20px;
-        }
+    .sidebar ul li {
+      padding: 12px 20px;
+    }
 
-        .sidebar ul li a {
-            color: #ecf0f1;
-            text-decoration: none;
-            font-size: 1.1em;
-            display: block;
-            transition: 0.3s;
-        }
+    .sidebar ul li a {
+      color: #ecf0f1;
+      text-decoration: none;
+      font-size: 1.1em;
+      display: block;
+      transition: 0.3s;
+    }
 
-        .sidebar ul li a:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 4px;
-        }
+    .sidebar ul li a:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+    }
 
-        .content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
-            background: #fff;
-        }
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: #fff;
+    }
 
-        h1 {
-            color: #333;
-            margin-top: 0;
-            font-size: 2em;
-        }
+    h1 {
+      color: #333;
+      margin-top: 0;
+      font-size: 2em;
+    }
 
-        button {
-            padding: 10px 20px;
-            background-color: #1565c0;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: 0.3s;
-        }
+    button {
+      padding: 10px 20px;
+      background-color: #1565c0;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+      transition: 0.3s;
+    }
 
-        button:hover {
-            background-color: #0d47a1;
-        }
+    button:hover {
+      background-color: #0d47a1;
+    }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            background-color: #fff;
-            margin-top: 20px;
-        }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background-color: #fff;
+      margin-top: 20px;
+    }
 
-        th,
-        td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid #ddd;
-        }
+    th,
+    td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
 
-        th {
-            background-color: #2c3e50;
-            color: white;
-            font-size: 1.1em;
-        }
+    th {
+      background-color: #2c3e50;
+      color: white;
+      font-size: 1.1em;
+    }
 
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
+    tr:nth-child(even) {
+      background-color: #f8f9fa;
+    }
 
-        tr:hover {
-            background-color: #e9ecef;
-        }
+    tr:hover {
+      background-color: #e9ecef;
+    }
 
-        .delete-btn {
-            background-color: #dc3545;
-            padding: 5px 10px;
-            border: none;
-            border-radius: 4px;
-            color: white;
-            cursor: pointer;
-        }
+    .delete-btn {
+      background-color: #dc3545;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 4px;
+      color: white;
+      cursor: pointer;
+    }
 
-        .delete-btn:hover {
-            background-color: #c82333;
-        }
+    .delete-btn:hover {
+      background-color: #c82333;
+    }
 
-        .media-preview img,
-        .media-preview video {
-            max-width: 200px;
-            max-height: 200px;
-            margin: 10px;
-            border-radius: 4px;
-        }
+    .media-preview img,
+    .media-preview video {
+      max-width: 200px;
+      max-height: 200px;
+      margin: 10px;
+      border-radius: 4px;
+    }
 
-        input[type="date"],
-        input[type="text"],
-        input[type="file"],
-        textarea {
-            padding: 8px;
-            width: 250px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
+    input[type="date"],
+    input[type="text"],
+    input[type="file"],
+    textarea {
+      padding: 8px;
+      width: 250px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+    }
 
-        textarea {
-            width: 100%;
-            height: 100px;
-            resize: vertical;
-        }
+    textarea {
+      width: 100%;
+      height: 100px;
+      resize: vertical;
+    }
 
-        @media (max-width: 768px) {
-            body {
-                flex-direction: column;
-                height: auto;
-            }
+    @media (max-width: 768px) {
+      body {
+        flex-direction: column;
+        height: auto;
+      }
 
-            .sidebar {
-                width: 100%;
-                height: auto;
-                flex-direction: row;
-                justify-content: space-around;
-                padding: 10px 0;
-            }
+      .sidebar {
+        width: 100%;
+        height: auto;
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 10px 0;
+      }
 
-            .sidebar ul {
-                display: flex;
-                flex-direction: row;
-            }
+      .sidebar ul {
+        display: flex;
+        flex-direction: row;
+      }
 
-            .sidebar ul li {
-                padding: 10px;
-            }
+      .sidebar ul li {
+        padding: 10px;
+      }
 
-            .content {
-                width: 100%;
-                margin-left: 0;
-                overflow: visible;
-            }
+      .content {
+        width: 100%;
+        margin-left: 0;
+        overflow: visible;
+      }
 
-            input[type="date"],
-            input[type="text"],
-            input[type="file"],
-            textarea {
-                width: 100%;
-            }
-        }
-    </style>
+      input[type="date"],
+      input[type="text"],
+      input[type="file"],
+      textarea {
+        width: 100%;
+      }
+      .sop-button-fixed {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 999;
+  background: linear-gradient(135deg, #00b09b, #96c93d);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 1em;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease-in-out, box-shadow 0.3s ease-in-out;
+}
+
+.sop-button-fixed:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+    }
+  </style>
 </head>
 
 <body>
-    <div class="sidebar">
-        <h2>Trainer Portal</h2>
-        <ul>
-            <li><a href="/trainer-dashboard?username=<%= email %>">Dashboard</a></li>
-            <li><a href="/trainer-dashboard?username=<%= email %>#assigned-schools">Assigned Schools</a></li>
-            <li><a href="/trainer-gamezone">Gamezone</a></li>
-            <li><a href="/logout">Logout</a></li>
-        </ul>
-    </div>
+  <div class="sidebar">
+    <h2>Trainer Portal</h2>
+    <ul>
+      <li><a href="/trainer-dashboard?username=<%= email %>">Dashboard</a></li>
+      <li><a href="/trainer-dashboard?username=<%= email %>#assigned-schools">Assigned Schools</a></li>
+      <li><a href="/trainer-gamezone">Gamezone</a></li>
+      <li><a href="/logout">Logout</a></li>
+    </ul>
+  </div>
 
-    <div class="content">
-        <h1>Welcome, <%= trainerName %>
-        </h1>
-        <p><strong>Email:</strong>
-            <%= email %>
-        </p>
-        <p><strong>City:</strong>
-            <%= city %>
-        </p>
-        <p><strong>District:</strong>
-            <%= district %>
-        </p>
-        <p><strong>Profession:</strong>
-            <%= profession %>
-        </p>
-
-        <% if (error) { %>
-            <p style="color: red;">
-                <%= error %>
-            </p>
-            <% } %>
-                <% if (success) { %>
-                    <p style="color: green;">
-                        <%= success %>
-                    </p>
-                    <% } %>
-
-                        <% if (trainerData && trainerData.isApproved) { %>
-                            <p style="color: green;">Congratulations! You have completed the workshop.</p>
-                                                          <h2>Training Materials</h2>
-            <p>Access training materials from the following link:</p>
-            <a href="https://drive.google.com/drive/folders/1eLAp8bFnKbsqTa7jEApylckT0X91fivS?usp=sharing" target="_blank">
-                <button>Download Training Materials</button>
-            </a>
-
-                            <h2>Add Available Dates</h2>
-                            <form action="/trainer-dashboard/add-dates?username=<%= email %>" method="POST">
-                                <input type="hidden" name="trainerEmail" value="<%= email %>">
-                                <div>
-                                    <label for="availableDate1">Available Date 1:</label>
-                                    <input type="date" name="availableDates" required>
-
-                                </div>
-                                <div>
-                                    <label for="availableDate2">Available Date 2 (optional):</label>
-                                    <input type="date" id="availableDate2" name="availableDates[]">
-                                </div>
-                                <button type="submit">Add Dates</button>
-                            </form>
-
-                            <h3>Your Available Dates</h3>
-                            <% if (availableDates.length> 0) { %>
-                                <table>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Action</th>
-                                    </tr>
-                                    <% availableDates.forEach(date=> { %>
-                                        <tr>
-                                            <td>
-                                                <%= new Date(date).toLocaleDateString() %>
-                                            </td>
-                                            <td>
-                                                <form action="/trainer-dashboard/delete-date?username=<%= email %>"
-                                                    method="POST">
-                                                    <input type="hidden" name="trainerEmail" value="<%= email %>">
-                                                    <input type="hidden" name="dateToDelete" value="<%= date %>">
-                                                    <button type="submit" class="delete-btn">Delete</button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                        <% }) %>
-                                </table>
-                                <% } else { %>
-                                    <p>No available dates added yet.</p>
-                                    <% } %>
+  <div class="content">
+    <h1>Welcome, <%= trainerName %></h1>
+    <p><strong>Email:</strong> <%= email %></p>
+    <p><strong>City:</strong> <%= city %></p>
+    <p><strong>District:</strong> <%= district %></p>
+    <p><strong>Profession:</strong> <%= profession %></p>
 
 
-                                        <h2>Upload Media</h2>
-                                        <form action="/trainer-dashboard/upload-media?username=<%= email %>"
-                                            method="POST" enctype="multipart/form-data">
-                                            <input type="hidden" name="trainerEmail" value="<%= email %>">
-                                            <div>
-                                                <label for="photos">Upload Photos (Max 10):</label>
-                                                <input type="file" id="photos" name="photos" accept="image/*" multiple>
-                                            </div>
-                                            <div>
-                                                <label for="videos">Upload Videos (Max 5):</label>
-                                                <input type="file" id="videos" name="videos" accept="video/*" multiple>
-                                            </div>
-                                            <div>
-                                                <label for="mediaDescription">Media Description (Optional):</label>
-                                                <textarea id="mediaDescription" name="mediaDescription"
-                                                    placeholder="Describe the media content"></textarea>
-                                            </div>
-                                            <div>
-                                                <label for="mediaLink">External Media Link (Optional):</label>
-                                                <input type="text" id="mediaLink" name="mediaLink"
-                                                    placeholder="e.g., https://example.com">
-                                            </div>
-                                            <button type="submit">Upload Media</button>
-                                        </form>
 
-                                        <h3>Your Uploaded Media</h3>
-                                        <% if (mediaUploads && mediaUploads.length> 0) { %>
-                                            <table>
-                                                <tr>
-                                                    <th>Type</th>
-                                                    <th>Preview</th>
-                                                    <th>Description</th>
-                                                    <th>Link</th>
-                                                    <th>Uploaded At</th>
-                                                </tr>
-                                                <% mediaUploads.forEach(upload=> { %>
-                                                    <tr>
-                                                        <td>
-                                                            <%= upload.type %>
-                                                        </td>
-                                                        <td class="media-preview">
-                                                            <% if (upload.type==='image' ) { %>
-                                                                <img src="<%= upload.url %>" alt="Uploaded Image">
-                                                                <% } else if (upload.type==='video' ) { %>
-                                                                    <video src="<%= upload.url %>" controls></video>
-                                                                    <% } %>
-                                                        </td>
-                                                        <td>
-                                                            <%= upload.description || 'N/A' %>
-                                                        </td>
-                                                        <td>
-                                                            <% if (upload.link) { %>
-                                                                <a href="<%= upload.link %>" target="_blank">View
-                                                                    Link</a>
-                                                                <% } else { %>
-                                                                    N/A
-                                                                    <% } %>
-                                                        </td>
-                                                        <td>
-                                                            <%= upload.uploadedAt ?
-                                                                upload.uploadedAt.toLocaleDateString() : 'N/A' %>
-                                                        </td>
-                                                    </tr>
-                                                    <% }) %>
-                                            </table>
-                                            <% } else { %>
-                                                <p>No media uploaded yet.</p>
-                                                <% } %>
+    <% if (error) { %>
+      <p style="color: red;"><%= error %></p>
+    <% } %>
+    <% if (success) { %>
+      <p style="color: green;"><%= success %></p>
+    <% } %>
 
-                                                    <% } else { %>
-                                                        <p>You have not completed the Train the Trainer yet!</p>
-                                                        <% } %>
+    <% if (trainerData && trainerData.isApproved) { %>
+      <p style="color: green;">Congratulations! You have completed the workshop.</p>
+    <!-- 👇 SOP Section Added -->
+   
+  <% if (trainerData && trainerData.isApproved) { %>
+   <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;" >
+  <h2 style="margin: 0 15px 0 0;">Trainer SOP</h2>
+  <a href="https://drive.google.com/file/d/1V7GHErIVNLv5ITcvLp-vOmxCrqVNcWqx/preview" target="_blank">
+    <button>View</button>
+  </a>
+  <a href="https://drive.google.com/uc?export=download&id=1V7GHErIVNLv5ITcvLp-vOmxCrqVNcWqx">
+    <button>Download</button>
+  </a>
+</div>
+     
+  <% } %>
+    <!-- ☝️ SOP Section End -->
+      <h2>Workshop Materials</h2>
+      <a href="https://drive.google.com/drive/folders/1eLAp8bFnKbsqTa7jEApylckT0X91fivS?usp=sharing" target="_blank">
+        <button>Download workshop Materials</button>
+      </a>
 
-                              
+      <h2>Add Available Dates</h2>
+      <form action="/trainer-dashboard/add-dates?username=<%= email %>" method="POST">
+        <input type="hidden" name="trainerEmail" value="<%= email %>" />
+        <div>
+          <label>Available Date 1:</label>
+          <input type="date" name="availableDates" required />
+        </div>
+        <div>
+          <label>Available Date 2 (optional):</label>
+          <input type="date" name="availableDates[]" />
+        </div>
+        <button type="submit">Add Dates</button>
+      </form>
 
-                                                                                            <h2>Schools in Your District
-                                                                                                (<%= district %>)
-                                                                                            </h2>
-                                                                                            <% if
-                                                                                                (schoolsInDistrict.length>
-                                                                                                0) { %>
-                                                                                                <table>
-                                                                                                    <tr>
-                                                                                                        <th>School Name
-                                                                                                        </th>
-                                                                                                        <th>Email</th>
-                                                                                                        <th>City</th>
-                                                                                                        <th>Event Date
-                                                                                                        </th>
-                                                                                                        <th>Assigned
-                                                                                                            Trainer</th>
-                                                                                                    </tr>
-                                                                                                    <%
-                                                                                                        schoolsInDistrict.forEach(school=>
-                                                                                                        {
-                                                                                                        %>
-                                                                                                        <tr>
-                                                                                                            <td>
-                                                                                                                <%= school.schoolName
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= school.schoolEmail
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= school.city
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= school.eventDate
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                            <td>
-                                                                                                                <%= school.assignedTrainerId
-                                                                                                                    ? 'Assigned'
-                                                                                                                    : 'Not Assigned'
-                                                                                                                    %>
-                                                                                                            </td>
-                                                                                                        </tr>
-                                                                                                        <% }) %>
-                                                                                                </table>
-                                                                                                <% } else { %>
-                                                                                                    <p>No schools found
-                                                                                                        in your
-                                                                                                        district.
-                                                                                                    </p>
-                                                                                                    <% } %>
-    </div>
+      <h3>Your Available Dates</h3>
+      <% if (availableDates.length > 0) { %>
+        <table>
+          <tr>
+            <th>Date</th>
+            <th>Action</th>
+          </tr>
+          <% availableDates.forEach(date => { %>
+            <tr>
+              <td><%= new Date(date).toLocaleDateString() %></td>
+              <td>
+                <form action="/trainer-dashboard/delete-date?username=<%= email %>" method="POST">
+                  <input type="hidden" name="trainerEmail" value="<%= email %>" />
+                  <input type="hidden" name="dateToDelete" value="<%= date %>" />
+                  <button class="delete-btn" type="submit">Delete</button>
+                </form>
+              </td>
+            </tr>
+          <% }) %>
+        </table>
+      <% } else { %>
+        <p>No available dates added yet.</p>
+      <% } %>
+
+      <h2>Upload Media</h2>
+      <form action="/trainer-dashboard/upload-media?username=<%= email %>" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="trainerEmail" value="<%= email %>" />
+        <div>
+          <label for="photos">Upload Photos (Max 10):</label>
+          <input type="file" id="photos" name="photos" accept="image/*" multiple />
+        </div>
+        <div>
+          <label for="videos">Upload Videos (Max 5):</label>
+          <input type="file" id="videos" name="videos" accept="video/*" multiple />
+        </div>
+        <div>
+          <label for="mediaDescription">Media Description (Optional):</label>
+          <textarea id="mediaDescription" name="mediaDescription"></textarea>
+        </div>
+        <div>
+          <label for="mediaLink">External Media Link (Optional):</label>
+          <input type="text" id="mediaLink" name="mediaLink" placeholder="e.g., https://example.com" />
+        </div>
+        <button type="submit">Upload Media</button>
+      </form>
+
+      <h3>Your Uploaded Media</h3>
+      <% if (mediaUploads && mediaUploads.length > 0) { %>
+        <table>
+          <tr>
+            <th>Type</th>
+            <th>Preview</th>
+            <th>Description</th>
+            <th>Link</th>
+            <th>Uploaded At</th>
+          </tr>
+          <% mediaUploads.forEach(upload => { %>
+            <tr>
+              <td><%= upload.type %></td>
+              <td class="media-preview">
+                <% if (upload.type === 'image') { %>
+                  <img src="<%= upload.url %>" alt="Uploaded Image" />
+                <% } else if (upload.type === 'video') { %>
+                  <video src="<%= upload.url %>" controls></video>
+                <% } %>
+              </td>
+              <td><%= upload.description || 'N/A' %></td>
+              <td>
+                <% if (upload.link) { %>
+                  <a href="<%= upload.link %>" target="_blank">View Link</a>
+                <% } else { %>
+                  N/A
+                <% } %>
+              </td>
+              <td><%= upload.uploadedAt ? upload.uploadedAt.toLocaleDateString() : 'N/A' %></td>
+            </tr>
+          <% }) %>
+        </table>
+      <% } else { %>
+        <p>No media uploaded yet.</p>
+      <% } %>
+
+    <% } else { %>
+      <p>You have not completed the Train the Trainer yet!</p>
+    <% } %>
+
+    <h2>Schools in Your District (<%= district %>)</h2>
+    <% if (schoolsInDistrict.length > 0) { %>
+      <table>
+        <tr>
+          <th>School Name</th>
+          <th>Email</th>
+          <th>City</th>
+          <th>Event Date</th>
+          <th>Assigned Trainer</th>
+        </tr>
+        <% schoolsInDistrict.forEach(school => { %>
+          <tr>
+            <td><%= school.schoolName %></td>
+            <td><%= school.schoolEmail %></td>
+            <td><%= school.city %></td>
+            <td><%= school.eventDate %></td>
+            <td><%= school.assignedTrainerId ? 'Assigned' : 'Not Assigned' %></td>
+          </tr>
+        <% }) %>
+      </table>
+    <% } else { %>
+      <p>No schools found in your district.</p>
+    <% } %>
+  </div>
 </body>
 
 </html>

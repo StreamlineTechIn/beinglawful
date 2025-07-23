@@ -15,22 +15,23 @@ const storage = multer.memoryStorage();const upload = multer({
     storage: storage,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
     fileFilter: (req, file, cb) => {
-        const allowedTypes = ['image/', 'video/', 'application/zip', 'application/x-zip-compressed'];
+        const allowedTypes = ['image/', 'video/', 'application/pdf'];
         if (allowedTypes.some(type => file.mimetype.startsWith(type))) {
             cb(null, true);
         } else {
-            cb(new Error('Only images, videos, and ZIP files are allowed'), false);
+            cb(new Error('Only images, videos, and PDF files are allowed'), false);
         }
     }
 }).fields([
     { name: 'photos', maxCount: 10 },
     { name: 'videos', maxCount: 5 },
-    { name: 'zipFiles', maxCount: 5 } // Add ZIP file upload field
+    { name: 'pdfs', maxCount: 5 } 
+    
 ]);
 
 const app = express();
 
-app.use('/zipfiles', express.static(path.join(__dirname, 'uploads', 'zipfiles')));
+// app.use('/zipfiles', express.static(path.join(__dirname, 'uploads', 'zipfiles')));
 
 // Set view engine to EJS and specify the views directory
 app.set('view engine', 'ejs');
@@ -647,7 +648,8 @@ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (
             percentage: user.percentage || 0,
             mediaUploads: mediaUploads || [],
             showMediaSection: false,   // ✅ Added this line
-                isApproved: user.isApproved || false 
+                isApproved: user.isApproved || false ,
+             championMessage: user.championMessage || null
         });
 
     } catch (error) {
@@ -1232,161 +1234,18 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
 // School dashboard (renders schoolDashboard.ejs)
 
 // GET route for school dashboard
-    app.get('/school-dashboard', async (req, res) => {
-        try {
-            const schoolEmail = req.query.username;
-            console.log('Request query:', req.query); // Debug log
+   app.get('/school-dashboard', async (req, res) => {
+    try {
+        const schoolEmail = req.query.username;
+        console.log('Request query:', req.query); // Debug log
 
-            if (!schoolEmail) {
-                return res.render('schoolDashboard', {
-                    schoolName: 'Unknown',
-                    schoolEmail: '',
-                    city: '',
-                    district: '',
-                    pincode: '',
-                    schoolPhoneNumber: '',
-                    principalNumber: '',
-                    principalEmail: '',
-                    civicsTeacherNumber: '',
-                    civicsTeacherEmail: '',
-                    students: [],
-                    eventDate: null,
-                    eventDateMissing: true,
-                    resourcesConfirmed: false,
-                    selectedResources: [],
-                    selectedTrainers: [],
-                    error: 'Please login first',
-                    trialTests,
-                    trainers: [],
-                    mediaUploads: []
-                });
-            }
-
-            const schoolSnapshot = await db.collection('schools')
-                .where('schoolEmail', '==', schoolEmail)
-                .get();
-
-            if (schoolSnapshot.empty || schoolSnapshot.docs.length === 0) {
-                return res.render('schoolDashboard', {
-                    schoolName: 'Unknown',
-                    schoolEmail: '',
-                    city: '',
-                    district: '',
-                    pincode: '',
-                    schoolPhoneNumber: '',
-                    principalNumber: '',
-                    principalEmail: '',
-                    civicsTeacherNumber: '',
-                    civicsTeacherEmail: '',
-                    students: [],
-                    eventDate: null,
-                    eventDateMissing: true,
-                    resourcesConfirmed: false,
-                    selectedResources: [],
-                    selectedTrainers: [],
-                    error: 'School not found',
-                    trialTests,
-                    trainers: [],
-                    mediaUploads: []
-                });
-            }
-
-            const schoolData = schoolSnapshot.docs[0].data();
-            const schoolName = schoolData.schoolName;
-
-            // Format event date
-            let eventDate = null;
-            let eventDateMissing = true;
-            if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
-                eventDate = schoolData.eventDate.toDate().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                });
-                eventDateMissing = false;
-            }
-
-            // Fetch students
-            const studentsSnapshot = await db.collection('participants')
-                .where('schoolNameDropdown', '==', schoolName)
-                .get();
-
-          const students = studentsSnapshot.docs.map(doc => {
-    const data = doc.data();
-    return {
-        id: doc.id,   // ✅ This is required for approve-student route
-        studentName: data.studentName || 'N/A',
-        studentClass: data.studentClass || 'N/A',
-        hasCompletedMCQ: data.hasCompletedMCQ || false,
-        trial1Percentage: data.trial1Percentage || 'N/A',
-        trial2Percentage: data.trial2Percentage || 'N/A',
-        score: data.score || 0,
-        totalQuestions: data.totalQuestions || 0,
-        percentage: data.percentage || 0,
-        completedAt: data.completedAt ? data.completedAt.toDate().toLocaleDateString() : 'N/A',
-        isApproved: data.isApproved || false   // ✅ You need this also for button disable logic
-    };
-});
-
-            // Fetch trainers with transformed availableDates
-            const trainersSnapshot = await db.collection('trainers').get();
-            const trainers = trainersSnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    trainerName: data.trainerName || 'Unnamed',
-                    district: data.district || 'Not Specified',
-                    availableDates: Array.isArray(data.availableDates) ? data.availableDates.map(dateObj => 
-                        dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
-                    ) : [] // Transform objects to date strings
-                };
-            });
-
-            // Fetch media uploads (optional, placeholder)
-            const mediaUploads = []; // Replace with actual fetch if needed
-
-            // ✅ Fixed selectedTrainers
-            const selectedTrainers = [
-                schoolData.selectedTrainer1 || '',
-                schoolData.selectedTrainer2 || ''
-            ].map(trainerId => {
-                const trainer = trainers.find(t => t.id === trainerId);
-                return trainer ? { ...trainer, isOtherDistrict: trainer.district !== schoolData.district } : '';
-            });
-
-            res.render('schoolDashboard', {
-                schoolName,
-                mediaUploads,
-                schoolEmail: schoolData.schoolEmail || '',
-                city: schoolData.city || '',
-                district: schoolData.district || '',
-                pincode: schoolData.pincode || '',
-                schoolPhoneNumber: schoolData.schoolPhoneNumber || '',
-                principalNumber: schoolData.principalNumber || '',
-                principalEmail: schoolData.principalEmail || '',
-                civicsTeacherNumber: schoolData.civicsTeacherNumber || '',
-                civicsTeacherEmail: schoolData.civicsTeacherEmail || '',
-                students,
-                eventDate,
-                eventDateMissing,
-                resourcesConfirmed: schoolData.resourcesConfirmed || false,
-                selectedResources: schoolData.selectedResources || [],
-                selectedTrainers,
-                error: null,
-                trialTests,
-                trainers,
-                 workshopStartTime: schoolData.workshopStartTime || null,
-                workshopEndTime: schoolData.workshopEndTime || null
-            });
-
-        } catch (error) {
-            console.error('Error in /school-dashboard route:', error.message, error.stack);
-            res.render('schoolDashboard', {
+        if (!schoolEmail) {
+            return res.render('schoolDashboard', {
                 schoolName: 'Unknown',
                 schoolEmail: '',
                 city: '',
                 district: '',
-                pincode: '',    
+                pincode: '',
                 schoolPhoneNumber: '',
                 principalNumber: '',
                 principalEmail: '',
@@ -1398,13 +1257,159 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
                 resourcesConfirmed: false,
                 selectedResources: [],
                 selectedTrainers: [],
-                error: 'Error loading school data.',
+                error: 'Please login first',
                 trialTests,
                 trainers: [],
                 mediaUploads: []
             });
         }
-    });
+
+        const schoolSnapshot = await db.collection('schools')
+            .where('schoolEmail', '==', schoolEmail)
+            .get();
+
+        if (schoolSnapshot.empty || schoolSnapshot.docs.length === 0) {
+            return res.render('schoolDashboard', {
+                schoolName: 'Unknown',
+                schoolEmail: '',
+                city: '',
+                district: '',
+                pincode: '',
+                schoolPhoneNumber: '',
+                principalNumber: '',
+                principalEmail: '',
+                civicsTeacherNumber: '',
+                civicsTeacherEmail: '',
+                students: [],
+                eventDate: null,
+                eventDateMissing: true,
+                resourcesConfirmed: false,
+                selectedResources: [],
+                selectedTrainers: [],
+                error: 'School not found',
+                trialTests,
+                trainers: [],
+                mediaUploads: []
+            });
+        }
+
+        const schoolData = schoolSnapshot.docs[0].data();
+        const schoolName = schoolData.schoolName;
+
+        // Format event date
+        let eventDate = null;
+        let eventDateMissing = true;
+        if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
+            eventDate = schoolData.eventDate.toDate().toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+            eventDateMissing = false;
+        }
+
+        // Fetch students
+        const studentsSnapshot = await db.collection('participants')
+            .where('schoolNameDropdown', '==', schoolName)
+            .get();
+
+        const students = studentsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                studentName: data.studentName || 'N/A',
+                studentClass: data.studentClass || 'N/A',
+                hasCompletedMCQ: data.hasCompletedMCQ || false,
+                trial1Percentage: data.trial1Percentage || 'N/A',
+                trial2Percentage: data.trial2Percentage || 'N/A',
+                score: data.score || 0,
+                totalQuestions: data.totalQuestions || 0,
+                percentage: data.percentage || 0,
+                completedAt: data.completedAt ? data.completedAt.toDate().toLocaleDateString() : 'N/A',
+                isApproved: data.isApproved || false,
+                 isChampion: data.isChampion || false,
+               message: data.message || null, // ✅ NEW: Student-specific message support
+            };
+        });
+
+        // Fetch trainers with transformed availableDates
+        const trainersSnapshot = await db.collection('trainers').get();
+        const trainers = trainersSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                trainerName: data.trainerName || 'Unnamed',
+                district: data.district || 'Not Specified',
+                availableDates: Array.isArray(data.availableDates)
+                    ? data.availableDates.map(dateObj =>
+                        dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
+                    )
+                    : []
+            };
+        });
+
+        const mediaUploads = []; // Replace with actual fetch logic if needed
+
+        const selectedTrainers = [
+            schoolData.selectedTrainer1 || '',
+            schoolData.selectedTrainer2 || ''
+        ].map(trainerId => {
+            const trainer = trainers.find(t => t.id === trainerId);
+            return trainer ? { ...trainer, isOtherDistrict: trainer.district !== schoolData.district } : '';
+        });
+
+        res.render('schoolDashboard', {
+            schoolName,
+            mediaUploads,
+            schoolEmail: schoolData.schoolEmail || '',
+            city: schoolData.city || '',
+            district: schoolData.district || '',
+            pincode: schoolData.pincode || '',
+            schoolPhoneNumber: schoolData.schoolPhoneNumber || '',
+            principalNumber: schoolData.principalNumber || '',
+            principalEmail: schoolData.principalEmail || '',
+            civicsTeacherNumber: schoolData.civicsTeacherNumber || '',
+            civicsTeacherEmail: schoolData.civicsTeacherEmail || '',
+            students,
+            eventDate,
+            eventDateMissing,
+            resourcesConfirmed: schoolData.resourcesConfirmed || false,
+            selectedResources: schoolData.selectedResources || [],
+            selectedTrainers,
+            error: null,
+            trialTests,
+            trainers,
+            workshopStartTime: schoolData.workshopStartTime || null,
+            workshopEndTime: schoolData.workshopEndTime || null
+        });
+
+    } catch (error) {
+        console.error('Error in /school-dashboard route:', error.message, error.stack);
+        res.render('schoolDashboard', {
+            schoolName: 'Unknown',
+            schoolEmail: '',
+            city: '',
+            district: '',
+            pincode: '',
+            schoolPhoneNumber: '',
+            principalNumber: '',
+            principalEmail: '',
+            civicsTeacherNumber: '',
+            civicsTeacherEmail: '',
+            students: [],
+            eventDate: null,
+            eventDateMissing: true,
+            resourcesConfirmed: false,
+            selectedResources: [],
+            selectedTrainers: [],
+            error: 'Error loading school data.',
+            trialTests,
+            trainers: [],
+            mediaUploads: []
+        });
+    }
+});
+
 // POST route for submitting resources
     app.post('/school-dashboard/submit-resources', async (req, res) => {
         try {
@@ -1967,8 +1972,35 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
     }
 });
 
+app.post('/school-dashboard/mark-champ/:id', async (req, res) => {
+    const studentId = req.params.id;
+    const { username } = req.query;
 
+    try {
+        // 1. Get all students for this school who are already marked as champion
+        const champSnapshot = await db.collection('participants')
+            .where('schoolEmail', '==', username)
+            .where('isChampion', '==', true)
+            .get();
 
+        if (champSnapshot.size >= 55) {
+            // 2. Limit reached — don't update, send message via query param
+            return res.redirect(`/school-dashboard?username=${username}&champLimit=true`);
+        }
+
+        // 3. Mark student as champion and add message
+        await db.collection('participants').doc(studentId).update({
+            isChampion: true,
+            championMessage: '🎉 Congratulations! You have been selected as a Being Lawful Champ!',
+            updatedAt: new Date() // Optional: track when the update occurred
+        });
+
+        res.redirect(`/school-dashboard?username=${username}&champSuccess=true`);
+    } catch (err) {
+        console.error('Error marking champ:', err);
+        res.redirect(`/school-dashboard?username=${username}&champError=true`);
+    }
+});
 
 
 
@@ -2137,106 +2169,122 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         }
     });
 
-    app.post('/school-participate', [
-        body('schoolName').trim().notEmpty().withMessage('School name is required'),
-        body('city').trim().notEmpty().withMessage('City is required'),
-        body('district').trim().notEmpty().withMessage('District is required'),
-        body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
-        body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
-        body('schoolEmail').trim().isEmail().withMessage('Invalid school email address'),
-        body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
-        body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
-        body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
-        body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address'),
-        body('eventDate1').isDate().withMessage('Invalid date format for Event Date 1'),
-        body('eventDate2').isDate().withMessage('Invalid date format for Event Date 2'),
-        body('eventDate3').isDate().withMessage('Invalid date format for Event Date 3'),
-        body('eventDate4').isDate().withMessage('Invalid date format for Event Date 4')
-    ], async (req, res) => {
-        try {
-            const errors = validationResult(req).array();
+ app.post('/school-participate', [
+    body('schoolName').trim().notEmpty().withMessage('School name is required'),
+    body('city').trim().notEmpty().withMessage('City is required'),
+    body('district').trim().notEmpty().withMessage('District is required'),
+    body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
+    body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
+    body('schoolEmail').trim().isEmail().withMessage('Invalid school email address'),
+    body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
+    body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
+    body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
+    body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address'),
+    body('eventDate1').isDate().withMessage('Invalid date format for Event Date 1'),
+    body('eventDate2').isDate().withMessage('Invalid date format for Event Date 2'),
+    body('eventDate3').isDate().withMessage('Invalid date format for Event Date 3'),
+    body('eventDate4').isDate().withMessage('Invalid date format for Event Date 4')
+], async (req, res) => {
+    try {
+        const errors = validationResult(req).array();
 
-            // Check for duplicate entries
-            const {
-                schoolName,
-                city,
-                district,
-                pincode,
-                schoolPhoneNumber,
-                schoolEmail,
-                principalNumber,
-                principalEmail,
-                civicsTeacherNumber,
-                civicsTeacherEmail,
-                eventDate1,
-                eventDate2,
-                eventDate3,
-                eventDate4
-            } = req.body;
+        // Check for duplicate entries
+        const {
+            schoolName,
+            city,
+            district,
+            pincode,
+            schoolPhoneNumber,
+            schoolEmail,
+            principalNumber,
+            principalEmail,
+            civicsTeacherNumber,
+            civicsTeacherEmail,
+            eventDate1,
+            eventDate2,
+            eventDate3,
+            eventDate4
+        } = req.body;
 
-            const checks = [
-                { field: 'schoolEmail', value: schoolEmail, message: 'School email already exists' },
-                { field: 'principalEmail', value: principalEmail, message: 'Principal email already exists' },
-                { field: 'civicsTeacherEmail', value: civicsTeacherEmail, message: 'Civics teacher email already exists' },
-                { field: 'schoolPhoneNumber', value: schoolPhoneNumber, message: 'School phone number already exists' },
-                { field: 'principalNumber', value: principalNumber, message: 'Principal phone number already exists' },
-                { field: 'civicsTeacherNumber', value: civicsTeacherNumber, message: 'Civics teacher phone number already exists' }
-            ];
+        const checks = [
+            { field: 'schoolEmail', value: schoolEmail, message: 'School email already exists' },
+            { field: 'principalEmail', value: principalEmail, message: 'Principal email already exists' },
+            { field: 'civicsTeacherEmail', value: civicsTeacherEmail, message: 'Civics teacher email already exists' },
+            { field: 'schoolPhoneNumber', value: schoolPhoneNumber, message: 'School phone number already exists' },
+            { field: 'principalNumber', value: principalNumber, message: 'Principal phone number already exists' },
+            { field: 'civicsTeacherNumber', value: civicsTeacherNumber, message: 'Civics teacher phone number already exists' }
+        ];
 
-            for (const check of checks) {
-                const snapshot = await db.collection('schools')
-                    .where(check.field, '==', check.value)
-                    .get();
-                if (!snapshot.empty) {
-                    errors.push({ param: check.field, msg: check.message });
-                }
+        for (const check of checks) {
+            const snapshot = await db.collection('schools')
+                .where(check.field, '==', check.value)
+                .get();
+            if (!snapshot.empty) {
+                errors.push({ param: check.field, msg: check.message });
             }
-
-            if (errors.length > 0) {
-                const schoolsSnapshot = await db.collection('schools').get();
-                const schools = schoolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                return res.status(400).render('schoolParticipation', { schools, errors });
-            }
-
-            await db.collection('schools').add({
-                schoolName,
-                city,
-                district,
-                pincode,
-                schoolPhoneNumber,
-                schoolEmail,
-                principalNumber,
-                principalEmail,
-                civicsTeacherNumber,
-                civicsTeacherEmail,
-                eventDates: [eventDate1, eventDate2, eventDate3, eventDate4],
-                registeredAt: admin.firestore.FieldValue.serverTimestamp(),
-                isApproved: false,
-                resourcesConfirmed: false,
-                selectedResources: []
-            });
-
-            await sendEmail(
-                schoolEmail,
-                emailTemplates.schoolRegistration.subject,
-                emailTemplates.schoolRegistration.text(schoolName, schoolEmail, principalNumber),
-                emailTemplates.schoolRegistration.html(schoolName, schoolEmail, principalNumber)
-            );
-
-            res.render('confirmation', {
-                schoolEmail: schoolEmail,
-                principalNumber: principalNumber
-            });
-        } catch (error) {
-            console.error('Error in school-participate route:', error.message, error.stack);
-            const schoolsSnapshot = await db.collection('schools').get();
-            const schools = schoolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            res.status(500).render('schoolParticipation', {
-                schools,
-                errors: [{ msg: 'Internal server error. Please try again later.' }]
-            });
         }
-    });
+
+        if (errors.length > 0) {
+            const schoolsSnapshot = await db.collection('schools').get();
+            const schools = schoolsSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    // Convert Firestore Timestamp to readable string
+                    registeredAt: data.registeredAt ? data.registeredAt.toDate().toLocaleString() : 'Not registered'
+                };
+            });
+            return res.status(400).render('schoolParticipation', { schools, errors });
+        }
+
+        await db.collection('schools').add({
+            schoolName,
+            city,
+            district,
+            pincode,
+            schoolPhoneNumber,
+            schoolEmail,
+            principalNumber,
+            principalEmail,
+            civicsTeacherNumber,
+            civicsTeacherEmail,
+            eventDates: [eventDate1, eventDate2, eventDate3, eventDate4],
+            registeredAt: admin.firestore.FieldValue.serverTimestamp(),
+            isApproved: false,
+            resourcesConfirmed: false,
+            selectedResources: []
+        });
+
+        await sendEmail(
+            schoolEmail,
+            emailTemplates.schoolRegistration.subject,
+            emailTemplates.schoolRegistration.text(schoolName, schoolEmail, principalNumber),
+            emailTemplates.schoolRegistration.html(schoolName, schoolEmail, principalNumber)
+        );
+
+        res.render('confirmation', {
+            schoolEmail: schoolEmail,
+            principalNumber: principalNumber
+        });
+    } catch (error) {
+        console.error('Error in school-participate route:', error.message, error.stack);
+        const schoolsSnapshot = await db.collection('schools').get();
+        const schools = schoolsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                ...data,
+                // Convert Firestore Timestamp to readable string
+                registeredAt: data.registeredAt ? data.registeredAt.toDate().toLocaleString() : 'Not registered'
+            };
+        });
+        res.status(500).render('schoolParticipation', {
+            schools,
+            errors: [{ msg: 'Internal server error. Please try again later.' }]
+        });
+    }
+});
     // Confirmation page (renders confirmation.ejs)
     app.get('/confirmation', (req, res) => {
         res.render('confirmation', {
@@ -3260,23 +3308,7 @@ app.post('/trainer-dashboard/add-dates', async (req, res) => {
         });
     }
 });
-app.post('/admin/approve-zip/:zipId', requireAdmin, async (req, res) => {
-    try {
-        const zipId = req.params.zipId;
-        const zipRef = db.collection('trainerZips').doc(zipId);
-        const zipDoc = await zipRef.get();
 
-        if (!zipDoc.exists) {
-            return res.redirect('/admin-dashboard?error=ZIP file not found');
-        }
-
-        await zipRef.update({ approved: true });
-        res.redirect('/admin-dashboard?success=ZIP file approved successfully');
-    } catch (error) {
-        console.error('Error in admin/approve-zip route:', error.message, error.stack);
-        res.redirect('/admin-dashboard?error=Error approving ZIP file');
-    }
-});
     app.get('/trainer-dashboard', async (req, res) => {
         try {
             const trainerEmail = req.query.username;
@@ -3599,8 +3631,13 @@ async function renderFormWithErrors(res, errors) {
 
 
     // Dashboard route
+
 app.get("/logistic-dashboard", async (req, res) => {
-  const snapshot = await db.collection("schools").where("isApproved", "==", true).get();
+  const snapshot = await db
+    .collection("schools")
+    .where("isApproved", "==", true)
+    .get();
+
   const schools = [];
 
   snapshot.forEach(doc => {
@@ -3608,19 +3645,22 @@ app.get("/logistic-dashboard", async (req, res) => {
     schools.push({
       id: doc.id,
       name: data.schoolName,
-  civicsSirNumber: data.civicsTeacherNumber,
-    schoolPhoneNumber: data.schoolPhoneNumber,
-    principalNumber: data.principalNumber,            
+      civicsSirNumber: data.civicsTeacherNumber,
+      schoolPhoneNumber: data.schoolPhoneNumber,
+    principalNumber: data.principalNumber,       
       city: data.city,
       district: data.district,
-      eventDate: data.eventDates?.[0],
+      rawEventDate: data.eventDate?.toDate(), // Keep raw Date for sorting
+      eventDate: data.eventDate?.toDate().toLocaleDateString("en-IN"),
       status: data.isCompleted ? "delivered" : "pending",
     });
   });
 
-  res.render("logistic-dashboard", { schools });
-});
+  // Sort by raw date
+  schools.sort((a, b) => a.rawEventDate - b.rawEventDate);
 
+  res.render("logistic-dashboard", { schools });
+});
 // New POST route to update status
 app.post("/update-status", async (req, res) => {
   const { id, status } = req.body;

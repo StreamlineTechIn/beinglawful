@@ -2015,6 +2015,7 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
 
 
 
+
 // Participation form (renders participation.ejs)
     app.get('/participation', async (req, res) => {
         try {
@@ -3679,7 +3680,9 @@ app.get("/logistic-dashboard", async (req, res) => {
       schools.push({
         id: doc.id,
         name: data.schoolName,
-        civicsSirNumber: data.civicsTeacherNumber,
+       civicsSirNumber: data.civicsTeacherNumber,
+      schoolPhoneNumber: data.schoolPhoneNumber,
+    principalNumber: data.principalNumber,  
         city: data.city,
         district: data.district,
         rawEventDate: rawDate,

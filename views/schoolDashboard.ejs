@@ -118,6 +118,8 @@
         #studentTable td:nth-child(8) { width: 140px; }
         #studentTable th:nth-child(9),
         #studentTable td:nth-child(9) { width: 100px; }
+        #studentTable th:nth-child(10),
+        #studentTable td:nth-child(10) { width: 100px; }
         .filter-select {
             padding: 5px;
             border: 1px solid #ddd;
@@ -195,7 +197,7 @@
             background-color: #cccccc;
             cursor: not-allowed;
         }
-        .approve-button {
+        .approve-btn {
             background-color: #4CAF50;
             color: white;
             border: none;
@@ -203,13 +205,16 @@
             cursor: pointer;
             border-radius: 4px;
             font-size: 14px;
+            transition: background-color 0.3s;
         }
-        .approve-button:hover {
+        .approve-btn:hover {
             background-color: #45a049;
         }
-        .approve-button:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
+        .approve-btn.unapprove, .approve-btn.unmark-champ {
+            background-color: #e74c3c;
+        }
+        .approve-btn.unapprove:hover, .approve-btn.unmark-champ:hover {
+            background-color: #c0392b;
         }
         .edit-form label,
         .resources-form label,
@@ -331,23 +336,6 @@
         .logout-button:hover {
             background-color: #c0392b;
         }
-        .approve-btn {
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: background-color 0.3s;
-        }
-        .approve-btn:hover {
-            background-color: #45a049;
-        }
-        .approve-btn:disabled {
-            background-color: #cccccc;
-            cursor: not-allowed;
-        }
         /* Roadmap Styles */
         .roadmap-container {
             margin: 15px 0;
@@ -425,32 +413,29 @@
         .roadmap-step.active .label {
             color: #2196F3;
         }
-      .view-sop-button,
-  .download-sop-button {
-    background: #4CAF50;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    cursor: pointer;
-    border-radius: 4px;
-    font-size: 14px;
-    text-decoration: none;
-    margin-right: 10px;
-    transition: background-color 0.3s, transform 0.2s;
-    display: inline-block;
-  }
-
-  .view-sop-button:hover,
-  .download-sop-button:hover {
-    background: #4CAF50;
-    transform: translateY(-1px);
-  }
-
-  .sop-button-container {
-    margin: 15px 0;
-    text-align: center;
-  }
-        
+        .view-sop-button,
+        .download-sop-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            text-decoration: none;
+            margin-right: 10px;
+            transition: background-color 0.3s, transform 0.2s;
+            display: inline-block;
+        }
+        .view-sop-button:hover,
+        .download-sop-button:hover {
+            background: #45a049;
+            transform: translateY(-1px);
+        }
+        .sop-button-container {
+            margin: 15px 0;
+            text-align: center;
+        }
         @media (max-width: 1200px) {
             .dashboard-container { padding: 15px; }
             .table-container { max-width: 100%; }
@@ -491,7 +476,7 @@
                     <div class="icon">📚</div>
                     <div class="label">Student MCQ Test</div>
                 </div>
-                <div class="roadmap-step <%= students.some(s => s.isApproved) ? 'completed' : '' %>">
+                <div class="roadmap-step <%= students.some(s => s.isApproved === true) ? 'completed' : '' %>">
                     <div class="icon">🎓</div>
                     <div class="label">Certificate</div>
                 </div>
@@ -515,9 +500,9 @@
         </div>
         <!-- SOP Button -->
         <div class="sop-button-container">
-  <a href="https://drive.google.com/file/d/1bvvrEsXiTeOGCQLz6mC2bpr4GdqA0Jho/view?usp=sharing" target="_blank" class="view-sop-button">View SOP</a>
-  <a href="https://drive.google.com/uc?export=download&id=1bvvrEsXiTeOGCQLz6mC2bpr4GdqA0Jho" class="download-sop-button">Download SOP</a>
-</div>
+            <a href="https://drive.google.com/file/d/1bvvrEsXiTeOGCQLz6mC2bpr4GdqA0Jho/view?usp=sharing" target="_blank" class="view-sop-button">View SOP</a>
+            <a href="https://drive.google.com/uc?export=download&id=1bvvrEsXiTeOGCQLz6mC2bpr4GdqA0Jho" class="download-sop-button">Download SOP</a>
+        </div>
         <div class="tab-container">
             <div class="tab-buttons">
                 <button class="tab-button active" onclick="openTab('resources')">Resource Arrangement</button>
@@ -554,10 +539,9 @@
                             <p>Please confirm the resources you agree to arrange or pay for:</p>
                             <div class="resource-item">
                                 <input type="checkbox" id="trainerRemediation" name="resources" value="Trainer remediation" checked required>
-                                <label for="trainerRemediation">Trainer remediation</label>
+                                <label for="trainerRemediation">Trainer remuneration</label>
                             </div>
                             <div class="resource-item">
-13
                                 <input type="checkbox" id="travelingExpense" name="resources" value="Traveling expense" checked required>
                                 <label for="travelingExpense">Traveling expense</label>
                             </div>
@@ -618,7 +602,7 @@
                                 </div>
                                 <div>
                                     <label for="workshopStartTime" class="trainer-label">Workshop Time:</label>
-                                    <div class="timepicker-container">  
+                                    <div class="timepicker-container">
                                         <input type="time" id="workshopStartTime" name="workshopStartTime" class="timepicker" required oninput="enableSaveButton()">
                                         <button type="button" id="timepickerSaveButton" class="timepicker-save-button" onclick="updateEndTime()" disabled>Save</button>
                                     </div>
@@ -659,7 +643,7 @@
                                     <th data-filter="percentage">MCQ Percentage<br><select class="filter-select" data-column="percentage" onchange="applyFilters('studentTable')"></select></th>
                                     <th data-filter="completedAt">Completed At<br><select class="filter-select" data-column="completedAt" onchange="applyFilters('studentTable')"></select></th>
                                     <th>Approve</th>
-                                    <!-- <th>Champ</th> -->
+                                    <th>Champion</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -674,23 +658,25 @@
                                         <td data-column="percentage"><%= student.percentage !== undefined ? `${student.percentage}%` : 'N/A' %></td>
                                         <td data-column="completedAt"><%= student.completedAt || 'N/A' %></td>
                                         <td>
-                                            <form action="/school-dashboard/approve-student/<%= student.id %>?username=<%= schoolEmail %>" method="POST" style="display:inline;">
-                                                <% if (!student.isApproved) { %>
-                                                    <button type="submit" class="approve-btn">Approve</button>
-                                                <% } else { %>
-                                                    <button type="button" class="approve-btn" disabled>Approved</button>
-                                                <% } %>
+                                            <form action="/school-dashboard/approve-student/<%= student.id %>?username=<%= encodeURIComponent(schoolEmail) %>" method="POST" style="display:inline;">
+                                                <input type="hidden" name="action" value="<%= student.isApproved === true ? 'unapprove' : 'approve' %>">
+                                                <button type="submit" class="approve-btn <%= student.isApproved === true ? 'unapprove' : '' %>" onclick="console.log('Approve button clicked for student <%= student.id %>, isApproved: <%= student.isApproved %>')">
+                                                    <%= student.isApproved === true ? 'Unapprove' : 'Approve' %>
+                                                </button>
                                             </form>
+                                            <!-- Debugging log -->
+                                            <script>console.log('Student <%= student.id %> isApproved: <%= student.isApproved %>');</script>
                                         </td>
-                                        <!-- <td>
-  <% if (!student.isChampion) { %>
-    <form action="/school-dashboard/mark-champ/<%= student.id %>?username=<%= schoolEmail %>" method="POST" >
-      <button type="submit" class="approve-btn">Champ</button>
-    </form>
-  <% } else { %>
-    <button class="approve-btn" disabled>Champion</button>
-  <% } %>
-</td> -->
+                                        <td>
+                                            <form action="/school-dashboard/mark-champ/<%= student.id %>?username=<%= encodeURIComponent(schoolEmail) %>" method="POST" style="display:inline;">
+                                                <input type="hidden" name="action" value="<%= student.isChampion === true ? 'unmark' : 'mark' %>">
+                                                <button type="submit" class="approve-btn <%= student.isChampion === true ? 'unmark-champ' : '' %>" onclick="console.log('Champion button clicked for student <%= student.id %>, isChampion: <%= student.isChampion %>')">
+                                                    <%= student.isChampion === true ? 'Remove Champ' : 'Mark Champ' %>
+                                                </button>
+                                            </form>
+                                            <!-- Debugging log -->
+                                            <script>console.log('Student <%= student.id %> isChampion: <%= student.isChampion %>');</script>
+                                        </td>
                                     </tr>
                                 <% }) %>
                             </tbody>
@@ -775,265 +761,225 @@
         </div>
     </div>
     <script>
-   document.addEventListener('DOMContentLoaded', function () {
-    openTab('resources');
-    populateTrainerSelects();
-    initializeChampForms();
-});
-
-// Tab management
-function openTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('active');
-    });
-    const tab = document.getElementById(tabId);
-    if (tab) {
-        tab.classList.add('active');
-        const button = document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`);
-        if (button) button.classList.add('active');
-    }
-
-    if (tabId === 'student-data') {
-        initializeFilters('studentTable');
-    }
-    if (tabId === 'resources') {
-        updateTrainerSelection();
-    }
-}
-
-// Table filtering
-function initializeFilters(tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-
-    const headers = table.querySelectorAll('th[data-filter]');
-    const rows = table.querySelectorAll('tbody tr');
-
-    headers.forEach(header => {
-        const column = header.dataset.filter;
-        const select = header.querySelector('.filter-select');
-        if (!select) return;
-
-        const values = new Set(['All']);
-        rows.forEach(row => {
-            const cell = row.querySelector(`td[data-column="${column}"]`);
-            if (cell) {
-                let cellText = cell.textContent.trim();
-                if (cellText && !values.has(cellText)) {
-                    values.add(cellText);
-                }
-            }
+        document.addEventListener('DOMContentLoaded', function () {
+            openTab('student-data'); // Open student-data tab by default for debugging
+            populateTrainerSelects();
         });
 
-        select.innerHTML = '';
-        let isAllSet = false;
-        [...values].sort().forEach(value => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            if (value === 'All' && !isAllSet) {
-                option.selected = true;
-                isAllSet = true;
+        // Tab management
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-button').forEach(button => {
+                button.classList.remove('active');
+            });
+            const tab = document.getElementById(tabId);
+            if (tab) {
+                tab.classList.add('active');
+                const button = document.querySelector(`.tab-button[onclick="openTab('${tabId}')"]`);
+                if (button) button.classList.add('active');
             }
-            select.appendChild(option);
-        });
 
-        select.addEventListener('change', () => applyFilters(tableId));
-    });
-}
-
-function applyFilters(tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-
-    const rows = table.querySelectorAll('tbody tr');
-    const filters = {};
-    table.querySelectorAll('.filter-select').forEach(select => {
-        filters[select.dataset.column] = select.value.trim();
-    });
-
-    rows.forEach(row => {
-        let show = true;
-        for (const [column, value] of Object.entries(filters)) {
-            if (value && value !== 'All' && value !== '') {
-                const cell = row.querySelector(`td[data-column="${column}"]`);
-                if (cell) {
-                    let cellText = cell.textContent.trim();
-                    if (cellText !== value) {
-                        show = false;
-                        break;
-                    }
-                }
+            if (tabId === 'student-data') {
+                initializeFilters('studentTable');
+            }
+            if (tabId === 'resources') {
+                updateTrainerSelection();
             }
         }
-        row.style.display = show ? '' : 'none';
-    });
-}
 
-// Trainer selection
-const allTrainers = <%- JSON.stringify(trainers) %>;
-const schoolDistrict = "<%= district %>".trim();
+        // Table filtering
+        function initializeFilters(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
 
-function populateTrainerSelects() {
-    updateTrainerSelection();
-}
+            const headers = table.querySelectorAll('th[data-filter]');
+            const rows = table.querySelectorAll('tbody tr');
 
-function updateTrainerSelection() {
-    const trainer1Select = document.getElementById('trainerId1');
-    const trainer2Select = document.getElementById('trainerId2');
-    const showAllTrainers = document.getElementById('showAllTrainers')?.checked;
+            headers.forEach(header => {
+                const column = header.dataset.filter;
+                const select = header.querySelector('.filter-select');
+                if (!select) return;
 
-    if (!trainer1Select || !trainer2Select) return;
-
-    const trainer1Value = trainer1Select.value;
-    const trainer2Value = trainer2Select.value;
-
-    const filteredTrainers = showAllTrainers
-        ? allTrainers
-        : allTrainers.filter(t => t.district === schoolDistrict);
-
-    [trainer1Select, trainer2Select].forEach(select => {
-        const currentValue = select.value;
-        select.innerHTML = '<option value="">Select a trainer</option>';
-        filteredTrainers.forEach(trainer => {
-            const option = document.createElement('option');
-            option.value = trainer.id;
-            option.text = `${trainer.trainerName} (${trainer.district})`;
-            option.setAttribute('data-district', trainer.district);
-            option.setAttribute('data-dates', JSON.stringify(trainer.availableDates || []));
-            select.appendChild(option);
-        });
-        select.value = currentValue;
-    });
-
-    if (trainer1Value && trainer2Value && trainer1Value === trainer2Value) {
-        alert('Please select different trainers for Trainer 1 and Trainer 2.');
-        if (trainer1Select.value === trainer2Value) trainer1Select.value = '';
-        if (trainer2Select.value === trainer1Value) trainer2Select.value = '';
-    }
-
-    updateTrainerDatesDisplay();
-    updateCostNoteDisplay();
-}
-
-function updateTrainerDatesDisplay() {
-    const trainer1Select = document.getElementById('trainerId1');
-    const trainer2Select = document.getElementById('trainerId2');
-    const trainer1DatesDiv = document.getElementById('trainer1-dates');
-    const trainer2DatesDiv = document.getElementById('trainer2-dates');
-    const trainer1DatesList = document.getElementById('trainer1-dates-list');
-    const trainer2DatesList = document.getElementById('trainer2-dates-list');
-
-    if (!trainer1Select || !trainer2Select || !trainer1DatesDiv || !trainer2DatesDiv || !trainer1DatesList || !trainer2DatesList) return;
-
-    if (trainer1Select.value) {
-        const selectedOption1 = trainer1Select.options[trainer1Select.selectedIndex];
-        const dates1 = JSON.parse(selectedOption1.getAttribute('data-dates') || '[]');
-        trainer1DatesList.textContent = dates1.length > 0 ? dates1.join(', ') : 'No dates available';
-        trainer1DatesDiv.style.display = 'block';
-    } else {
-        trainer1DatesDiv.style.display = 'none';
-    }
-
-    if (trainer2Select.value) {
-        const selectedOption2 = trainer2Select.options[trainer2Select.selectedIndex];
-        const dates2 = JSON.parse(selectedOption2.getAttribute('data-dates') || '[]');
-        trainer2DatesList.textContent = dates2.length > 0 ? dates2.join(', ') : 'No dates available';
-        trainer2DatesDiv.style.display = 'block';
-    } else {
-        trainer2DatesDiv.style.display = 'none';
-    }
-}
-
-function updateCostNoteDisplay() {
-    const trainer1Select = document.getElementById('trainerId1');
-    const trainer2Select = document.getElementById('trainerId2');
-    const costNote = document.getElementById('trainer-cost-note');
-
-    if (!trainer1Select || !trainer2Select || !costNote) return;
-
-    const trainer1District = trainer1Select.selectedOptions[0]?.getAttribute('data-district') || '';
-    const trainer2District = trainer2Select.selectedOptions[0]?.getAttribute('data-district') || '';
-
-    costNote.style.display = (trainer1District && trainer1District !== schoolDistrict) || (trainer2District && trainer2District !== schoolDistrict)
-        ? 'block'
-        : 'none';
-}
-
-// Time picker
-function enableSaveButton() {
-    const startTimeInput = document.getElementById('workshopStartTime');
-    const saveButton = document.getElementById('timepickerSaveButton');
-    if (startTimeInput && saveButton) {
-        saveButton.disabled = !startTimeInput.value;
-    }
-}
-
-function updateEndTime() {
-    const startTimeInput = document.getElementById('workshopStartTime');
-    const endTimeInput = document.getElementById('workshopEndTime');
-    const endTimeDisplay = document.getElementById('workshopEndTimeDisplay');
-    const durationMessage = document.getElementById('durationMessage');
-
-    if (!startTimeInput || !endTimeInput || !endTimeDisplay || !durationMessage) return;
-
-    if (startTimeInput.value) {
-        const startTime = new Date(`1970-01-01T${startTimeInput.value}:00`);
-        startTime.setHours(startTime.getHours() + 4);
-        const hours = String(startTime.getHours()).padStart(2, '0');
-        const minutes = String(startTime.getMinutes()).padStart(2, '0');
-        const endTime = `${hours}:${minutes}`;
-        endTimeInput.value = endTime;
-        endTimeDisplay.textContent = endTime;
-        durationMessage.style.display = 'block';
-    } else {
-        endTimeInput.value = '';
-        endTimeDisplay.textContent = '';
-        durationMessage.style.display = 'none';
-    }
-}
-
-// Champion form handling
-function initializeChampForms() {
-    const champForms = document.querySelectorAll('.champ-form');
-    champForms.forEach(form => {
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault(); // Prevent page reload
-            const studentId = form.dataset.studentId;
-            const formAction = form.action;
-            const messageDiv = document.getElementById(`champ-message-${studentId}`);
-            const button = form.querySelector('button');
-
-            if (!studentId || !formAction || !messageDiv || !button) return;
-
-            try {
-                const response = await fetch(formAction, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ studentId })
+                const values = new Set(['All']);
+                rows.forEach(row => {
+                    const cell = row.querySelector(`td[data-column="${column}"]`);
+                    if (cell) {
+                        let cellText = cell.textContent.trim();
+                        if (cellText && !values.has(cellText)) {
+                            values.add(cellText);
+                        }
+                    }
                 });
 
-                if (!response.ok) throw new Error('Failed to mark as champion');
+                select.innerHTML = '';
+                let isAllSet = false;
+                [...values].sort().forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    if (value === 'All' && !isAllSet) {
+                        option.selected = true;
+                        isAllSet = true;
+                    }
+                    select.appendChild(option);
+                });
 
-                const data = await response.json();
-                messageDiv.style.display = 'block';
-                messageDiv.style.color = 'green';
-                messageDiv.innerText = data.message || 'Student marked as champion!';
-                button.disabled = true;
-                button.innerText = 'Champion';
-            } catch (error) {
-                console.error('Error:', error);
-                messageDiv.style.display = 'block';
-                messageDiv.style.color = 'red';
-                messageDiv.innerText = 'Error marking student as champion.';
+                select.addEventListener('change', () => applyFilters(tableId));
+            });
+        }
+
+        function applyFilters(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) return;
+
+            const rows = table.querySelectorAll('tbody tr');
+            const filters = {};
+            table.querySelectorAll('.filter-select').forEach(select => {
+                filters[select.dataset.column] = select.value.trim();
+            });
+
+            rows.forEach(row => {
+                let show = true;
+                for (const [column, value] of Object.entries(filters)) {
+                    if (value && value !== 'All' && value !== '') {
+                        const cell = row.querySelector(`td[data-column="${column}"]`);
+                        if (cell) {
+                            let cellText = cell.textContent.trim();
+                            if (cellText !== value) {
+                                show = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        // Trainer selection
+        const allTrainers = <%- JSON.stringify(trainers) %>;
+        const schoolDistrict = "<%= district %>".trim();
+
+        function populateTrainerSelects() {
+            updateTrainerSelection();
+        }
+
+        function updateTrainerSelection() {
+            const trainer1Select = document.getElementById('trainerId1');
+            const trainer2Select = document.getElementById('trainerId2');
+            const showAllTrainers = document.getElementById('showAllTrainers')?.checked;
+
+            if (!trainer1Select || !trainer2Select) return;
+
+            const trainer1Value = trainer1Select.value;
+            const trainer2Value = trainer2Select.value;
+
+            const filteredTrainers = showAllTrainers
+                ? allTrainers
+                : allTrainers.filter(t => t.district === schoolDistrict);
+
+            [trainer1Select, trainer2Select].forEach(select => {
+                const currentValue = select.value;
+                select.innerHTML = '<option value="">Select a trainer</option>';
+                filteredTrainers.forEach(trainer => {
+                    const option = document.createElement('option');
+                    option.value = trainer.id;
+                    option.text = `${trainer.trainerName} (${trainer.district})`;
+                    option.setAttribute('data-district', trainer.district);
+                    option.setAttribute('data-dates', JSON.stringify(trainer.availableDates || []));
+                    select.appendChild(option);
+                });
+                select.value = currentValue;
+            });
+
+            if (trainer1Value && trainer2Value && trainer1Value === trainer2Value) {
+                alert('Please select different trainers for Trainer 1 and Trainer 2.');
+                if (trainer1Select.value === trainer2Value) trainer1Select.value = '';
+                if (trainer2Select.value === trainer1Value) trainer2Select.value = '';
             }
-        });
-    });
-}
-    
+
+            updateTrainerDatesDisplay();
+            updateCostNoteDisplay();
+        }
+
+        function updateTrainerDatesDisplay() {
+            const trainer1Select = document.getElementById('trainerId1');
+            const trainer2Select = document.getElementById('trainerId2');
+            const trainer1DatesDiv = document.getElementById('trainer1-dates');
+            const trainer2DatesDiv = document.getElementById('trainer2-dates');
+            const trainer1DatesList = document.getElementById('trainer1-dates-list');
+            const trainer2DatesList = document.getElementById('trainer2-dates-list');
+
+            if (!trainer1Select || !trainer2Select || !trainer1DatesDiv || !trainer2DatesDiv || !trainer1DatesList || !trainer2DatesList) return;
+
+            if (trainer1Select.value) {
+                const selectedOption1 = trainer1Select.options[trainer1Select.selectedIndex];
+                const dates1 = JSON.parse(selectedOption1.getAttribute('data-dates') || '[]');
+                trainer1DatesList.textContent = dates1.length > 0 ? dates1.join(', ') : 'No dates available';
+                trainer1DatesDiv.style.display = 'block';
+            } else {
+                trainer1DatesDiv.style.display = 'none';
+            }
+
+            if (trainer2Select.value) {
+                const selectedOption2 = trainer2Select.options[trainer2Select.selectedIndex];
+                const dates2 = JSON.parse(selectedOption2.getAttribute('data-dates') || '[]');
+                trainer2DatesList.textContent = dates2.length > 0 ? dates2.join(', ') : 'No dates available';
+                trainer2DatesDiv.style.display = 'block';
+            } else {
+                trainer2DatesDiv.style.display = 'none';
+            }
+        }
+
+        function updateCostNoteDisplay() {
+            const trainer1Select = document.getElementById('trainerId1');
+            const trainer2Select = document.getElementById('trainerId2');
+            const costNote = document.getElementById('trainer-cost-note');
+
+            if (!trainer1Select || !trainer2Select || !costNote) return;
+
+            const trainer1District = trainer1Select.selectedOptions[0]?.getAttribute('data-district') || '';
+            const trainer2District = trainer2Select.selectedOptions[0]?.getAttribute('data-district') || '';
+
+            costNote.style.display = (trainer1District && trainer1District !== schoolDistrict) || (trainer2District && trainer2District !== schoolDistrict)
+                ? 'block'
+                : 'none';
+        }
+
+        // Time picker
+        function enableSaveButton() {
+            const startTimeInput = document.getElementById('workshopStartTime');
+            const saveButton = document.getElementById('timepickerSaveButton');
+            if (startTimeInput && saveButton) {
+                saveButton.disabled = !startTimeInput.value;
+            }
+        }
+
+        function updateEndTime() {
+            const startTimeInput = document.getElementById('workshopStartTime');
+            const endTimeInput = document.getElementById('workshopEndTime');
+            const endTimeDisplay = document.getElementById('workshopEndTimeDisplay');
+            const durationMessage = document.getElementById('durationMessage');
+
+            if (!startTimeInput || !endTimeInput || !endTimeDisplay || !durationMessage) return;
+
+            if (startTimeInput.value) {
+                const startTime = new Date(`1970-01-01T${startTimeInput.value}:00`);
+                startTime.setHours(startTime.getHours() + 4);
+                const hours = String(startTime.getHours()).padStart(2, '0');
+                const minutes = String(startTime.getMinutes()).padStart(2, '0');
+                const endTime = `${hours}:${minutes}`;
+                endTimeInput.value = endTime;
+                endTimeDisplay.textContent = endTime;
+                durationMessage.style.display = 'block';
+            } else {
+                endTimeInput.value = '';
+                endTimeDisplay.textContent = '';
+                durationMessage.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>

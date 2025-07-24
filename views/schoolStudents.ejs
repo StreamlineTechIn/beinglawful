@@ -94,6 +94,16 @@
                     <% } %>
                 </form>
             </td>
+                    <td>
+                                        <% if (!student.isChampion) { %>
+                                            <form action="/school-dashboard/mark-champ/<%= student.id %>?username=<%= schoolEmail %>" method="POST" >
+                                                <button type="submit" class="approve-btn" style="background-color: #ff9800;">Champ</button>
+                                            </form>
+                                        <% } else { %>
+                                            <button type="button" class="approve-btn" disabled style="background-color: #ff9800;">Champion</button>
+                                        <% } %>
+                                    </td>
+
                     </tr>
                 <% }) %>
             </tbody>

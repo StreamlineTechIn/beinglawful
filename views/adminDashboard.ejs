@@ -415,6 +415,7 @@
                             <tr>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                                 <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
@@ -427,7 +428,6 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
@@ -438,6 +438,17 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                                                                   <td class="py-2 px-4 border-b text-gray-700">
+  <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : 'N/A' %>
+</td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
@@ -476,17 +487,6 @@
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700">
-  <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
-    timeZone: 'Asia/Kolkata',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }) : 'N/A' %>
-</td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
                                         <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
@@ -504,6 +504,7 @@
                             <tr>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
@@ -516,7 +517,6 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
@@ -527,6 +527,17 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                                                          <td class="py-2 px-4 border-b text-gray-700">
+  <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : 'N/A' %>
+</td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
@@ -560,9 +571,6 @@
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700">
-                                       <%= school && school.registeredAt && new Date(school.registeredAt).toString() !== 'Invalid Date' ? new Date(school.registeredAt).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
-                                     </td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
                                         <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
@@ -580,6 +588,7 @@
                             <tr>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
@@ -595,7 +604,6 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
@@ -606,6 +614,17 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                          <td class="py-2 px-4 border-b text-gray-700">
+  <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : 'N/A' %>
+</td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
@@ -708,9 +727,7 @@
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= school.registeredAt ? school.registeredAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
-                                    </td>
+
                                     <td class="py-2 px-4 border-b text-gray-700">
                                         <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                                     </td>
@@ -729,6 +746,7 @@
                             <tr>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                                 <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
@@ -743,7 +761,6 @@
                                 <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
@@ -754,6 +771,17 @@
                                 <tr class="hover:bg-gray-50">
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                                                     <td class="py-2 px-4 border-b text-gray-700">
+  <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  }) : 'N/A' %>
+</td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
@@ -789,9 +817,7 @@
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                               <%= school.registeredAt ? new Date(school.registeredAt._seconds * 1000).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'N/A' %>
-    </td>
+                                    
                                     <td class="py-2 px-4 border-b text-gray-700">
                                         <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                                     </td>

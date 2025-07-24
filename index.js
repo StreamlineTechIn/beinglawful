@@ -513,7 +513,7 @@ function requireStudentAuth(req, res, next) {
     });
 
     // Student login (renders login.ejs or dashboard.ejs)
- app.post('/student-login', async (req, res) => {
+app.post('/student-login', async (req, res) => {
     const { username, password } = req.body;
     try {
         if (!username || !password) {
@@ -546,43 +546,10 @@ function requireStudentAuth(req, res, next) {
         }
 
         req.session.parentMobile1 = username;
+        console.log(`Login successful for ${username}, redirecting to /dashboard/${encodeURIComponent(username)}`);
 
-        let mcqs = [];
-        const hasCompletedMCQ = user.hasCompletedMCQ || false;
-        if (!hasCompletedMCQ) {
-            await db.runTransaction(async (transaction) => {
-                const userRef = db.collection('participants').doc(userId);
-                const userDoc = await transaction.get(userRef);
-                const userData = userDoc.data();
-                mcqs = userData.currentMcqs || [];
-                if (mcqs.length === 0) {
-                    mcqs = await getRandomQuestions(30);
-                    transaction.update(userRef, { currentMcqs: mcqs });
-                }
-            });
-        }
-
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(user.schoolNameDropdown || '');
-
-        res.render('dashboard', {
-            studentName: user.studentName || 'Unknown Student',
-            parentMobile1: username,
-            hasCompletedMCQ: hasCompletedMCQ,
-            hasCompletedTrial1: user.hasCompletedTrial1 || false,
-            hasCompletedTrial2: user.hasCompletedTrial2 || false,
-            mcqs: mcqs,
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate: isEventDate,
-            isOnOrAfterEventDate: isOnOrAfterEventDate,
-            eventDateMissing: eventDateMissing,
-            eventDate: eventDate,
-            showResults: hasCompletedMCQ,
-            score: user.score || 0,
-            totalQuestions: user.totalQuestions || 30,
-            percentage: user.percentage || 0,
-             championMessage: user.championMessage || null
-        });
+        // Redirect to dashboard route
+        res.redirect(`/dashboard/${encodeURIComponent(username)}`);
 
     } catch (error) {
         console.error('Error during student login:', error.message, error.stack);
@@ -592,7 +559,7 @@ function requireStudentAuth(req, res, next) {
 
 
     // Dashboard (renders dashboard.ejs)
-   app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
+  app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
         const parentMobile1 = req.session.parentMobile1;
 
@@ -635,29 +602,44 @@ function requireStudentAuth(req, res, next) {
 
         const mediaUploads = mediaSnapshot.docs.map(doc => doc.data());
 
+        // ✅ Debug data being sent to template
+        console.log('Dashboard Data:', {
+            studentName: user.studentName || 'N/A',
+            parentMobile1: parentMobile1,
+            isChampion: user.isChampion || false,
+            championMessage: user.championMessage || '',
+            batch: user.batch || 'N/A',
+            hasCompletedMCQ: user.hasCompletedMCQ || false,
+            eventDateMissing: req.eventDateMissing || true,
+            isOnOrAfterEventDate: req.isOnOrAfterEventDate || false,
+            eventDate: req.eventDate || '',
+            isEventDate: req.isEventDate || false
+        });
+
         // ✅ Render dashboard with fresh Firestore data
         res.render('dashboard', {
-            studentName: user.studentName || 'Unknown Student',
-            parentMobile1,
-            hasCompletedMCQ,
+            studentName: user.studentName || 'N/A',
+            parentMobile1: parentMobile1,
+            isChampion: user.isChampion || false,
+            championMessage: user.championMessage || '',
+            hasCompletedMCQ: user.hasCompletedMCQ || false,
+            eventDateMissing: req.eventDateMissing || true,
+            isOnOrAfterEventDate: req.isOnOrAfterEventDate || false,
+            eventDate: req.eventDate || '',
+            isEventDate: req.isEventDate || false,
             hasCompletedTrial1: user.hasCompletedTrial1 || false,
             hasCompletedTrial2: user.hasCompletedTrial2 || false,
-            mcqs,
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate: res.locals.isEventDate,
-            isOnOrAfterEventDate: res.locals.isOnOrAfterEventDate,
-            eventDateMissing: res.locals.eventDateMissing,
-            eventDate: res.locals.eventDate,
-            showResults: hasCompletedMCQ,
-            score: user.score || 0,
-            totalQuestions: user.totalQuestions || 30,
-            percentage: user.percentage || 0,
+            trial1: [], // Replace with actual query if needed (e.g., trial1Questions.docs.map(doc => doc.data()))
+            trial2: [], // Replace with actual query if needed
+            mcqs: mcqs, // Use transaction result
+            showResults: user.hasCompletedMCQ || false,
+            score: user.score,
+            totalQuestions: user.totalQuestions,
+            percentage: user.percentage,
             mediaUploads: mediaUploads || [],
-            showMediaSection: false,
-            isApproved: user.isApproved || false,
-            isChampion: user.isChampion || false, // ✅ Include this
-            championMessage: user.championMessage || ''// ✅ This will now be visible
+            showMediaSection: (user.hasCompletedMCQ || false) && (req.isOnOrAfterEventDate || false),
+            batch: user.batch || 'N/A', // Use user data for batch
+            error: null
         });
 
     } catch (error) {

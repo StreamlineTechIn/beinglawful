@@ -511,8 +511,7 @@ function requireStudentAuth(req, res, next) {
         const error = req.query.error || null;
         res.render('login', { error });
     });
-
-    // Student login (renders login.ejs or dashboard.ejs)
+    
 app.post('/student-login', async (req, res) => {
     const { username, password } = req.body;
     try {
@@ -527,14 +526,12 @@ app.post('/student-login', async (req, res) => {
             return res.render('login', { error: 'Student not found.' });
         }
 
-        // ✅ Approval Check
         if (!user.isApproved) {
             return res.render('login', { error: 'Approval pending. Please contact your school.' });
         }
 
-        // ✅ Birthdate-based password check
         if (!user.birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(user.birthdate)) {
-            console.error(`Invalid birthdate format for user ${username}: ${user.birthdate}`);
+            console.error(`Invalid birthdate for user ${username}: ${user.birthdate}`);
             return res.render('login', { error: 'Invalid user data. Contact administrator.' });
         }
 
@@ -546,11 +543,9 @@ app.post('/student-login', async (req, res) => {
         }
 
         req.session.parentMobile1 = username;
-        console.log(`Login successful for ${username}, redirecting to /dashboard/${encodeURIComponent(username)}`);
+        console.log(`Login successful for ${username}`);
 
-        // Redirect to dashboard route
         res.redirect(`/dashboard/${encodeURIComponent(username)}`);
-
     } catch (error) {
         console.error('Error during student login:', error.message, error.stack);
         res.render('login', { error: 'Login failed. Please try again later.' });
@@ -558,31 +553,31 @@ app.post('/student-login', async (req, res) => {
 });
 
 
+
+
     // Dashboard (renders dashboard.ejs)
-  app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
+ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
         const parentMobile1 = req.session.parentMobile1;
 
-        // ✅ Always fetch fresh participant data from Firestore
-        const participantSnapshot = await db.collection('participants')
+        const snapshot = await db.collection('participants')
             .where('parentMobile1', '==', parentMobile1)
             .get();
 
-        if (participantSnapshot.empty) {
+        if (snapshot.empty) {
             return res.redirect('/login?error=Student%20not%20found');
         }
 
-        const participantDoc = participantSnapshot.docs[0];
-        const participantDocId = participantDoc.id;
-        const user = participantDoc.data(); // ✅ FRESH DATA
+        const doc = snapshot.docs[0];
+        const user = doc.data();
+        const docId = doc.id;
 
         let mcqs = [];
         const hasCompletedMCQ = user.hasCompletedMCQ || false;
 
-        // ✅ Set MCQs if not completed
         if (!hasCompletedMCQ) {
             await db.runTransaction(async (transaction) => {
-                const userRef = db.collection('participants').doc(participantDocId);
+                const userRef = db.collection('participants').doc(docId);
                 const userDoc = await transaction.get(userRef);
                 const userData = userDoc.data();
                 mcqs = userData.currentMcqs || [];
@@ -591,60 +586,52 @@ app.post('/student-login', async (req, res) => {
                     transaction.update(userRef, { currentMcqs: mcqs });
                 }
             });
+        } else {
+            mcqs = user.currentMcqs || [];
         }
 
-        // ✅ Get participant media uploads
         const mediaSnapshot = await db.collection('participants')
-            .doc(participantDocId)
+            .doc(docId)
             .collection('mediaUploads')
             .orderBy('uploadedAt', 'desc')
             .get();
 
         const mediaUploads = mediaSnapshot.docs.map(doc => doc.data());
 
-        // ✅ Debug data being sent to template
         console.log('Dashboard Data:', {
-            studentName: user.studentName || 'N/A',
-            parentMobile1: parentMobile1,
-            isChampion: user.isChampion || false,
-            championMessage: user.championMessage || '',
-            batch: user.batch || 'N/A',
-            hasCompletedMCQ: user.hasCompletedMCQ || false,
-            eventDateMissing: req.eventDateMissing || true,
-            isOnOrAfterEventDate: req.isOnOrAfterEventDate || false,
-            eventDate: req.eventDate || '',
-            isEventDate: req.isEventDate || false
+            studentName: user.studentName,
+            parentMobile1,
+            hasCompletedMCQ,
+            mcqsCount: mcqs.length
         });
 
-        // ✅ Render dashboard with fresh Firestore data
         res.render('dashboard', {
             studentName: user.studentName || 'N/A',
-            parentMobile1: parentMobile1,
+            parentMobile1,
             isChampion: user.isChampion || false,
             championMessage: user.championMessage || '',
-            hasCompletedMCQ: user.hasCompletedMCQ || false,
-            eventDateMissing: req.eventDateMissing || true,
-            isOnOrAfterEventDate: req.isOnOrAfterEventDate || false,
-            eventDate: req.eventDate || '',
-            isEventDate: req.isEventDate || false,
+            hasCompletedMCQ,
             hasCompletedTrial1: user.hasCompletedTrial1 || false,
             hasCompletedTrial2: user.hasCompletedTrial2 || false,
-            trial1: [], // Replace with actual query if needed (e.g., trial1Questions.docs.map(doc => doc.data()))
-            trial2: [], // Replace with actual query if needed
-            mcqs: mcqs, // Use transaction result
-            showResults: user.hasCompletedMCQ || false,
-            score: user.score,
-            totalQuestions: user.totalQuestions,
-            percentage: user.percentage,
-            mediaUploads: mediaUploads || [],
-            showMediaSection: (user.hasCompletedMCQ || false) && (req.isOnOrAfterEventDate || false),
-            batch: user.batch || 'N/A', // Use user data for batch
+            trial1: trialTests.trial1,
+            trial2: trialTests.trial2,
+            mcqs,
+            showResults: hasCompletedMCQ,
+            score: user.score || 0,
+            totalQuestions: user.totalQuestions || 30,
+            percentage: user.percentage || 0,
+            mediaUploads,
+            showMediaSection: hasCompletedMCQ && (req.isOnOrAfterEventDate || false),
+            eventDate: req.eventDate || '',
+            eventDateMissing: req.eventDateMissing || true,
+            isOnOrAfterEventDate: req.isOnOrAfterEventDate || false,
+            isEventDate: req.isEventDate || false,
+            batch: user.batch || 'N/A',
             error: null
         });
-
     } catch (error) {
-        console.error('Error loading dashboard:', error);
-        res.redirect('/login?error=Error%20loading%20dashboard');
+        console.error('Error loading dashboard:', error.message, error.stack);
+        res.redirect('/login?error=Dashboard%20load%20failed');
     }
 });
 

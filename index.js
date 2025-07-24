@@ -513,7 +513,7 @@ function requireStudentAuth(req, res, next) {
     });
 
     // Student login (renders login.ejs or dashboard.ejs)
-      app.post('/student-login', async (req, res) => {
+ app.post('/student-login', async (req, res) => {
     const { username, password } = req.body;
     try {
         if (!username || !password) {
@@ -592,11 +592,11 @@ function requireStudentAuth(req, res, next) {
 
 
     // Dashboard (renders dashboard.ejs)
-app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
+   app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
         const parentMobile1 = req.session.parentMobile1;
-        const user = res.locals.user;
 
+        // ✅ Always fetch fresh participant data from Firestore
         const participantSnapshot = await db.collection('participants')
             .where('parentMobile1', '==', parentMobile1)
             .get();
@@ -605,10 +605,14 @@ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (
             return res.redirect('/login?error=Student%20not%20found');
         }
 
-        const participantDocId = participantSnapshot.docs[0].id;
+        const participantDoc = participantSnapshot.docs[0];
+        const participantDocId = participantDoc.id;
+        const user = participantDoc.data(); // ✅ FRESH DATA
 
         let mcqs = [];
         const hasCompletedMCQ = user.hasCompletedMCQ || false;
+
+        // ✅ Set MCQs if not completed
         if (!hasCompletedMCQ) {
             await db.runTransaction(async (transaction) => {
                 const userRef = db.collection('participants').doc(participantDocId);
@@ -622,6 +626,7 @@ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (
             });
         }
 
+        // ✅ Get participant media uploads
         const mediaSnapshot = await db.collection('participants')
             .doc(participantDocId)
             .collection('mediaUploads')
@@ -630,6 +635,7 @@ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (
 
         const mediaUploads = mediaSnapshot.docs.map(doc => doc.data());
 
+        // ✅ Render dashboard with fresh Firestore data
         res.render('dashboard', {
             studentName: user.studentName || 'Unknown Student',
             parentMobile1,
@@ -648,9 +654,10 @@ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (
             totalQuestions: user.totalQuestions || 30,
             percentage: user.percentage || 0,
             mediaUploads: mediaUploads || [],
-            showMediaSection: false,   // ✅ Added this line
-                isApproved: user.isApproved || false ,
-             championMessage: user.championMessage || null
+            showMediaSection: false,
+            isApproved: user.isApproved || false,
+            isChampion: user.isChampion || false, // ✅ Include this
+            championMessage: user.championMessage || ''// ✅ This will now be visible
         });
 
     } catch (error) {
@@ -658,6 +665,7 @@ app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (
         res.redirect('/login?error=Error%20loading%20dashboard');
     }
 });
+
 
 
 
@@ -1972,26 +1980,39 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         res.status(500).send('Error approving student.');
     }
 });
-app.post('/school-dashboard/mark-champ/:id', async (req, res) => {
-  const studentId = req.params.id;
-  const { username } = req.query;
 
-  // Count total champions first (to limit to 50)
-  const championsSnapshot = await db.collection('participants')
-    .where('isChampion', '==', true)
-    .get();
+//champ student
+  app.post('/school-dashboard/mark-champ/:id', async (req, res) => {
+    const studentId = req.params.id;
+    const { username } = req.query;
 
-  if (championsSnapshot.size >= 50) {
-    return res.send('❌ Only 50 students can be marked as Champion.');
-  }
+    try {
+        //  Count existing champions
+        const championsSnapshot = await db.collection('participants')
+            .where('isChampion', '==', true)
+            .get();
 
-  await db.collection('participants').doc(studentId).update({
-    isChampion: true,
-    championMessage: '🎉 Congratulations! You have been selected as a Being Lawful Champ!'
-  });
-  console.log(participant.championMessage)
-  res.redirect(`/school-dashboard?username=${username}`);
+        if (championsSnapshot.size >= 50) {
+            return res.send(' Only 50 students can be marked as Champion.');
+        }
+
+        const championMessage = '🎉 Congratulations! You have been selected as a Being Lawful Champ!';
+
+        //  Update the participant
+        await db.collection('participants').doc(studentId).update({
+            isChampion: true,
+            championMessage: championMessage
+        });
+
+        console.log(`Champion set for ${studentId} - Message: ${championMessage}`);
+
+        res.redirect(`/school-dashboard?username=${username}`);
+    } catch (error) {
+        console.error('Error marking champ:', error);
+        res.status(500).send('Server error while marking champion');
+    }
 });
+
 
 
 // Participation form (renders participation.ejs)
@@ -2158,62 +2179,106 @@ app.post('/school-dashboard/mark-champ/:id', async (req, res) => {
         }
     });
 
- app.post('/school-participate', [
-    body('schoolName').trim().notEmpty().withMessage('School name is required'),
-    body('city').trim().notEmpty().withMessage('City is required'),
-    body('district').trim().notEmpty().withMessage('District is required'),
-    body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
-    body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
-    body('schoolEmail').trim().isEmail().withMessage('Invalid school email address'),
-    body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
-    body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
-    body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
-    body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address'),
-    body('eventDate1').isDate().withMessage('Invalid date format for Event Date 1'),
-    body('eventDate2').isDate().withMessage('Invalid date format for Event Date 2'),
-    body('eventDate3').isDate().withMessage('Invalid date format for Event Date 3'),
-    body('eventDate4').isDate().withMessage('Invalid date format for Event Date 4')
-], async (req, res) => {
-    try {
-        const errors = validationResult(req).array();
+    app.post('/school-participate', [
+        body('schoolName').trim().notEmpty().withMessage('School name is required'),
+        body('city').trim().notEmpty().withMessage('City is required'),
+        body('district').trim().notEmpty().withMessage('District is required'),
+        body('pincode').trim().matches(/^\d{6}$/).withMessage('Pincode must be 6 digits'),
+        body('schoolPhoneNumber').trim().matches(/^\d{10}$/).withMessage('School phone number must be 10 digits'),
+        body('schoolEmail').trim().isEmail().withMessage('Invalid school email address'),
+        body('principalNumber').trim().matches(/^\d{10}$/).withMessage('Principal phone number must be 10 digits'),
+        body('principalEmail').trim().isEmail().withMessage('Invalid principal email address'),
+        body('civicsTeacherNumber').trim().matches(/^\d{10}$/).withMessage('Civics teacher phone number must be 10 digits'),
+        body('civicsTeacherEmail').trim().isEmail().withMessage('Invalid civics teacher email address'),
+        body('eventDate1').isDate().withMessage('Invalid date format for Event Date 1'),
+        body('eventDate2').isDate().withMessage('Invalid date format for Event Date 2'),
+        body('eventDate3').isDate().withMessage('Invalid date format for Event Date 3'),
+        body('eventDate4').isDate().withMessage('Invalid date format for Event Date 4')
+    ], async (req, res) => {
+        try {
+            const errors = validationResult(req).array();
 
-        // Check for duplicate entries
-        const {
-            schoolName,
-            city,
-            district,
-            pincode,
-            schoolPhoneNumber,
-            schoolEmail,
-            principalNumber,
-            principalEmail,
-            civicsTeacherNumber,
-            civicsTeacherEmail,
-            eventDate1,
-            eventDate2,
-            eventDate3,
-            eventDate4
-        } = req.body;
+            // Check for duplicate entries
+            const {
+                schoolName,
+                city,
+                district,
+                pincode,
+                schoolPhoneNumber,
+                schoolEmail,
+                principalNumber,
+                principalEmail,
+                civicsTeacherNumber,
+                civicsTeacherEmail,
+                eventDate1,
+                eventDate2,
+                eventDate3,
+                eventDate4
+            } = req.body;
 
-        const checks = [
-            { field: 'schoolEmail', value: schoolEmail, message: 'School email already exists' },
-            { field: 'principalEmail', value: principalEmail, message: 'Principal email already exists' },
-            { field: 'civicsTeacherEmail', value: civicsTeacherEmail, message: 'Civics teacher email already exists' },
-            { field: 'schoolPhoneNumber', value: schoolPhoneNumber, message: 'School phone number already exists' },
-            { field: 'principalNumber', value: principalNumber, message: 'Principal phone number already exists' },
-            { field: 'civicsTeacherNumber', value: civicsTeacherNumber, message: 'Civics teacher phone number already exists' }
-        ];
+            const checks = [
+                { field: 'schoolEmail', value: schoolEmail, message: 'School email already exists' },
+                { field: 'principalEmail', value: principalEmail, message: 'Principal email already exists' },
+                { field: 'civicsTeacherEmail', value: civicsTeacherEmail, message: 'Civics teacher email already exists' },
+                { field: 'schoolPhoneNumber', value: schoolPhoneNumber, message: 'School phone number already exists' },
+                { field: 'principalNumber', value: principalNumber, message: 'Principal phone number already exists' },
+                { field: 'civicsTeacherNumber', value: civicsTeacherNumber, message: 'Civics teacher phone number already exists' }
+            ];
 
-        for (const check of checks) {
-            const snapshot = await db.collection('schools')
-                .where(check.field, '==', check.value)
-                .get();
-            if (!snapshot.empty) {
-                errors.push({ param: check.field, msg: check.message });
+            for (const check of checks) {
+                const snapshot = await db.collection('schools')
+                    .where(check.field, '==', check.value)
+                    .get();
+                if (!snapshot.empty) {
+                    errors.push({ param: check.field, msg: check.message });
+                }
             }
-        }
 
-        if (errors.length > 0) {
+            if (errors.length > 0) {
+                const schoolsSnapshot = await db.collection('schools').get();
+                const schools = schoolsSnapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        // Convert Firestore Timestamp to readable string
+                        registeredAt: data.registeredAt ? data.registeredAt.toDate().toLocaleString() : 'Not registered'
+                    };
+                });
+                return res.status(400).render('schoolParticipation', { schools, errors });
+            }
+
+            await db.collection('schools').add({
+                schoolName,
+                city,
+                district,
+                pincode,
+                schoolPhoneNumber,
+                schoolEmail,
+                principalNumber,
+                principalEmail,
+                civicsTeacherNumber,
+                civicsTeacherEmail,
+                eventDates: [eventDate1, eventDate2, eventDate3, eventDate4],
+                registeredAt: admin.firestore.FieldValue.serverTimestamp(),
+                isApproved: false,
+                resourcesConfirmed: false,
+                selectedResources: []
+            });
+
+            await sendEmail(
+                schoolEmail,
+                emailTemplates.schoolRegistration.subject,
+                emailTemplates.schoolRegistration.text(schoolName, schoolEmail, principalNumber),
+                emailTemplates.schoolRegistration.html(schoolName, schoolEmail, principalNumber)
+            );
+
+            res.render('confirmation', {
+                schoolEmail: schoolEmail,
+                principalNumber: principalNumber
+            });
+        } catch (error) {
+            console.error('Error in school-participate route:', error.message, error.stack);
             const schoolsSnapshot = await db.collection('schools').get();
             const schools = schoolsSnapshot.docs.map(doc => {
                 const data = doc.data();
@@ -2224,359 +2289,314 @@ app.post('/school-dashboard/mark-champ/:id', async (req, res) => {
                     registeredAt: data.registeredAt ? data.registeredAt.toDate().toLocaleString() : 'Not registered'
                 };
             });
-            return res.status(400).render('schoolParticipation', { schools, errors });
-        }
-
-        await db.collection('schools').add({
-            schoolName,
-            city,
-            district,
-            pincode,
-            schoolPhoneNumber,
-            schoolEmail,
-            principalNumber,
-            principalEmail,
-            civicsTeacherNumber,
-            civicsTeacherEmail,
-            eventDates: [eventDate1, eventDate2, eventDate3, eventDate4],
-            registeredAt: admin.firestore.FieldValue.serverTimestamp(),
-            isApproved: false,
-            resourcesConfirmed: false,
-            selectedResources: []
-        });
-
-        await sendEmail(
-            schoolEmail,
-            emailTemplates.schoolRegistration.subject,
-            emailTemplates.schoolRegistration.text(schoolName, schoolEmail, principalNumber),
-            emailTemplates.schoolRegistration.html(schoolName, schoolEmail, principalNumber)
-        );
-
-        res.render('confirmation', {
-            schoolEmail: schoolEmail,
-            principalNumber: principalNumber
-        });
-    } catch (error) {
-        console.error('Error in school-participate route:', error.message, error.stack);
-        const schoolsSnapshot = await db.collection('schools').get();
-        const schools = schoolsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                // Convert Firestore Timestamp to readable string
-                registeredAt: data.registeredAt ? data.registeredAt.toDate().toLocaleString() : 'Not registered'
-            };
-        });
-        res.status(500).render('schoolParticipation', {
-            schools,
-            errors: [{ msg: 'Internal server error. Please try again later.' }]
-        });
-    }
-});
-    // Confirmation page (renders confirmation.ejs)
-    app.get('/confirmation', (req, res) => {
-        res.render('confirmation', {
-            schoolEmail: 'Not provided',
-            principalNumber: 'Not provided'
-        });
-    });
-
-    // School students (renders schoolStudents.ejs)
-    app.get('/school-students', async (req, res) => {
-        try {
-            const schoolName = req.query.schoolName;
-            if (!schoolName) {
-                return res.status(400).send('School name is required.');
-            }
-
-            const snapshot = await db.collection('participants')
-                .where('schoolName', '==', schoolName)
-                .get();
-            const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            res.render('schoolStudents', { schoolName, students });
-        } catch (error) {
-            console.error('Error in school-students route:', error.message, error.stack);
-            res.status(500).send('Error fetching student data.');
-        }
-    });
-
-    // Admin login page (renders adminLogin.ejs)
-    app.get('/admin-login', (req, res) => {
-        if (req.session.isAdmin) {
-            return res.redirect('/admin-dashboard');
-        }
-        res.render('adminLogin', { error: null });
-    });
-
-    // Admin login (renders adminLogin.ejs on error)
-    app.post('/admin-login', (req, res) => {
-        const { username, password } = req.body;
-        if (!username || !password) {
-            return res.render('adminLogin', { error: 'Username and password are required.' });
-        }
-
-        if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-            req.session.isAdmin = true;
-            res.redirect('/admin-dashboard');
-        } else {
-            res.render('adminLogin', { error: 'Invalid username or password.' });
-        }
-    });
-
-    // Admin route (redirects to /admin-dashboard for backward compatibility)
-    app.get('/admin', requireAdmin, async (req, res) => {
-        res.redirect('/admin-dashboard');
-    });
-
-    // Admin dashboard (renders adminDashboard.ejs)
-app.get('/admin-dashboard', requireAdmin, async (req, res) => {
-    try {
-        console.log('---- Admin Dashboard Route Triggered ----');
-
-        // 1️⃣ Parse Filters
-        const filters = {
-            schoolApproved: req.query.schoolApproved || '',
-            schoolCity: req.query.schoolCity || '',
-            trainerApproved: req.query.trainerApproved || '',
-            trainerCity: req.query.trainerCity || '',
-            studentCompleted: req.query.studentCompleted || '',
-            studentCity: req.query.studentCity || '',
-            workshopCompleted: req.query.workshopCompleted || ''
-        };
-
-        // 2️⃣ Fetch Schools + School Media
-        let schoolsQuery = db.collection('schools');
-        if (filters.schoolApproved) schoolsQuery = schoolsQuery.where('isApproved', '==', filters.schoolApproved === 'true');
-        if (filters.schoolCity) schoolsQuery = schoolsQuery.where('city', '==', filters.schoolCity);
-        if (filters.workshopCompleted) schoolsQuery = schoolsQuery.where('workshopCompleted', '==', filters.workshopCompleted === 'true');
-
-        const schoolsSnapshot = await schoolsQuery.get();
-        const schools = [];
-        const schoolMediaPromises = [];
-
-        for (const doc of schoolsSnapshot.docs) {
-            const schoolData = doc.data();
-            const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
-
-            schoolMediaPromises.push(
-                db.collection('schools').doc(doc.id).collection('mediaUploads').get()
-                    .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
-                        ...mediaDoc.data(),
-                        uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                        uploadedBy: schoolData.schoolName || 'Unknown School'
-                    })))
-            );
-
-            let trainer1 = null, trainer2 = null;
-            if (schoolData.trainerId1) {
-                const t1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
-                if (t1Doc.exists) trainer1 = { id: t1Doc.id, ...t1Doc.data() };
-            }
-            if (schoolData.trainerId2) {
-                const t2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
-                if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
-            }
-
-            schools.push({ id: doc.id, ...schoolData, eventDate, trainer1, trainer2 });
-        }
-
-        // 3️⃣ Fetch Trainers + Trainer Media
-        let trainersQuery = db.collection('trainers');
-        if (filters.trainerApproved) trainersQuery = trainersQuery.where('isApproved', '==', filters.trainerApproved === 'true');
-        if (filters.trainerCity) trainersQuery = trainersQuery.where('city', '==', filters.trainerCity);
-
-        const trainersSnapshot = await trainersQuery.get();
-        const trainers = [];
-        const trainerMediaPromises = [];
-
-        for (const doc of trainersSnapshot.docs) {
-            const data = doc.data();
-            trainerMediaPromises.push(
-                db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
-                    .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
-                        ...mediaDoc.data(),
-                        uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                        uploadedBy: data.trainerName || 'Unknown Trainer'
-                    })))
-            );
-
-            trainers.push({
-                id: doc.id,
-                ...data,
-                registeredAt: data.registeredAt?.toDate ? data.registeredAt.toDate() : (data.registeredAt ? new Date(data.registeredAt) : null),
-                isApproved: typeof data.isApproved === 'boolean' ? data.isApproved : false
+            res.status(500).render('schoolParticipation', {
+                schools,
+                errors: [{ msg: 'Internal server error. Please try again later.' }]
             });
         }
-
-        // 4️⃣ Fetch Participants
-        let participantsQuery = db.collection('participants');
-        if (filters.studentCompleted) participantsQuery = participantsQuery.where('hasCompletedMCQ', '==', filters.studentCompleted === 'true');
-        if (filters.studentCity) participantsQuery = participantsQuery.where('city', '==', filters.studentCity);
-
-        const participantsSnapshot = await participantsQuery.get();
-        const participants = participantsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            const score = Number(data.score) || null;
-            const totalQuestions = Number(data.totalQuestions) || null;
-            const trial1Score = Number(data.trial1Score) || null;
-            const trial1TotalQuestions = Number(data.trial1TotalQuestions) || null;
-            const trial2Score = Number(data.trial2Score) || null;
-            const trial2TotalQuestions = Number(data.trial2TotalQuestions) || null;
-
-            return {
-                id: doc.id,
-                ...data,
-                birthdate: data.birthdate?.toDate ? data.birthdate.toDate() : (data.birthdate ? new Date(data.birthdate) : null),
-                completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : (data.completedAt ? new Date(data.completedAt) : null),
-                score,
-                totalQuestions,
-                percentage: score && totalQuestions ? ((score / totalQuestions) * 100).toFixed(2) : null,
-                trial1Score,
-                trial1TotalQuestions,
-                trial1Percentage: trial1Score && trial1TotalQuestions ? ((trial1Score / trial1TotalQuestions) * 100).toFixed(2) : null,
-                trial2Score,
-                trial2TotalQuestions,
-                trial2Percentage: trial2Score && trial2TotalQuestions ? ((trial2Score / trial2TotalQuestions) * 100).toFixed(2) : null,
-                trial1CorrectAnswers: Number(data.trial1CorrectAnswers) || null,
-                trial1WrongAnswers: Number(data.trial1WrongAnswers) || null,
-                trial2CorrectAnswers: Number(data.trial2CorrectAnswers) || null,
-                trial2WrongAnswers: Number(data.trial2WrongAnswers) || null
-            };
+    });
+        // Confirmation page (renders confirmation.ejs)
+        app.get('/confirmation', (req, res) => {
+            res.render('confirmation', {
+                schoolEmail: 'Not provided',
+                principalNumber: 'Not provided'
+            });
         });
 
-        // 5️⃣ Collect All Media Uploads
-        const schoolMedia = (await Promise.all(schoolMediaPromises)).flat();
-        const trainerMedia = (await Promise.all(trainerMediaPromises)).flat();
-        const mediaUploads = [...schoolMedia, ...trainerMedia].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+        // School students (renders schoolStudents.ejs)
+        app.get('/school-students', async (req, res) => {
+            try {
+                const schoolName = req.query.schoolName;
+                if (!schoolName) {
+                    return res.status(400).send('School name is required.');
+                }
 
-        // 6️⃣ Today's Participants Summary
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-        let studentsTodayCount = 0;
-        let averageScore = 0;
+                const snapshot = await db.collection('participants')
+                    .where('schoolName', '==', schoolName)
+                    .get();
+                const students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                res.render('schoolStudents', { schoolName, students });
+            } catch (error) {
+                console.error('Error in school-students route:', error.message, error.stack);
+                res.status(500).send('Error fetching student data.');
+            }
+        });
+
+        // Admin login page (renders adminLogin.ejs)
+        app.get('/admin-login', (req, res) => {
+            if (req.session.isAdmin) {
+                return res.redirect('/admin-dashboard');
+            }
+            res.render('adminLogin', { error: null });
+        });
+
+        // Admin login (renders adminLogin.ejs on error)
+        app.post('/admin-login', (req, res) => {
+            const { username, password } = req.body;
+            if (!username || !password) {
+                return res.render('adminLogin', { error: 'Username and password are required.' });
+            }
+
+            if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+                req.session.isAdmin = true;
+                res.redirect('/admin-dashboard');
+            } else {
+                res.render('adminLogin', { error: 'Invalid username or password.' });
+            }
+        });
+
+        // Admin route (redirects to /admin-dashboard for backward compatibility)
+        app.get('/admin', requireAdmin, async (req, res) => {
+            res.redirect('/admin-dashboard');
+        });
+
+        // Admin dashboard (renders adminDashboard.ejs)
+    app.get('/admin-dashboard', requireAdmin, async (req, res) => {
+        try {
+            console.log('---- Admin Dashboard Route Triggered ----');
+
+            // 1️⃣ Parse Filters
+            const filters = {
+                schoolApproved: req.query.schoolApproved || '',
+                schoolCity: req.query.schoolCity || '',
+                trainerApproved: req.query.trainerApproved || '',
+                trainerCity: req.query.trainerCity || '',
+                studentCompleted: req.query.studentCompleted || '',
+                studentCity: req.query.studentCity || '',
+                workshopCompleted: req.query.workshopCompleted || ''
+            };
+
+            // 2️⃣ Fetch Schools + School Media
+            let schoolsQuery = db.collection('schools');
+            if (filters.schoolApproved) schoolsQuery = schoolsQuery.where('isApproved', '==', filters.schoolApproved === 'true');
+            if (filters.schoolCity) schoolsQuery = schoolsQuery.where('city', '==', filters.schoolCity);
+            if (filters.workshopCompleted) schoolsQuery = schoolsQuery.where('workshopCompleted', '==', filters.workshopCompleted === 'true');
+
+            const schoolsSnapshot = await schoolsQuery.get();
+            const schools = [];
+            const schoolMediaPromises = [];
+
+            for (const doc of schoolsSnapshot.docs) {
+                const schoolData = doc.data();
+                const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
+
+                schoolMediaPromises.push(
+                    db.collection('schools').doc(doc.id).collection('mediaUploads').get()
+                        .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                            ...mediaDoc.data(),
+                            uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                            uploadedBy: schoolData.schoolName || 'Unknown School'
+                        })))
+                );
+
+                let trainer1 = null, trainer2 = null;
+                if (schoolData.trainerId1) {
+                    const t1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
+                    if (t1Doc.exists) trainer1 = { id: t1Doc.id, ...t1Doc.data() };
+                }
+                if (schoolData.trainerId2) {
+                    const t2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
+                    if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
+                }
+
+                schools.push({ id: doc.id, ...schoolData, eventDate, trainer1, trainer2 });
+            }
+
+            // 3️⃣ Fetch Trainers + Trainer Media
+            let trainersQuery = db.collection('trainers');
+            if (filters.trainerApproved) trainersQuery = trainersQuery.where('isApproved', '==', filters.trainerApproved === 'true');
+            if (filters.trainerCity) trainersQuery = trainersQuery.where('city', '==', filters.trainerCity);
+
+            const trainersSnapshot = await trainersQuery.get();
+            const trainers = [];
+            const trainerMediaPromises = [];
+
+            for (const doc of trainersSnapshot.docs) {
+                const data = doc.data();
+                trainerMediaPromises.push(
+                    db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
+                        .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                            ...mediaDoc.data(),
+                            uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                            uploadedBy: data.trainerName || 'Unknown Trainer'
+                        })))
+                );
+
+                trainers.push({
+                    id: doc.id,
+                    ...data,
+                    registeredAt: data.registeredAt?.toDate ? data.registeredAt.toDate() : (data.registeredAt ? new Date(data.registeredAt) : null),
+                    isApproved: typeof data.isApproved === 'boolean' ? data.isApproved : false
+                });
+            }
+
+            // 4️⃣ Fetch Participants
+            let participantsQuery = db.collection('participants');
+            if (filters.studentCompleted) participantsQuery = participantsQuery.where('hasCompletedMCQ', '==', filters.studentCompleted === 'true');
+            if (filters.studentCity) participantsQuery = participantsQuery.where('city', '==', filters.studentCity);
+
+            const participantsSnapshot = await participantsQuery.get();
+            const participants = participantsSnapshot.docs.map(doc => {
+                const data = doc.data();
+                const score = Number(data.score) || null;
+                const totalQuestions = Number(data.totalQuestions) || null;
+                const trial1Score = Number(data.trial1Score) || null;
+                const trial1TotalQuestions = Number(data.trial1TotalQuestions) || null;
+                const trial2Score = Number(data.trial2Score) || null;
+                const trial2TotalQuestions = Number(data.trial2TotalQuestions) || null;
+
+                return {
+                    id: doc.id,
+                    ...data,
+                    birthdate: data.birthdate?.toDate ? data.birthdate.toDate() : (data.birthdate ? new Date(data.birthdate) : null),
+                    completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : (data.completedAt ? new Date(data.completedAt) : null),
+                    score,
+                    totalQuestions,
+                    percentage: score && totalQuestions ? ((score / totalQuestions) * 100).toFixed(2) : null,
+                    trial1Score,
+                    trial1TotalQuestions,
+                    trial1Percentage: trial1Score && trial1TotalQuestions ? ((trial1Score / trial1TotalQuestions) * 100).toFixed(2) : null,
+                    trial2Score,
+                    trial2TotalQuestions,
+                    trial2Percentage: trial2Score && trial2TotalQuestions ? ((trial2Score / trial2TotalQuestions) * 100).toFixed(2) : null,
+                    trial1CorrectAnswers: Number(data.trial1CorrectAnswers) || null,
+                    trial1WrongAnswers: Number(data.trial1WrongAnswers) || null,
+                    trial2CorrectAnswers: Number(data.trial2CorrectAnswers) || null,
+                    trial2WrongAnswers: Number(data.trial2WrongAnswers) || null
+                };
+            });
+
+            // 5️⃣ Collect All Media Uploads
+            const schoolMedia = (await Promise.all(schoolMediaPromises)).flat();
+            const trainerMedia = (await Promise.all(trainerMediaPromises)).flat();
+            const mediaUploads = [...schoolMedia, ...trainerMedia].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+
+            // 6️⃣ Today's Participants Summary
+            const today = new Date(); today.setHours(0, 0, 0, 0);
+            const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+            let studentsTodayCount = 0;
+            let averageScore = 0;
+
+            try {
+                const studentsTodaySnapshot = await db.collection('participants')
+                    .where('hasCompletedMCQ', '==', true)
+                    .where('completedAt', '>=', today)
+                    .where('completedAt', '<', tomorrow)
+                    .get();
+
+                studentsTodayCount = studentsTodaySnapshot.size;
+                const totalScore = studentsTodaySnapshot.docs.reduce((sum, doc) => sum + (Number(doc.data().score) || 0), 0);
+                averageScore = studentsTodayCount > 0 ? (totalScore / studentsTodayCount).toFixed(2) : 0;
+            } catch (indexErr) {
+                console.error('🔥 Firestore Index Error:', indexErr.message);
+            }
+
+            // 7️⃣ Fetch Trainer ZIPs
+            const zipSnapshot = await db.collection('trainerZips').get();
+            const zips = zipSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                uploadedAt: doc.data().uploadedAt?.toDate() || null
+            }));
+
+            // 8️⃣ Render Admin Dashboard View
+            res.render('adminDashboard', {
+                schools,
+                trainers,
+                participants,
+                filters,
+                studentsTodayCount,
+                averageScore,
+                zips,
+                mediaUploads,
+                error: null,
+                success: req.query.success || null
+            });
+
+        } catch (err) {
+            console.error('❌ Error in /admin-dashboard:', err.message);
+            res.render('adminDashboard', {
+                schools: [],
+                trainers: [],
+                participants: [],
+                filters: {},
+                studentsTodayCount: 0,
+                averageScore: 0,
+                zips: [],
+                mediaUploads: [],
+                error: 'Failed to load dashboard data.',
+                success: null
+            });
+        }
+    });
+
+    app.post('/admin-dashboard/delete-trainer/:id', requireAdmin, async (req, res) => {
+        const trainerId = req.params.id;
 
         try {
-            const studentsTodaySnapshot = await db.collection('participants')
-                .where('hasCompletedMCQ', '==', true)
-                .where('completedAt', '>=', today)
-                .where('completedAt', '<', tomorrow)
+            await db.collection('trainers').doc(trainerId).delete();
+            res.redirect('/admin-dashboard?success=Trainer deleted successfully');
+        } catch (err) {
+            console.error('❌ Error deleting trainer:', err.message);
+            res.redirect('/admin-dashboard?error=Failed to delete trainer');
+        }
+    });
+
+    // Delete a participant by ID
+    app.post('/admin-dashboard/delete-student/:id', requireAdmin, async (req, res) => {
+        const participantId = req.params.id;
+
+        try {
+            await db.collection('participants').doc(participantId).delete();
+            res.redirect('/admin-dashboard?success=Student deleted successfully');
+        } catch (err) {
+            console.error('❌ Error deleting student:', err.message);
+            res.redirect('/admin-dashboard?error=Failed to delete student');
+        }
+    });
+    // ✅ POST mark media as seen (One-way, not toggle)
+    app.post('/admin-dashboard/mark-media-seen/:mediaId', async (req, res) => {
+        try {
+            const mediaId = req.params.mediaId;
+            const mediaSnap = await db.collectionGroup('mediaUploads')
+                .where('id', '==', mediaId)
+                .limit(1)
                 .get();
 
-            studentsTodayCount = studentsTodaySnapshot.size;
-            const totalScore = studentsTodaySnapshot.docs.reduce((sum, doc) => sum + (Number(doc.data().score) || 0), 0);
-            averageScore = studentsTodayCount > 0 ? (totalScore / studentsTodayCount).toFixed(2) : 0;
-        } catch (indexErr) {
-            console.error('🔥 Firestore Index Error:', indexErr.message);
+            if (mediaSnap.empty) {
+                return res.status(404).json({ error: 'Media not found' });
+            }
+
+            const mediaDoc = mediaSnap.docs[0];
+
+            if (!mediaDoc.data().seen) {
+                await mediaDoc.ref.update({ seen: true });
+            }
+
+            res.json({ seen: true, message: 'Media marked as seen' });
+        } catch (err) {
+            console.error('Error marking media as seen:', err.message);
+            res.status(500).json({ error: 'Server error' });
         }
+    });
 
-        // 7️⃣ Fetch Trainer ZIPs
-        const zipSnapshot = await db.collection('trainerZips').get();
-        const zips = zipSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            uploadedAt: doc.data().uploadedAt?.toDate() || null
-        }));
+    app.get('/admin-dashboard/get-media-status/:mediaId', async (req, res) => {
+        try {
+            const mediaId = req.params.mediaId;
+            const mediaSnap = await db.collectionGroup('mediaUploads').where('id', '==', mediaId).limit(1).get();
 
-        // 8️⃣ Render Admin Dashboard View
-        res.render('adminDashboard', {
-            schools,
-            trainers,
-            participants,
-            filters,
-            studentsTodayCount,
-            averageScore,
-            zips,
-            mediaUploads,
-            error: null,
-            success: req.query.success || null
-        });
+            if (mediaSnap.empty) {
+                return res.status(404).json({ error: 'Media not found' });
+            }
 
-    } catch (err) {
-        console.error('❌ Error in /admin-dashboard:', err.message);
-        res.render('adminDashboard', {
-            schools: [],
-            trainers: [],
-            participants: [],
-            filters: {},
-            studentsTodayCount: 0,
-            averageScore: 0,
-            zips: [],
-            mediaUploads: [],
-            error: 'Failed to load dashboard data.',
-            success: null
-        });
-    }
-});
-
-app.post('/admin-dashboard/delete-trainer/:id', requireAdmin, async (req, res) => {
-    const trainerId = req.params.id;
-
-    try {
-        await db.collection('trainers').doc(trainerId).delete();
-        res.redirect('/admin-dashboard?success=Trainer deleted successfully');
-    } catch (err) {
-        console.error('❌ Error deleting trainer:', err.message);
-        res.redirect('/admin-dashboard?error=Failed to delete trainer');
-    }
-});
-
-
-// Delete a participant by ID
-app.post('/admin-dashboard/delete-student/:id', requireAdmin, async (req, res) => {
-    const participantId = req.params.id;
-
-    try {
-        await db.collection('participants').doc(participantId).delete();
-        res.redirect('/admin-dashboard?success=Student deleted successfully');
-    } catch (err) {
-        console.error('❌ Error deleting student:', err.message);
-        res.redirect('/admin-dashboard?error=Failed to delete student');
-    }
-});
-// ✅ POST mark media as seen (One-way, not toggle)
-app.post('/admin-dashboard/mark-media-seen/:mediaId', async (req, res) => {
-    try {
-        const mediaId = req.params.mediaId;
-        const mediaSnap = await db.collectionGroup('mediaUploads')
-            .where('id', '==', mediaId)
-            .limit(1)
-            .get();
-
-        if (mediaSnap.empty) {
-            return res.status(404).json({ error: 'Media not found' });
+            const mediaDoc = mediaSnap.docs[0];
+            res.json({ seen: mediaDoc.data().seen || false });
+        } catch (err) {
+            console.error('Error fetching media status:', err.message);
+            res.status(500).json({ error: 'Server error' });
         }
-
-        const mediaDoc = mediaSnap.docs[0];
-
-        if (!mediaDoc.data().seen) {
-            await mediaDoc.ref.update({ seen: true });
-        }
-
-        res.json({ seen: true, message: 'Media marked as seen' });
-    } catch (err) {
-        console.error('Error marking media as seen:', err.message);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
-
-app.get('/admin-dashboard/get-media-status/:mediaId', async (req, res) => {
-    try {
-        const mediaId = req.params.mediaId;
-        const mediaSnap = await db.collectionGroup('mediaUploads').where('id', '==', mediaId).limit(1).get();
-
-        if (mediaSnap.empty) {
-            return res.status(404).json({ error: 'Media not found' });
-        }
-
-        const mediaDoc = mediaSnap.docs[0];
-        res.json({ seen: mediaDoc.data().seen || false });
-    } catch (err) {
-        console.error('Error fetching media status:', err.message);
-        res.status(500).json({ error: 'Server error' });
-    }
-});
+    });
 
 // POST: Toggle media seen status
 app.post('/admin-dashboard/toggle-media-seen/:mediaId', async (req, res) => {
@@ -3642,27 +3662,7 @@ async function renderFormWithErrors(res, errors) {
     });
 
 
-    // Dashboard route
-app.get("/logistic-dashboard", async (req, res) => {
-  const snapshot = await db.collection("schools").where("isApproved", "==", true).get();
-  const schools = [];
-
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    schools.push({
-      id: doc.id,
-      name: data.schoolName,
-  civicsSirNumber: data.civicsTeacherNumber,
-         
-      city: data.city,
-      district: data.district,
-     eventDate: data.eventDate?.toDate().toLocaleDateString("en-IN"),
-      status: data.isCompleted ? "delivered" : "pending",
-    });
-  });
-
-  res.render("logistic-dashboard", { schools });
-});
+    // logistic Dashboard route
 app.get("/logistic-dashboard", async (req, res) => {
   const snapshot = await db
     .collection("schools")
@@ -3692,6 +3692,8 @@ app.get("/logistic-dashboard", async (req, res) => {
 
   res.render("logistic-dashboard", { schools });
 });
+
+
 // New POST route to update status
 app.post("/update-status", async (req, res) => {
   const { id, status } = req.body;
@@ -3705,6 +3707,45 @@ app.post("/update-status", async (req, res) => {
   } catch (error) {
     console.error("Status update failed:", error);
     res.status(500).send("Error updating status");
+  }
+});
+
+
+app.get("/admin-dashboard/logistics", async (req, res) => {
+  try {
+    const snapshot = await db
+      .collection("schools")
+      .where("isApproved", "==", true)
+      .get();
+
+    const schools = [];
+
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      schools.push({
+        id: doc.id,
+        name: data.schoolName || "N/A",
+        civicsSirNumber: data.civicsTeacherNumber || "N/A",
+        schoolPhoneNumber: data.schoolPhoneNumber || "N/A",
+        principalNumber: data.principalNumber || "N/A",
+        city: data.city || "N/A",
+        district: data.district || "N/A",
+        rawEventDate: data.eventDate?.toDate(), // For sorting if needed
+        eventDate: data.eventDate
+          ? data.eventDate.toDate().toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            })
+          : "Not set",
+        status: data.isCompleted ? "Delivered" : "Pending",
+      });
+    });
+
+    res.render("admin-logistics", { schools });
+  } catch (error) {
+    console.error("Error fetching logistics data:", error);
+    res.status(500).send("Error loading logistics dashboard");
   }
 });
 

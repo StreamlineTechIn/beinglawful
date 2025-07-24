@@ -3664,34 +3664,42 @@ async function renderFormWithErrors(res, errors) {
 
     // logistic Dashboard route
 app.get("/logistic-dashboard", async (req, res) => {
-  const snapshot = await db
-    .collection("schools")
-    .where("isApproved", "==", true)
-    .get();
+  try {
+    const snapshot = await db
+      .collection("schools")
+      .where("isApproved", "==", true)
+      .get();
 
-  const schools = [];
+    const schools = [];
 
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    schools.push({
-      id: doc.id,
-      name: data.schoolName,
-      civicsSirNumber: data.civicsTeacherNumber,
-      schoolPhoneNumber: data.schoolPhoneNumber,
-    principalNumber: data.principalNumber,       
-      city: data.city,
-      district: data.district,
-      rawEventDate: data.eventDate?.toDate(), // Keep raw Date for sorting
-      eventDate: data.eventDate?.toDate().toLocaleDateString("en-IN"),
-      status: data.isCompleted ? "delivered" : "pending",
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      const rawDate = data.eventDate?.toDate();
+
+      schools.push({
+        id: doc.id,
+        name: data.schoolName,
+        civicsSirNumber: data.civicsTeacherNumber,
+        city: data.city,
+        district: data.district,
+        rawEventDate: rawDate,
+        eventDate: rawDate ? rawDate.toLocaleDateString("en-IN") : "N/A",
+        status: data.isCompleted ? "delivered" : "pending",
+      });
     });
-  });
 
-  // Sort by raw date
-  schools.sort((a, b) => a.rawEventDate - b.rawEventDate);
+    // Sort by rawEventDate (null-safe)
+    schools.sort((a, b) => {
+      if (!a.rawEventDate) return 1;
+      if (!b.rawEventDate) return -1;
+      return a.rawEventDate - b.rawEventDate;
+    });
 
-  res.render("logistic-dashboard", { schools });
-});
+    res.render("logistic-dashboard", { schools });
+  } catch (error) {
+    console.error("Error fetching school data:", error);
+    res.status(500).send("Internal Server Error");
+  } });
 
 
 // New POST route to update status

@@ -3327,150 +3327,13 @@ app.post('/trainer-dashboard/add-dates', async (req, res) => {
     }
 });
 
-    app.get('/trainer-dashboard', async (req, res) => {
-        try {
-            const trainerEmail = req.query.username;
-            if (!trainerEmail) {
-                return res.status(400).render('trainerDashboard', {
-                    trainerName: 'Unknown',
-                    email: '',
-                    city: '',
-                    district: '',
-                    profession: '',
-                    assignedSchools: [],
-                    availableDates: [],
-                    schoolsInDistrict: [],
-                    mediaUploads: [],
-                    approvedZips: [],
-                    error: 'Trainer email is required',
-                    success: null,
-                    trainerData: {}
-                });
-            }
-
-            // Fetch trainer data
-            const trainerSnapshot = await db.collection('trainers')
-                .where('email', '==', trainerEmail)
-                .get();
-
-            if (trainerSnapshot.empty) {
-                return res.status(404).render('trainerDashboard', {
-                    trainerName: 'Unknown',
-                    email: trainerEmail,
-                    city: '',
-                    district: '',
-                    profession: '',
-                    assignedSchools: [],
-                    availableDates: [],
-                    schoolsInDistrict: [],
-                    mediaUploads: [],
-                    approvedZips: [],
-                    error: 'Trainer not found',
-                    success: null,
-                    trainerData: {}
-                });
-            }
-
-            const trainerId = trainerSnapshot.docs[0].id;
-            const trainerData = trainerSnapshot.docs[0].data();
-
-            // Fetch assigned schools
-            const schoolsSnapshot1 = await db.collection('schools')
-                .where('isApproved', '==', true)
-                .where('trainerId1', '==', trainerId)
-                .get();
-
-            const schoolsSnapshot2 = await db.collection('schools')
-                .where('isApproved', '==', true)
-                .where('trainerId2', '==', trainerId)
-                .get();
-
-            const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
-                const data = doc.data();
-                return {
-                    schoolName: data.schoolName || 'N/A',
-                    city: data.city || 'N/A',
-                    district: data.district || data.city || 'N/A',
-                    eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    }) : 'Not assigned',
-                    resourcesConfirmed: data.resourcesConfirmed || false,
-                    selectedResources: data.selectedResources || [],
-                    trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2'
-                };
-            });
-
-            // Fetch schools in trainer's district
-            const schoolsInDistrictSnapshot = await db.collection('schools')
-                .where('district', '==', trainerData.district || trainerData.city)
-                .where('isApproved', '==', true)
-                .get();
-
-            const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    schoolName: data.schoolName || 'N/A',
-                    schoolEmail: data.schoolEmail || 'N/A',
-                    city: data.city || 'N/A',
-                    district: data.district || 'N/A',
-                    eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                    }) : 'Not assigned',
-                    assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
-                    trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
-                };
-            });
-
-            // Fetch media uploads
-            const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
-            const mediaUploads = mediaSnapshot.docs.map(doc => ({
-                ...doc.data(),
-                uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
-            }));
-
-            // Fetch approved ZIP files for trainers
-            const zipSnapshot = await db.collection('trainerZips')
-                .where('trainerId', '==', trainerId)
-                .where('approved', '==', true)
-                .get();
-
-                 const approvedZips = zipSnapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    ...data,
-                    downloadUrl: `/zipfiles/${data.fileName}`, // Path for downloading
-                    uploadedAt: data.uploadedAt ? data.uploadedAt.toDate() : null
-                };
-            });
-
-
-            // Render Dashboard with all data
-            res.render('trainerDashboard', {
-                trainerName: trainerData.trainerName || 'Unknown',
-                email: trainerEmail,
-                city: trainerData.city || '',
-                district: trainerData.district || trainerData.city || '',
-                profession: trainerData.profession || '',
-                assignedSchools,
-                availableDates: trainerData.availableDates || [],
-                schoolsInDistrict,
-                mediaUploads,
-                approvedZips,
-                error: null,
-                success: null,
-                trainerData
-            });
-
-        } catch (error) {
-            console.error('Error in trainer-dashboard route:', error.message, error.stack);
-            res.status(500).render('trainerDashboard', {
+app.get('/trainer-dashboard', async (req, res) => {
+    try {
+        const trainerEmail = req.query.username;
+        if (!trainerEmail) {
+            return res.status(400).render('trainerDashboard', {
                 trainerName: 'Unknown',
-                email: req.query.username || '',
+                email: '',
                 city: '',
                 district: '',
                 profession: '',
@@ -3479,12 +3342,152 @@ app.post('/trainer-dashboard/add-dates', async (req, res) => {
                 schoolsInDistrict: [],
                 mediaUploads: [],
                 approvedZips: [],
-                error: `Error loading dashboard: ${error.message}`,
+                error: 'Trainer email is required',
                 success: null,
                 trainerData: {}
             });
         }
-    });    
+
+        // Fetch trainer data
+        const trainerSnapshot = await db.collection('trainers')
+            .where('email', '==', trainerEmail)
+            .get();
+
+        if (trainerSnapshot.empty) {
+            return res.status(404).render('trainerDashboard', {
+                trainerName: 'Unknown',
+                email: trainerEmail,
+                city: '',
+                district: '',
+                profession: '',
+                assignedSchools: [],
+                availableDates: [],
+                schoolsInDistrict: [],
+                mediaUploads: [],
+                approvedZips: [],
+                error: 'Trainer not found',
+                success: null,
+                trainerData: {}
+            });
+        }
+
+        const trainerId = trainerSnapshot.docs[0].id;
+        const trainerData = trainerSnapshot.docs[0].data();
+
+        // Fetch assigned schools
+        const schoolsSnapshot1 = await db.collection('schools')
+            .where('isApproved', '==', true)
+            .where('trainerId1', '==', trainerId)
+            .get();
+
+        const schoolsSnapshot2 = await db.collection('schools')
+            .where('isApproved', '==', true)
+            .where('trainerId2', '==', trainerId)
+            .get();
+
+        const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
+            const data = doc.data();
+            return {
+                schoolName: data.schoolName || 'N/A',
+                city: data.city || 'N/A',
+                district: data.district || data.city || 'N/A',
+                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : 'Not assigned',
+                resourcesConfirmed: data.resourcesConfirmed || false,
+                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2',
+                schoolPhoneNumber: data.schoolPhoneNumber || 'N/A',
+                civicsTeacherNumber: data.civicsTeacherNumber || 'N/A',
+                principalNumber: data.principalNumber || 'N/A',
+                principalEmail: data.principalEmail || 'N/A',
+                schoolCode: data.schoolCode || data.schoolNumber || 'N/A'
+            };
+        });
+
+        // Fetch schools in trainer's district
+        const schoolsInDistrictSnapshot = await db.collection('schools')
+            .where('district', '==', trainerData.district || trainerData.city)
+            .where('isApproved', '==', true)
+            .get();
+
+        const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                schoolName: data.schoolName || 'N/A',
+                schoolEmail: data.schoolEmail || 'N/A',
+                city: data.city || 'N/A',
+                district: data.district || 'N/A',
+                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }) : 'Not assigned',
+                assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
+                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
+            };
+        });
+
+        // Fetch media uploads
+        const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
+        const mediaUploads = mediaSnapshot.docs.map(doc => ({
+            ...doc.data(),
+            uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
+        }));
+
+        // Fetch approved ZIP files for trainers
+        const zipSnapshot = await db.collection('trainerZips')
+            .where('trainerId', '==', trainerId)
+            .where('approved', '==', true)
+            .get();
+
+        const approvedZips = zipSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                ...data,
+                downloadUrl: `/zipfiles/${data.fileName}`,
+                uploadedAt: data.uploadedAt ? data.uploadedAt.toDate() : null
+            };
+        });
+
+        // Render Dashboard
+        res.render('trainerDashboard', {
+            trainerName: trainerData.trainerName || 'Unknown',
+            email: trainerEmail,
+            city: trainerData.city || '',
+            district: trainerData.district || trainerData.city || '',
+            profession: trainerData.profession || '',
+            assignedSchools,
+            availableDates: trainerData.availableDates || [],
+            schoolsInDistrict,
+            mediaUploads,
+            approvedZips,
+            error: null,
+            success: null,
+            trainerData
+        });
+
+    } catch (error) {
+        console.error('Error in trainer-dashboard route:', error.message, error.stack);
+        res.status(500).render('trainerDashboard', {
+            trainerName: 'Unknown',
+            email: req.query.username || '',
+            city: '',
+            district: '',
+            profession: '',
+            assignedSchools: [],
+            availableDates: [],
+            schoolsInDistrict: [],
+            mediaUploads: [],
+            approvedZips: [],
+            error: `Error loading dashboard: ${error.message}`,
+            success: null,
+            trainerData: {}
+        });
+    }
+});   
 app.post('/trainer-login', async (req, res) => {
             const { username, password } = req.body;
             try {

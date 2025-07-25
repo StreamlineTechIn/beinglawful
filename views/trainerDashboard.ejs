@@ -357,7 +357,59 @@
     <% } else { %>
       <p>You have not completed the Train the Trainer yet!</p>
     <% } %>
+ <!-- ✅ Assigned Schools Section -->
+  <div class="bg-white p-4 rounded shadow mb-6" id="assigned-schools">
+    <h2 class="text-xl font-bold mb-4 text-gray-700">Assigned Schools</h2>
 
+    <% if (assignedSchools.length === 0) { %>
+      <p class="text-gray-500">No schools assigned yet.</p>
+    <% } else { %>
+      <div class="overflow-x-auto">
+        <table class="min-w-full border border-gray-200 rounded-lg shadow">
+          <thead class="bg-gray-100">
+            <tr>
+              <th class="py-2 px-4 border-b text-left">School Name</th>
+              <th class="py-2 px-4 border-b text-left">City</th>
+              <th class="py-2 px-4 border-b text-left">District</th>
+              <!-- <th class="py-2 px-4 border-b text-left">Trainer Role</th> -->
+              <th class="py-2 px-4 border-b text-left">Event Date</th>
+                   <th class="py-3 px-4 text-left">School Phone</th>
+                <th class="py-3 px-4 text-left">Civics Number</th>
+                <th class="py-3 px-4 text-left">Principal Number</th>
+              <th class="py-2 px-4 border-b text-left">Resources Confirmed</th>
+              <!-- <th class="py-2 px-4 border-b text-left">Selected Resources</th> -->
+            </tr>
+          </thead>
+          <tbody>
+            <% assignedSchools.forEach(school => { %>
+              <tr class="border-t">
+                <td class="py-2 px-4"><%= school.schoolName %></td>
+                <td class="py-2 px-4"><%= school.city %></td>
+                <td class="py-2 px-4"><%= school.district %></td>
+                <!-- <td class="py-2 px-4"><%= school.trainerRole %></td> -->
+                <td class="py-2 px-4"><%= school.eventDate %></td>
+                 <td class="py-2 px-4"><%= school.schoolPhoneNumber || 'N/A' %></td>
+                  <td class="py-2 px-4"><%= school.civicsTeacherNumber || 'N/A' %></td>
+                  <td class="py-2 px-4"><%= school.principalNumber || 'N/A' %></td>
+                <td class="py-2 px-4"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
+                <!-- <td class="py-2 px-4">
+                  <% if (school.selectedResources && school.selectedResources.length > 0) { %>
+                    <ul class="list-disc list-inside">
+                      <% school.selectedResources.forEach(resource => { %>
+                        <li><%= resource %></li>
+                      <% }) %>
+                    </ul>
+                  <% } else { %>
+                    None
+                  <% } %>
+                </td> -->
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
+  </div>
     <h2>Schools in Your District (<%= district %>)</h2>
     <% if (schoolsInDistrict.length > 0) { %>
       <table>

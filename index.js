@@ -3611,33 +3611,33 @@ async function renderFormWithErrors(res, errors) {
 }
 
     // Assign trainer to school
-    app.post('/admin/assign-trainer', requireAdmin, async (req, res) => {
+   app.post('/admin/assign-trainer', requireAdmin, async (req, res) => {
     try {
-    const { schoolId, trainerId } = req.body;
-    if (!schoolId || !trainerId) {
-    return res.redirect('/admin-dashboard?error=School ID and Trainer ID are required');
-    }
+        const { schoolId, trainerId } = req.body;
 
-    const schoolRef = db.collection('schools').doc(schoolId);
-    const schoolDoc = await schoolRef.get();
-    if (!schoolDoc.exists) {
-    return res.redirect('/admin-dashboard?error=School not found');
-    }
+        if (!schoolId || !trainerId) {
+            return res.redirect('/admin-dashboard?error=School ID and Trainer ID are required');
+        }
 
-    const trainerRef = db.collection('trainers').doc(trainerId);
-    const trainerDoc = await trainerRef.get();
-    if (!trainerDoc.exists) {
-    return res.redirect('/admin-dashboard?error=Trainer not found');
-    }
+        const schoolRef = db.collection('schools').doc(schoolId);
+        const schoolDoc = await schoolRef.get();
+        if (!schoolDoc.exists) {
+            return res.redirect('/admin-dashboard?error=School not found');
+        }
 
-    await schoolRef.update({ assignedTrainerId: trainerId });
-    res.redirect('/admin-dashboard?success=Trainer assigned successfully');
+        const trainerRef = db.collection('trainers').doc(trainerId);
+        const trainerDoc = await trainerRef.get();
+        if (!trainerDoc.exists) {
+            return res.redirect('/admin-dashboard?error=Trainer not found');
+        }
+
+        await schoolRef.update({ assignedTrainerId: trainerId });
+        res.redirect('/admin-dashboard?success=Trainer assigned successfully');
     } catch (error) {
-    console.error('Error in admin/assign-trainer route:', error.message, error.stack);
-    res.redirect('/admin-dashboard?error=Error assigning trainer');
+        console.error('Error in admin/assign-trainer route:', error.message, error.stack);
+        res.redirect('/admin-dashboard?error=Error assigning trainer');
     }
-    });
-
+});
     // Logout
     app.get('/logout', (req, res) => {
     req.session.destroy(err => {

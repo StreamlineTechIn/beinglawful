@@ -3338,6 +3338,7 @@ app.get('/trainer-dashboard', async (req, res) => {
                 district: '',
                 profession: '',
                 assignedSchools: [],
+                completedSchools: [],
                 availableDates: [],
                 schoolsInDistrict: [],
                 mediaUploads: [],
@@ -3361,6 +3362,7 @@ app.get('/trainer-dashboard', async (req, res) => {
                 district: '',
                 profession: '',
                 assignedSchools: [],
+                completedSchools: [],
                 availableDates: [],
                 schoolsInDistrict: [],
                 mediaUploads: [],
@@ -3403,6 +3405,29 @@ app.get('/trainer-dashboard', async (req, res) => {
                 principalNumber: data.principalNumber || 'N/A',
                 principalEmail: data.principalEmail || 'N/A',
                 schoolCode: data.schoolCode || data.schoolNumber || 'N/A'
+            };
+        });
+
+        // ✅ Fetch completed schools
+        const completedSnapshot1 = await db.collection('schools')
+            .where('trainerId1', '==', trainerId)
+            .where('isCompleted', '==', true)
+            .get();
+
+        const completedSnapshot2 = await db.collection('schools')
+            .where('trainerId2', '==', trainerId)
+            .where('isCompleted', '==', true)
+            .get();
+
+        const completedSchools = [...completedSnapshot1.docs, ...completedSnapshot2.docs].map(doc => {
+            const data = doc.data();
+            return {
+                schoolName: data.schoolName || 'N/A',
+                city: data.city || 'N/A',
+                district: data.district || data.city || 'N/A',
+                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-IN') : 'Not assigned',
+                completionDate: data.completionDate ? data.completionDate.toDate().toLocaleDateString('en-IN') : 'N/A',
+                remarks: data.remarks || 'N/A'
             };
         });
 
@@ -3452,7 +3477,7 @@ app.get('/trainer-dashboard', async (req, res) => {
             };
         });
 
-        // Render Dashboard
+        // ✅ Render Trainer Dashboard
         res.render('trainerDashboard', {
             trainerName: trainerData.trainerName || 'Unknown',
             email: trainerEmail,
@@ -3460,6 +3485,7 @@ app.get('/trainer-dashboard', async (req, res) => {
             district: trainerData.district || trainerData.city || '',
             profession: trainerData.profession || '',
             assignedSchools,
+            completedSchools, // ✅ added
             availableDates: trainerData.availableDates || [],
             schoolsInDistrict,
             mediaUploads,
@@ -3478,6 +3504,7 @@ app.get('/trainer-dashboard', async (req, res) => {
             district: '',
             profession: '',
             assignedSchools: [],
+            completedSchools: [], // ✅ added fallback to avoid crash
             availableDates: [],
             schoolsInDistrict: [],
             mediaUploads: [],
@@ -3487,7 +3514,8 @@ app.get('/trainer-dashboard', async (req, res) => {
             trainerData: {}
         });
     }
-});   
+});
+ 
 app.post('/trainer-login', async (req, res) => {
             const { username, password } = req.body;
             try {
@@ -3611,33 +3639,33 @@ async function renderFormWithErrors(res, errors) {
 }
 
     // Assign trainer to school
-   app.post('/admin/assign-trainer', requireAdmin, async (req, res) => {
+    app.post('/admin/assign-trainer', requireAdmin, async (req, res) => {
     try {
-        const { schoolId, trainerId } = req.body;
-
-        if (!schoolId || !trainerId) {
-            return res.redirect('/admin-dashboard?error=School ID and Trainer ID are required');
-        }
-
-        const schoolRef = db.collection('schools').doc(schoolId);
-        const schoolDoc = await schoolRef.get();
-        if (!schoolDoc.exists) {
-            return res.redirect('/admin-dashboard?error=School not found');
-        }
-
-        const trainerRef = db.collection('trainers').doc(trainerId);
-        const trainerDoc = await trainerRef.get();
-        if (!trainerDoc.exists) {
-            return res.redirect('/admin-dashboard?error=Trainer not found');
-        }
-
-        await schoolRef.update({ assignedTrainerId: trainerId });
-        res.redirect('/admin-dashboard?success=Trainer assigned successfully');
-    } catch (error) {
-        console.error('Error in admin/assign-trainer route:', error.message, error.stack);
-        res.redirect('/admin-dashboard?error=Error assigning trainer');
+    const { schoolId, trainerId } = req.body;
+    if (!schoolId || !trainerId) {
+    return res.redirect('/admin-dashboard?error=School ID and Trainer ID are required');
     }
-});
+
+    const schoolRef = db.collection('schools').doc(schoolId);
+    const schoolDoc = await schoolRef.get();
+    if (!schoolDoc.exists) {
+    return res.redirect('/admin-dashboard?error=School not found');
+    }
+
+    const trainerRef = db.collection('trainers').doc(trainerId);
+    const trainerDoc = await trainerRef.get();
+    if (!trainerDoc.exists) {
+    return res.redirect('/admin-dashboard?error=Trainer not found');
+    }
+
+    await schoolRef.update({ assignedTrainerId: trainerId });
+    res.redirect('/admin-dashboard?success=Trainer assigned successfully');
+    } catch (error) {
+    console.error('Error in admin/assign-trainer route:', error.message, error.stack);
+    res.redirect('/admin-dashboard?error=Error assigning trainer');
+    }
+    });
+
     // Logout
     app.get('/logout', (req, res) => {
     req.session.destroy(err => {

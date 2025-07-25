@@ -410,30 +410,38 @@
       </div>
     <% } %>
   </div>
-    <h2>Schools in Your District (<%= district %>)</h2>
-    <% if (schoolsInDistrict.length > 0) { %>
-      <table>
-        <tr>
-          <th>School Name</th>
-          <th>Email</th>
-          <th>City</th>
-          <th>Event Date</th>
-          <th>Assigned Trainer</th>
-        </tr>
-        <% schoolsInDistrict.forEach(school => { %>
+<% if (trainerData && trainerData.isApproved && completedSchools && completedSchools.length > 0) { %>
+  <div class="bg-white p-4 rounded shadow mb-6">
+    <h2 class="text-xl font-bold mb-4 text-green-700">Completed Schools</h2>
+    <div class="overflow-x-auto">
+      <table class="min-w-full bg-white border border-gray-200 rounded">
+        <thead class="bg-green-100 text-green-800">
           <tr>
-            <td><%= school.schoolName %></td>
-            <td><%= school.schoolEmail %></td>
-            <td><%= school.city %></td>
-            <td><%= school.eventDate %></td>
-            <td><%= school.assignedTrainerId ? 'Assigned' : 'Not Assigned' %></td>
+            <th class="py-2 px-4 border-b">School Name</th>
+            <th class="py-2 px-4 border-b">City</th>
+            <th class="py-2 px-4 border-b">District</th>
+            <th class="py-2 px-4 border-b">Event Date</th>
+            <!-- <th class="py-2 px-4 border-b">Completion Date</th> -->
+            <!-- <th class="py-2 px-4 border-b">Remarks</th> -->
           </tr>
-        <% }) %>
+        </thead>
+        <tbody>
+          <% completedSchools.forEach(school => { %>
+            <tr class="hover:bg-green-50">
+              <td class="py-2 px-4 border-b"><%= school.schoolName %></td>
+              <td class="py-2 px-4 border-b"><%= school.city %></td>
+              <td class="py-2 px-4 border-b"><%= school.district %></td>
+              <td class="py-2 px-4 border-b"><%= school.eventDate %></td>
+              <!-- <td class="py-2 px-4 border-b"><%= school.completionDate %></td> -->
+              <!-- <td class="py-2 px-4 border-b"><%= school.remarks || 'N/A' %></td> -->
+            </tr>
+          <% }); %>
+        </tbody>
       </table>
-    <% } else { %>
-      <p>No schools found in your district.</p>
-    <% } %>
+    </div>
   </div>
+<% } %>
+  
 </body>
 
 </html>

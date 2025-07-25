@@ -137,11 +137,13 @@
             </div>
         <% } %>
 
-        <form action="/school-participate" method="POST" id="schoolParticipationForm">
-            <div class="mb-3">
-                <label for="schoolName" class="form-label">School Name</label>
-                <input type="text" class="form-control" id="schoolName" name="schoolName" required>
-            </div>
+       <form action="/school-participate" method="POST" id="schoolParticipationForm">
+    <div class="mb-3">
+        <label for="schoolName" class="form-label">School Name</label>
+        <input type="text" class="form-control" id="schoolName" name="schoolName" required>
+        <p class="text-muted text-xs mt-1">This will be your official name on record. Please provide it accurately.</p>
+    </div>
+</form>
 
             <div class="mb-3">
                 <label for="city" class="form-label">City</label>

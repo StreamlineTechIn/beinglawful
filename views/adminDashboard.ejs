@@ -580,164 +580,166 @@
                         </tbody>
                     </table>
                 </div>
-
-                <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved and Event Date Assigned</h3>
-                <div class="overflow-x-auto mb-6">
-                    <table id="approved-with-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-                        <thead class="bg-gray-100 sticky top-0">
-                            <tr>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer1">Trainer 1<br><select class="filter-select text-sm w-full" data-column="trainer1"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer2">Trainer 2<br><select class="filter-select text-sm w-full" data-column="trainer2"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isCompleted">Completed<br><select class="filter-select text-sm w-full" data-column="isCompleted"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% schools.filter(school => school.isApproved && school.eventDate && !school.isCompleted).forEach(school => { %>
-                                <tr class="hover:bg-gray-50">
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
-                          <td class="py-2 px-4 border-b text-gray-700">
-  <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
-    timeZone: 'Asia/Kolkata',
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  }) : 'N/A' %>
-</td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">
-                                        <%= school.eventDate ? school.eventDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer1">
-                                        <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
-                                        <% if (school.trainerApproved === false) { %>
-                                            <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city}) - Pending` : 'Not Assigned' %>
-                                        <% } else if (school.trainerApproved === true) { %>
-                                            <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city}) - Approved` : 'Not Assigned' %>
-                                        <% } else { %>
-                                            Not Assigned
-                                        <% } %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer2">
-                                        <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
-                                        <% if (school.trainerApproved === false) { %>
-                                            <%= trainer2 ? `${trainer2.trainerName} (${trainer2.city}) - Pending` : 'Not Assigned' %>
-                                        <% } else if (school.trainerApproved === true) { %>
-                                            <%= trainer2 ? `${trainer2.trainerName} (${trainer2.city}) - Approved` : 'Not Assigned' %>
-                                        <% } else { %>
-                                            Not Assigned
-                                        <% } %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isCompleted">No</td>
-                                    <td class="py-2 px-4 border-b">
-                                        <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                                            <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
-                                                <select name="eventDate" required class="border rounded py-1 px-2 mr-2 text-gray-700 assign-event-date" data-school-id="<%= school.id %>">
-                                                    <option value="">Select Event Date</option>
-                                                    <% if (school.eventDates && school.eventDates.length > 0) { %>
-                                                        <% school.eventDates.forEach(date => { %>
-                                                            <% let validDate = new Date(date); %>
-                                                            <% if (!isNaN(validDate.getTime())) { %>
-                                                                <% let eventDateStr = school.eventDate ? school.eventDate.toISOString().split('T')[0] : null; %>
-                                                                <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>><%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></option>
-                                                            <% } %>
-                                                        <% }) %>
-                                                    <% } else { %>
-                                                        <option value="" disabled>No dates available</option>
-                                                    <% } %>
-                                                </select>
-                                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded assign-event-date-btn" data-school-id="<%= school.id %>">Assign Event Date</button>
-                                            </form>
-                                            <% if (school.trainerApproved === false && trainer1) { %>
-                                                <div class="flex items-center space-x-2">
-                                                    <span><%= trainer1.trainerName %> (<%= trainer1.city %>)</span>
-                                                    <form action="/admin/approve-trainer1/<%= school.id %>" method="POST" class="inline">
-                                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded approve-trainer1-btn" data-school-id="<%= school.id %>">Approve Trainer 1</button>
-                                                    </form>
-                                                    <form action="/admin/reject-trainer1/<%= school.id %>" method="POST" class="inline">
-                                                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded reject-trainer1-btn" data-school-id="<%= school.id %>">Reject Trainer 1</button>
-                                                    </form>
-                                                </div>
-                                            <% } else if (!trainer1) { %>
-                                                <form action="/admin/assign-trainer1/<%= school.id %>" method="POST" class="inline">
-                                                    <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700 assign-trainer1" data-school-id="<%= school.id %>">
-                                                        <option value="">Select Trainer 1</option>
-                                                        <% trainers.forEach(trainer => { %>
-                                                            <% if (trainer.isApproved) { %>
-                                                                <option value="<%= trainer.id %>"><%= trainer.trainerName %> (<%= trainer.city %>)</option>
-                                                            <% } %>
-                                                        <% }) %>
-                                                    </select>
-                                                    <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded assign-trainer1-btn" data-school-id="<%= school.id %>">Assign Trainer 1</button>
-                                                </form>
+<h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved and Event Date Assigned</h3>
+<div class="overflow-x-auto mb-6">
+    <table id="approved-with-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+        <thead class="bg-gray-100 sticky top-0">
+            <tr>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer1">Trainer 1<br><select class="filter-select text-sm w-full" data-column="trainer1"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer2">Trainer 2<br><select class="filter-select text-sm w-full" data-column="trainer2"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isCompleted">Completed<br><select class="filter-select text-sm w-full" data-column="isCompleted"></select></th>
+                <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
+                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
+                
+                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
+                <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
+                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
+                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
+                <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
+                <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
+                <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% schools.filter(school => school.isApproved && school.eventDate && !school.isCompleted).forEach(school => { %>
+                <tr class="hover:bg-gray-50">
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                    <td class="py-2 px-4 border-b text-gray-700">
+                        <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+                            timeZone: 'Asia/Kolkata',
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        }) : 'N/A' %>
+                    </td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">
+                        <%= school.eventDate ? school.eventDate.toLocaleString('en-US', { 
+                            timeZone: 'Asia/Kolkata', 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric', 
+                            hour: '2-digit', 
+                            minute: '2-digit' 
+                        }) : 'Not assigned' %>
+                    </td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer1">
+                        <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
+                        <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city}) ${school.trainerApproved === false ? '- Pending' : school.trainerApproved === true ? '- Approved' : ''}` : 'Not Assigned' %>
+                    </td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer2">
+                        <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
+                        <%= trainer2 ? `${trainer2.trainerName} (${trainer2.city}) ${school.trainerApproved === false ? '- Pending' : school.trainerApproved === true ? '- Approved' : ''}` : 'Not Assigned' %>
+                    </td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="isCompleted">No</td>
+                    <td class="py-2 px-4 border-b">
+                        <div class="flex flex-col space-y-2">
+                            <!-- Event Date Assignment -->
+                            <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="flex items-center space-x-2">
+                                <select name="eventDate" required class="border rounded py-1 px-2 text-gray-700 assign-event-date" data-school-id="<%= school.id %>">
+                                    <option value="">Select Event Date</option>
+                                    <% if (school.eventDates && school.eventDates.length > 0) { %>
+                                        <% school.eventDates.forEach(date => { %>
+                                            <% let validDate = new Date(date); %>
+                                            <% if (!isNaN(validDate.getTime())) { %>
+                                                <% let eventDateStr = school.eventDate ? school.eventDate.toISOString().split('T')[0] : null; %>
+                                                <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>>
+                                                    <%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
+                                                </option>
                                             <% } %>
-                                            <% if (school.trainerApproved === false && trainer2) { %>
-                                                <div class="flex items-center space-x-2">
-                                                    <span><%= trainer2.trainerName %> (<%= trainer2.city %>)</span>
-                                                    <form action="/admin/approve-trainer2/<%= school.id %>" method="POST" class="inline">
-                                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded approve-trainer2-btn" data-school-id="<%= school.id %>">Approve Trainer 2</button>
-                                                    </form>
-                                                    <form action="/admin/reject-trainer2/<%= school.id %>" method="POST" class="inline">
-                                                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded reject-trainer2-btn" data-school-id="<%= school.id %>">Reject Trainer 2</button>
-                                                    </form>
-                                                </div>
-                                            <% } else if (!trainer2) { %>
-                                                <form action="/admin/assign-trainer2/<%= school.id %>" method="POST" class="inline">
-                                                    <select name="trainerId" class="border rounded py-1 px-2 mr-2 text-gray-700 assign-trainer2" data-school-id="<%= school.id %>">
-                                                        <option value="">Select Trainer 2</option>
-                                                        <% trainers.forEach(trainer => { %>
-                                                            <% if (trainer.isApproved) { %>
-                                                                <option value="<%= trainer.id %>"><%= trainer.trainerName %> (<%= trainer.city %>)</option>
-                                                            <% } %>
-                                                        <% }) %>
-                                                    </select>
-                                                    <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded assign-trainer2-btn" data-school-id="<%= school.id %>">Assign Trainer 2</button>
-                                                </form>
-                                            <% } %>
-                                            <button class="complete-school-btn bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded" data-school-id="<%= school.id %>">Complete</button>
-                                        </div>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <option value="" disabled>No dates available</option>
+                                    <% } %>
+                                </select>
+                                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded assign-event-date-btn" data-school-id="<%= school.id %>">Assign</button>
+                            </form>
 
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
-                                </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
-                </div>
+                            <!-- Trainer 1 Assignment and Approval -->
+                            <div class="flex items-center space-x-2">
+                                <form action="/admin/assign-trainer1/<%= school.id %>" method="POST" class="flex items-center space-x-2">
+                                    <select name="trainerId" class="border rounded py-1 px-2 text-gray-700 assign-trainer1" data-school-id="<%= school.id %>">
+                                        <option value="">Select Trainer 1</option>
+                                        <% trainers.forEach(trainer => { %>
+                                            <% if (trainer.isApproved) { %>
+                                                <option value="<%= trainer.id %>" <%= school.trainerId1 === trainer.id ? 'selected' : '' %>>
+                                                    <%= trainer.trainerName %> (<%= trainer.city %>)
+                                                </option>
+                                            <% } %>
+                                        <% }) %>
+                                    </select>
+                                    <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded assign-trainer1-btn" data-school-id="<%= school.id %>">Assign Trainer 1</button>
+                                </form>
+                                <% if (trainer1 && school.trainerApproved === false) { %>
+                                    <form action="/admin/approve-trainer1/<%= school.id %>" method="POST" class="inline">
+                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded approve-trainer1-btn" data-school-id="<%= school.id %>">Approve</button>
+                                    </form>
+                                    <form action="/admin/reject-trainer1/<%= school.id %>" method="POST" class="inline">
+                                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded reject-trainer1-btn" data-school-id="<%= school.id %>">Reject</button>
+                                    </form>
+                                <% } %>
+                            </div>
+
+                            <!-- Trainer 2 Assignment and Approval -->
+                            <div class="flex items-center space-x-2">
+                                <form action="/admin/assign-trainer2/<%= school.id %>" method="POST" class="flex items-center space-x-2">
+                                    <select name="trainerId" class="border rounded py-1 px-2 text-gray-700 assign-trainer2" data-school-id="<%= school.id %>">
+                                        <option value="">Select Trainer 2</option>
+                                        <% trainers.forEach(trainer => { %>
+                                            <% if (trainer.isApproved) { %>
+                                                <option value="<%= trainer.id %>" <%= school.trainerId2 === trainer.id ? 'selected' : '' %>>
+                                                    <%= trainer.trainerName %> (<%= trainer.city %>)
+                                                </option>
+                                            <% } %>
+                                        <% }) %>
+                                    </select>
+                                    <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded assign-trainer2-btn" data-school-id="<%= school.id %>">Assign Trainer 2</button>
+                                </form>
+                                <% if (trainer2 && school.trainerApproved === false) { %>
+                                    <form action="/admin/approve-trainer2/<%= school.id %>" method="POST" class="inline">
+                                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded approve-trainer2-btn" data-school-id="<%= school.id %>">Approve</button>
+                                    </form>
+                                    <form action="/admin/reject-trainer2/<%= school.id %>" method="POST" class="inline">
+                                        <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded reject-trainer2-btn" data-school-id="<%= school.id %>">Reject</button>
+                                    </form>
+                                <% } %>
+                            </div>
+
+                            <!-- Complete Button -->
+                            <button class="complete-school-btn bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded" data-school-id="<%= school.id %>">Complete</button>
+                        </div>
+                    </td>
+                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber || 'N/A' %></td>
+                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber || 'N/A' %></td>
+                    <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber || 'N/A' %></td>
+                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail || 'N/A' %></td>
+                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail || 'N/A' %></td>
+                    <td class="py-2 px-4 border-b text-gray-700"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
+                    <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
+                    <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</div>
 
                 <h3 class="text-xl font-semibold mb-2 text-gray-600">Completed Schools</h3>
                 <div class="overflow-x-auto mb-6">

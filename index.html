@@ -316,6 +316,9 @@
     .tan-bg {
       background-color: #d2b48c;
     }
+    .author-bg-section {
+         background-color: #ffffff; /* New soft blue color for Author Note section */
+    }
     .hero-section {
       padding: 40px 0.5rem 1rem;
       width: 100%;
@@ -875,48 +878,55 @@
   </section>
 
   <!-- Stakeholders Section -->
-  <section class="min-h-screen flex flex-col items-center justify-center py-8 px-4" id="stakeholders" data-aos="fade-up">
-    <div class="wave-bg"></div>
-    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-6 relative z-10" data-aos="fade-up" data-aos-delay="200">Our Stakeholders</h2>
-    <div class="flex flex-col md:flex-row gap-6 max-w-4xl w-full px-4 relative z-10">
-      <!-- Schools Card -->
-      <div class="stakeholder-card flex-1" data-aos="fade-right" data-aos-delay="300">
-        <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🏫</span> Benefits for Schools</h3>
-        <ul class="list-none text-gray-600 text-xs sm:text-sm">
-          <li><span>📚</span> <strong>Value-Added Learning</strong>: Offers experiential civics education aligned with CBSE/National Curriculum.</li>
-          <li><span>🏆</span> <strong>Reputation Enhancement</strong>: Demonstrates commitment to legal awareness and democratic education.</li>
-          <li><span>🎮</span> <strong>Student Engagement</strong>: Encourages active participation through gamified and interactive modules.</li>
-          <li><span>⚙️</span> <strong>Easy Execution</strong>: Being Lawful team handles design, content, and trainer training.</li>
-          <li><span>🎖️</span> <strong>Recognition</strong>: Participating schools receive digital certificates and social media recognition.</li>
-        </ul>
-        <a href="/school-participation" class="mt-3 inline-block px-3 py-1 rounded-md font-semibold text-xs sm:text-sm">Join as a School</a>
-      </div>
-      <!-- Trainers Card -->
-      <div class="stakeholder-card flex-1" data-aos="fade-up" data-aos-delay="400">
-        <h3 class="text-base sm:text-lg font-semibold mb-2"><span>👩‍🏫</span> Benefits for Trainers</h3>
-        <ul class="list-none text-gray-600 text-xs sm:text-sm">
-          <li><span>📜</span> <strong>Certification</strong>: Get certified after completing the Train-the-Trainer (ToT) program.</li>
-          <li><span>🌟</span> <strong>Leadership Opportunity</strong>: Lead a legal awareness initiative within your school.</li>
-          <li><span>🛠️</span> <strong>Skill Development</strong>: Gain public speaking, facilitation, and student engagement skills.</li>
-          <li><span>🏅</span> <strong>Recognition</strong>: Trainers receive a certificate and can be highlighted in Being Lawful’s community.</li>
-          <li><span>🌍</span> <strong>Impact-Driven Role</strong>: Play a direct role in shaping civic understanding among students.</li>
-        </ul>
-        <a href="/trainer-participation" class="mt-3 inline-block px-3 py-1 rounded-md font-semibold text-xs sm:text-sm">Join as a Trainer</a>
-      </div>
-      <!-- Students Card -->
-      <div class="stakeholder-card flex-1" data-aos="fade-left" data-aos-delay="500">
-        <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🎓</span> Benefits for Students</h3>
-        <ul class="list-none text-gray-600 text-xs sm:text-sm">
-          <li><span>⚖️</span> <strong>Legal Awareness</strong>: Understand the Indian Constitution, rights, duties, and democratic values.</li>
-          <li><span>🧩</span> <strong>Interactive Learning</strong>: Participate in quizzes, games, and role-play scenarios.</li>
-          <li><span>🧠</span> <strong>Critical Thinking</strong>: Develop reasoning skills through real-life law-based situations.</li>
-          <li><span>💪</span> <strong>Confidence Building</strong>: Learn to ask questions and understand justice and fairness.</li>
-          <li><span>🥇</span> <strong>Certification & Recognition</strong>: Students receive participation certificates, adding value to their profile.</li>
-        </ul>
-        <a href="/participation?type=Student" class="mt-3 inline-block px-3 py-1 rounded-md font-semibold text-xs sm:text-sm">Join as a Student</a>
+<!-- Stakeholders Section -->
+<section class="min-h-[80vh] flex flex-col items-center justify-center py-8 px-4" id="stakeholders" data-aos="fade-up">
+  <div class="wave-bg"></div>
+  <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-6 relative z-10" data-aos="fade-up" data-aos-delay="200">Our Stakeholders</h2>
+  <div class="stakeholder-container flex flex-col md:flex-row gap-6 px-4 relative z-10">
+    <!-- Schools Card -->
+   <div class="stakeholder-card" data-aos="fade-right" data-aos-delay="300">
+  <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🏫</span> Benefits for Schools</h3>
+  <ul class="list-none text-gray-600 text-xs sm:text-sm">
+    <li><span>📚</span> <strong>Enhanced Curriculum</strong> : Provides experiential civics education aligned with CBSE and National Curriculum standards.</li>
+    <li><span>🏆</span> <strong>Institutional Prestige</strong> : Showcases dedication to fostering legal awareness and democratic values.</li>
+    <li><span>🎮</span> <strong>Student Engagement</strong> : Promotes active learning through interactive and gamified educational modules.</li>
+    <li><span>⚙️</span> <strong>Seamless Implementation</strong> : The Being Lawful team manages all aspects of program design, content, and trainer support.</li>
+    <li><span>🎖️</span> <strong>Recognition</strong> : Participating schools earn digital certificates and prominent social media acknowledgment.</li>
+  </ul>
+  <div class="button-row">
+    <a href="/school-participation" class="px-3 py-1 font-semibold text-xs sm:text-sm">Join as a School</a>
+  </div>
+</div>
+    <!-- Trainers Card -->
+    <div class="stakeholder-card" data-aos="fade-up" data-aos-delay="400">
+      <h3 class="text-base sm:text-lg font-semibold mb-2"><span>👩‍🏫</span> Benefits for Trainers</h3>
+      <ul class="list-none text-gray-600 text-xs sm:text-sm">
+        <li><span>📜</span> <strong>Certification</strong>: Get certified after completing the Train-the-Trainer (ToT) program.</li>
+        <li><span>🌟</span> <strong>Leadership Opportunity</strong>: Lead a legal awareness initiative within your school.</li>
+        <li><span>🛠️</span> <strong>Skill Development</strong>: Gain public speaking, facilitation, and student engagement skills.</li>
+        <li><span>🏅</span> <strong>Recognition</strong>: Trainers receive a certificate and can be highlighted in Being Lawful’s community.</li>
+        <li><span>🌍</span> <strong>Impact-Driven Role</strong>: Play a direct role in shaping civic understanding among students.</li>
+      </ul>
+      <div class="button-row">
+        <a href="/trainer-participation" class="px-3 py-1 font-semibold text-xs sm:text-sm">Join as a Trainer</a>
       </div>
     </div>
-  </section>
+    <!-- Students Card -->
+    <div class="stakeholder-card" data-aos="fade-left" data-aos-delay="500">
+      <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🎓</span> Benefits for Students</h3>
+      <ul class="list-none text-gray-600 text-xs sm:text-sm">
+        <li><span>⚖️</span> <strong>Legal Awareness</strong>: Understand the Indian Constitution, rights, duties, and democratic values.</li>
+        <li><span>🧩</span> <strong>Interactive Learning</strong>: Participate in quizzes, games, and role-play scenarios.</li>
+        <li><span>🧠</span> <strong>Critical Thinking</strong>: Develop reasoning skills through real-life law-based situations.</li>
+        <li><span>💪</span> <strong>Confidence Building</strong>: Learn to ask questions and understand justice and fairness.</li>
+        <li><span>🥇</span> <strong>Certification & Recognition</strong>: Students receive participation certificates, adding value to their profile.</li>
+      </ul>
+      <div class="button-row">
+        <a href="/participation?type=Student" class="px-3 py-1 font-semibold text-xs sm:text-sm">Join as a Student</a>
+      </div>
+    </div>
+  </div>
+</section>
 
   <!-- Workflow -->
   <section class="Workflow py-8 px-4" data-aos="fade-up" style="display: flex; justify-content: center; align-items: center;">
@@ -940,6 +950,59 @@
         <a href="/buy-book" class="px-3 py-1 bg-gray-800 text-white rounded-md hover:bg-blue-600 transform hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm" data-aos="zoom-in" data-aos-delay="400">Buy book</a>
       </div>
       <div class="book-bg w-full md:w-48 transform hover:scale-105 transition-all duration-300" data-aos="fade-left" data-aos-delay="300"></div>
+    </div>
+  </section>
+
+  <!-- Image Modal -->
+  <div id="imageModal" class="modal" onclick="closeModal(event)">
+    <span class="close-modal" onclick="closeModal(event)">×</span>
+    <div class="modal-content">
+      <img id="modalImage" src="" alt="Modal Image">
+    </div>
+  </div>
+
+  <!-- AI Modal -->
+  <div id="aiModal" class="ai-modal" onclick="closeAIModal(event)">
+    <span class="ai-close-modal" onclick="closeAIModal(event)" aria-label="Close Samvidhan AI">×</span>
+    <div class="ai-modal-content">
+      <iframe id="aiIframe" src="https://samvidhanai.beinglawful.in/" title="Samvidhan AI" aria-label="Samvidhan AI Interface"></iframe>
+    </div>
+  </div>
+
+  <!-- AI Icon -->
+  <div class="ai-icon-container">
+    <div class="ai-icon" onclick="openAIModal()" role="button" aria-label="Open Samvidhan AI">
+      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z'/%3E%3C/svg%3E" alt="Samvidhan AI Chat Icon">
+    </div>
+  </div>
+
+  <!-- Author Note Section -->
+<section class="author-bg-section min-h-[70vh] flex flex-col items-center justify-center py-8 px-4" id="author" data-aos="fade-up">
+    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Author Note</h2>
+    <div class="flex flex-col md:flex-row gap-4 max-w-3xl w-full items-center px-1">
+      <div class="author-bg w-44 h-48 rounded-full transform hover:scale-105 transition-all duration-300" data-aos="fade-right" data-aos-delay="300"></div>
+      <div class="bg-gray-200 p-3 rounded-xl flex-1 h-72 overflow-y-auto transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-left" data-aos-delay="300">
+        <p class="text-gray-600 text-xs sm:text-sm">
+          Being Lawful is not just a book about laws - it is about the art of living harmoniously in society.
+          <br><br>
+          In writing this book, my purpose was to show that when we choose to be lawful, we contribute to a peaceful and stable society where everyone can grow, learn, and thrive. Lawfulness is not merely about following rules; it is about understanding our place in the larger social fabric and acting with a sense of responsibility and purpose.
+          <br><br>
+          Drawing from our Constitution, ancient civilizational texts, and timeless values, Being Lawful invites adolescents and young adults to explore the deeper meaning of citizenship—not just in terms of rights, but equally in terms of duties. A duty-bound society is a strong society. And when citizens become aware, responsible, and active, the nation naturally rises to greater heights.
+          <br><br>
+          The workshop and website are designed to carry forward the same mission: to spark curiosity, build awareness, and encourage lawful behavior through real-life scenarios, thoughtful activities, and fun games. Law is not just a subject for lawyers—it’s a tool for every citizen to live with dignity, responsibility, and courage.
+        </p>
+      </div>
+    </div>
+</section>
+
+  <!-- Samvidhan Hero Section -->
+  <section class="samvidhan-bg min-h-screen flex items-center px-4 py-8" id="samvidhan" data-aos="fade-up">
+    <div class="text-left">
+      <h2 class="text-white text-lg sm:text-xl md:text-3xl font-bold mb-3" data-aos="fade-up" data-aos-delay="200">Visit Constitution75.com</h2>
+      <p class="text-white text-sm sm:text-base md:text-lg mb-3" data-aos="fade-up" data-aos-delay="200">Celebrating 75 years of Samvidhan</p>
+      <button class="px-3 py-1 border-2 border-white text-white font-semibold rounded-md hover:bg-white hover:text-black transform hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm" data-aos="zoom-in" data-aos-delay="300">
+        <a href="https://constitution75.com/">Visit Now</a>
+      </button>
     </div>
   </section>
 
@@ -1067,63 +1130,6 @@
           <span class="gallery-title">Adv. S.K Jain addressed the trainers</span>
         </div>
       </div>
-    </div>
-  </section>
-
- 
-
-  <!-- Image Modal -->
-  <div id="imageModal" class="modal" onclick="closeModal(event)">
-    <span class="close-modal" onclick="closeModal(event)">×</span>
-    <div class="modal-content">
-      <img id="modalImage" src="" alt="Modal Image">
-    </div>
-  </div>
-
- 
-
-  <!-- AI Modal -->
-  <div id="aiModal" class="ai-modal" onclick="closeAIModal(event)">
-    <span class="ai-close-modal" onclick="closeAIModal(event)" aria-label="Close Samvidhan AI">×</span>
-    <div class="ai-modal-content">
-      <iframe id="aiIframe" src="https://samvidhanai.beinglawful.in/" title="Samvidhan AI" aria-label="Samvidhan AI Interface"></iframe>
-    </div>
-  </div>
-
-  <!-- AI Icon -->
-  <div class="ai-icon-container">
-    <div class="ai-icon" onclick="openAIModal()" role="button" aria-label="Open Samvidhan AI">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z'/%3E%3C/svg%3E" alt="Samvidhan AI Chat Icon">
-    </div>
-  </div>
-
-  <!-- Author Note Section -->
-  <section class="tan-bg min-h-screen flex flex-col items-center justify-center py-8 px-4" id="author" data-aos="fade-up">
-    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Author Note</h2>
-    <div class="flex flex-col md:flex-row gap-4 max-w-3xl w-full items-center px-1">
-      <div class="author-bg w-44 h-48 rounded-full transform hover:scale-105 transition-all duration-300" data-aos="fade-right" data-aos-delay="300"></div>
-      <div class="bg-gray-200 p-3 rounded-xl flex-1 h-72 overflow-y-auto transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-left" data-aos-delay="300">
-        <p class="text-gray-600 text-xs sm:text-sm">
-          Being Lawful is not just a book about laws - it is about the art of living harmoniously in society.
-          <br><br>
-          In writing this book, my purpose was to show that when we choose to be lawful, we contribute to a peaceful and stable society where everyone can grow, learn, and thrive. Lawfulness is not merely about following rules; it is about understanding our place in the larger social fabric and acting with a sense of responsibility and purpose.
-          <br><br>
-          Drawing from our Constitution, ancient civilizational texts, and timeless values, Being Lawful invites adolescents and young adults to explore the deeper meaning of citizenship—not just in terms of rights, but equally in terms of duties. A duty-bound society is a strong society. And when citizens become aware, responsible, and active, the nation naturally rises to greater heights.
-          <br><br>
-          The workshop and website are designed to carry forward the same mission: to spark curiosity, build awareness, and encourage lawful behavior through real-life scenarios, thoughtful activities, and fun games. Law is not just a subject for lawyers—it’s a tool for every citizen to live with dignity, responsibility, and courage.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Samvidhan Hero Section -->
-  <section class="samvidhan-bg min-h-screen flex items-center px-4 py-8" id="samvidhan" data-aos="fade-up">
-    <div class="text-left">
-      <h2 class="text-white text-lg sm:text-xl md:text-3xl font-bold mb-3" data-aos="fade-up" data-aos-delay="200">Visit Constitution75.com</h2>
-      <p class="text-white text-sm sm:text-base md:text-lg mb-3" data-aos="fade-up" data-aos-delay="200">Celebrating 75 years of Samvidhan</p>
-      <button class="px-3 py-1 border-2 border-white text-white font-semibold rounded-md hover:bg-white hover:text-black transform hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm" data-aos="zoom-in" data-aos-delay="300">
-        <a href="https://constitution75.com/">Visit Now</a>
-      </button>
     </div>
   </section>
 

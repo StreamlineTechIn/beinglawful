@@ -1307,6 +1307,7 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
                 isApproved: data.isApproved || false,
                  isChampion: data.isChampion || false,
                message: data.message || null, // ✅ NEW: Student-specific message support
+
             };
         });
 
@@ -1388,6 +1389,19 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
     }
 });
 
+app.post('/school-dashboard/delete-student/:id', async (req, res) => {
+    const participantId = req.params.id;
+    const schoolEmail = req.body.username || req.query.username;
+
+    try {
+        // Delete the student from Firestore
+        await db.collection('participants').doc(participantId).delete();
+        res.redirect(`/school-dashboard?username=${schoolEmail}&success=Student deleted successfully`);
+    } catch (err) {
+        console.error('❌ Error deleting student:', err.message);
+        res.redirect(`/school-dashboard?username=${schoolEmail}&error=Failed to delete student`);
+    }
+});
 // POST route for submitting resources
     app.post('/school-dashboard/submit-resources', async (req, res) => {
         try {

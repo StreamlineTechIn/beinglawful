@@ -445,6 +445,20 @@
             .roadmap-step { width: 12%; }
             .roadmap-step .label { font-size: 10px; }
         }
+        .delete-btn {
+    background-color: #ff0000; /* Red color */
+    color: white;
+    border: none;
+    padding: 8px 12px; /* Same padding as .approve-btn */
+    cursor: pointer;
+    border-radius: 4px; /* Same border-radius as .approve-btn */
+    font-size: 14px; /* Same font-size as .approve-btn */
+    transition: background-color 0.3s; /* Same transition as .approve-btn */
+}
+
+.delete-btn:hover {
+    background-color: #cc0000; /* Darker red on hover */
+}
     </style>
 </head>
 <body>
@@ -539,7 +553,7 @@
                             <p>Please confirm the resources you agree to arrange or pay for:</p>
                             <div class="resource-item">
                                 <input type="checkbox" id="trainerRemediation" name="resources" value="Trainer remediation" checked required>
-                                <label for="trainerRemediation">Trainer remediation</label>
+                                <label for="trainerRemediation">Trainer remuneration</label>
                             </div>
                             <div class="resource-item">
                                 <input type="checkbox" id="travelingExpense" name="resources" value="Traveling expense" checked required>
@@ -644,6 +658,8 @@
                                     <th data-filter="completedAt">Completed At<br><select class="filter-select" data-column="completedAt" onchange="applyFilters('studentTable')"></select></th>
                                     <th>Approve</th>
                                     <th>Champion</th>
+                                    <th>Action</th>
+                                    
                                 </tr>
                             </thead>
                             <tbody>
@@ -677,6 +693,17 @@
                                             <!-- Debugging log -->
                                             <script>console.log('Student <%= student.id %> isChampion: <%= student.isChampion %>');</script>
                                         </td>
+                                                                             
+                                
+
+      <td class="py-2 px-4 border-b">
+    <form action="/school-dashboard/delete-student/<%= student.id %>" method="POST" style="display:inline;">
+        <input type="hidden" name="username" value="<%= schoolEmail %>">
+        <button type="submit" class="delete-btn" >Delete</button>
+    </form>
+</td>
+
+
                                     </tr>
                                 <% }) %>
                             </tbody>

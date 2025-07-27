@@ -505,79 +505,83 @@ function requireStudentAuth(req, res, next) {
     app.get('/', (req, res) => {
         res.sendFile(path.join(__dirname, 'index.html'));
     });
-
 // Login page (renders login.ejs)
     app.get('/login', (req, res) => {
         const error = req.query.error || null;
         res.render('login', { error });
     });
-    
-app.post('/student-login', async (req, res) => {
-    const { username, password } = req.body;
-    try {
-        if (!username || !password) {
-            return res.render('login', { error: 'Username and password are required.' });
+
+    // Student login (renders login.ejs or dashboard.ejs)
+// Student login (redirects to dashboard)
+    app.post('/student-login', async (req, res) => {
+        const { username, password } = req.body;
+        try {
+            if (!username || !password) {
+                return res.render('login', { error: 'Username and password are required.' });
+            }
+
+            console.log(`Student login attempt for username: ${username}`);
+            const { user, userId } = await getUserByParentMobile(username);
+
+            if (!user) {
+                return res.render('login', { error: 'Student not found.' });
+            }
+
+            // ✅ Approval Check
+            if (!user.isApproved) {
+                return res.render('login', { error: 'Approval pending. Please contact your school.' });
+            }
+
+            // ✅ Birthdate-based password check
+            if (!user.birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(user.birthdate)) {
+                console.error(`Invalid birthdate format for user ${username}: ${user.birthdate}`);
+                return res.render('login', { error: 'Invalid user data. Contact administrator.' });
+            }
+
+            const [year, month, day] = user.birthdate.split('-');
+            const expectedPassword = `${day}${month}${year}`;
+            if (password !== expectedPassword) {
+                console.log(`Invalid password for username: ${username}. Expected: ${expectedPassword}, Got: ${password}`);
+                return res.render('login', { error: 'Invalid username or password.' });
+            }
+
+            req.session.parentMobile1 = username;
+            console.log(`Login successful for ${username}, redirecting to /dashboard/${encodeURIComponent(username)}`);
+
+            // Redirect to dashboard route
+            res.redirect(`/dashboard/${encodeURIComponent(username)}`);
+
+        } catch (error) {
+            console.error('Error during student login:', error.message, error.stack);
+            res.render('login', { error: 'Login failed. Please try again later.' });
         }
+    });
 
-        console.log(`Student login attempt for username: ${username}`);
-        const { user, userId } = await getUserByParentMobile(username);
-
-        if (!user) {
-            return res.render('login', { error: 'Student not found.' });
-        }
-
-        if (!user.isApproved) {
-            return res.render('login', { error: 'Approval pending. Please contact your school.' });
-        }
-
-        if (!user.birthdate || !/^\d{4}-\d{2}-\d{2}$/.test(user.birthdate)) {
-            console.error(`Invalid birthdate for user ${username}: ${user.birthdate}`);
-            return res.render('login', { error: 'Invalid user data. Contact administrator.' });
-        }
-
-        const [year, month, day] = user.birthdate.split('-');
-        const expectedPassword = `${day}${month}${year}`;
-        if (password !== expectedPassword) {
-            console.log(`Invalid password for username: ${username}. Expected: ${expectedPassword}, Got: ${password}`);
-            return res.render('login', { error: 'Invalid username or password.' });
-        }
-
-        req.session.parentMobile1 = username;
-        console.log(`Login successful for ${username}`);
-
-        res.redirect(`/dashboard/${encodeURIComponent(username)}`);
-    } catch (error) {
-        console.error('Error during student login:', error.message, error.stack);
-        res.render('login', { error: 'Login failed. Please try again later.' });
-    }
-});
-
-
-
-
-    // Dashboard (renders dashboard.ejs)
- app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
+  // Dashboard (renders dashboard.ejs)
+app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
         const parentMobile1 = req.session.parentMobile1;
 
-        const snapshot = await db.collection('participants')
+        // ✅ Always fetch fresh participant data from Firestore
+        const participantSnapshot = await db.collection('participants')
             .where('parentMobile1', '==', parentMobile1)
             .get();
 
-        if (snapshot.empty) {
+        if (participantSnapshot.empty) {
             return res.redirect('/login?error=Student%20not%20found');
         }
 
-        const doc = snapshot.docs[0];
-        const user = doc.data();
-        const docId = doc.id;
+        const participantDoc = participantSnapshot.docs[0];
+        const participantDocId = participantDoc.id;
+        const user = participantDoc.data(); // ✅ FRESH DATA
 
         let mcqs = [];
         const hasCompletedMCQ = user.hasCompletedMCQ || false;
 
+        // ✅ Set MCQs if not completed
         if (!hasCompletedMCQ) {
             await db.runTransaction(async (transaction) => {
-                const userRef = db.collection('participants').doc(docId);
+                const userRef = db.collection('participants').doc(participantDocId);
                 const userDoc = await transaction.get(userRef);
                 const userData = userDoc.data();
                 mcqs = userData.currentMcqs || [];
@@ -586,52 +590,60 @@ app.post('/student-login', async (req, res) => {
                     transaction.update(userRef, { currentMcqs: mcqs });
                 }
             });
-        } else {
-            mcqs = user.currentMcqs || [];
         }
 
+        // ✅ Get participant media uploads
         const mediaSnapshot = await db.collection('participants')
-            .doc(docId)
+            .doc(participantDocId)
             .collection('mediaUploads')
             .orderBy('uploadedAt', 'desc')
             .get();
 
         const mediaUploads = mediaSnapshot.docs.map(doc => doc.data());
 
+        // ✅ Debug data being sent to template
         console.log('Dashboard Data:', {
-            studentName: user.studentName,
-            parentMobile1,
-            hasCompletedMCQ,
-            mcqsCount: mcqs.length
-        });
-
-        res.render('dashboard', {
             studentName: user.studentName || 'N/A',
-            parentMobile1,
+            parentMobile1: parentMobile1,
             isChampion: user.isChampion || false,
             championMessage: user.championMessage || '',
-            hasCompletedMCQ,
-            hasCompletedTrial1: user.hasCompletedTrial1 || false,
-            hasCompletedTrial2: user.hasCompletedTrial2 || false,
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            mcqs,
-            showResults: hasCompletedMCQ,
-            score: user.score || 0,
-            totalQuestions: user.totalQuestions || 30,
-            percentage: user.percentage || 0,
-            mediaUploads,
-            showMediaSection: hasCompletedMCQ && (req.isOnOrAfterEventDate || false),
-            eventDate: req.eventDate || '',
+            batch: user.batch || 'N/A',
+            hasCompletedMCQ: user.hasCompletedMCQ || false,
             eventDateMissing: req.eventDateMissing || true,
             isOnOrAfterEventDate: req.isOnOrAfterEventDate || false,
+            eventDate: req.eventDate || '',
+            isEventDate: req.isEventDate || false
+        });
+
+        // ✅ Render dashboard with fresh Firestore data
+        res.render('dashboard', {
+            studentName: user.studentName || 'N/A',
+            parentMobile1: parentMobile1,
+            isChampion: user.isChampion || false,
+            championMessage: user.championMessage || '',
+            hasCompletedMCQ: user.hasCompletedMCQ || false,
+            eventDateMissing: req.eventDateMissing || true,
+            isOnOrAfterEventDate: req.isOnOrAfterEventDate || false,
+            eventDate: req.eventDate || '',
             isEventDate: req.isEventDate || false,
-            batch: user.batch || 'N/A',
+            hasCompletedTrial1: user.hasCompletedTrial1 || false,
+            hasCompletedTrial2: user.hasCompletedTrial2 || false,
+            trial1: [], // Replace with actual query if needed (e.g., trial1Questions.docs.map(doc => doc.data()))
+            trial2: [], // Replace with actual query if needed
+            mcqs: mcqs, // Use transaction result
+            showResults: user.hasCompletedMCQ || false,
+            score: user.score,
+            totalQuestions: user.totalQuestions,
+            percentage: user.percentage,
+            mediaUploads: mediaUploads || [],
+            showMediaSection: (user.hasCompletedMCQ || false) && (req.isOnOrAfterEventDate || false),
+            batch: user.batch || 'N/A', // Use user data for batch
             error: null
         });
+
     } catch (error) {
-        console.error('Error loading dashboard:', error.message, error.stack);
-        res.redirect('/login?error=Dashboard%20load%20failed');
+        console.error('Error loading dashboard:', error);
+        res.redirect('/login?error=Error%20loading%20dashboard');
     }
 });
 
@@ -1307,7 +1319,6 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
                 isApproved: data.isApproved || false,
                  isChampion: data.isChampion || false,
                message: data.message || null, // ✅ NEW: Student-specific message support
-
             };
         });
 
@@ -1389,19 +1400,6 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
     }
 });
 
-app.post('/school-dashboard/delete-student/:id', async (req, res) => {
-    const participantId = req.params.id;
-    const schoolEmail = req.body.username || req.query.username;
-
-    try {
-        // Delete the student from Firestore
-        await db.collection('participants').doc(participantId).delete();
-        res.redirect(`/school-dashboard?username=${schoolEmail}&success=Student deleted successfully`);
-    } catch (err) {
-        console.error('❌ Error deleting student:', err.message);
-        res.redirect(`/school-dashboard?username=${schoolEmail}&error=Failed to delete student`);
-    }
-});
 // POST route for submitting resources
     app.post('/school-dashboard/submit-resources', async (req, res) => {
         try {
@@ -1995,7 +1993,6 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         res.status(500).send('Server error while marking champion');
     }
 });
-
 
 
 
@@ -3327,195 +3324,164 @@ app.post('/trainer-dashboard/add-dates', async (req, res) => {
     }
 });
 
-app.get('/trainer-dashboard', async (req, res) => {
-    try {
-        const trainerEmail = req.query.username;
-        if (!trainerEmail) {
-            return res.status(400).render('trainerDashboard', {
-                trainerName: 'Unknown',
-                email: '',
-                city: '',
-                district: '',
-                profession: '',
-                assignedSchools: [],
-                completedSchools: [],
-                availableDates: [],
-                schoolsInDistrict: [],
-                mediaUploads: [],
-                approvedZips: [],
-                error: 'Trainer email is required',
-                success: null,
-                trainerData: {}
+    app.get('/trainer-dashboard', async (req, res) => {
+        try {
+            const trainerEmail = req.query.username;
+            if (!trainerEmail) {
+                return res.status(400).render('trainerDashboard', {
+                    trainerName: 'Unknown',
+                    email: '',
+                    city: '',
+                    district: '',
+                    profession: '',
+                    assignedSchools: [],
+                    availableDates: [],
+                    schoolsInDistrict: [],
+                    mediaUploads: [],
+                    approvedZips: [],
+                    error: 'Trainer email is required',
+                    success: null,
+                    trainerData: {}
+                });
+            }
+
+            // Fetch trainer data
+            const trainerSnapshot = await db.collection('trainers')
+                .where('email', '==', trainerEmail)
+                .get();
+
+            if (trainerSnapshot.empty) {
+                return res.status(404).render('trainerDashboard', {
+                    trainerName: 'Unknown',
+                    email: trainerEmail,
+                    city: '',
+                    district: '',
+                    profession: '',
+                    assignedSchools: [],
+                    availableDates: [],
+                    schoolsInDistrict: [],
+                    mediaUploads: [],
+                    approvedZips: [],
+                    error: 'Trainer not found',
+                    success: null,
+                    trainerData: {}
+                });
+            }
+
+            const trainerId = trainerSnapshot.docs[0].id;
+            const trainerData = trainerSnapshot.docs[0].data();
+
+            // Fetch assigned schools
+            const schoolsSnapshot1 = await db.collection('schools')
+                .where('isApproved', '==', true)
+                .where('trainerId1', '==', trainerId)
+                .get();
+
+            const schoolsSnapshot2 = await db.collection('schools')
+                .where('isApproved', '==', true)
+                .where('trainerId2', '==', trainerId)
+                .get();
+
+            const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
+                const data = doc.data();
+                return {
+                    schoolName: data.schoolName || 'N/A',
+                    city: data.city || 'N/A',
+                    district: data.district || data.city || 'N/A',
+                    eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    }) : 'Not assigned',
+                    resourcesConfirmed: data.resourcesConfirmed || false,
+                    selectedResources: data.selectedResources || [],
+                    trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2'
+                };
             });
-        }
 
-        // Fetch trainer data
-        const trainerSnapshot = await db.collection('trainers')
-            .where('email', '==', trainerEmail)
-            .get();
+            // Fetch schools in trainer's district
+            const schoolsInDistrictSnapshot = await db.collection('schools')
+                .where('district', '==', trainerData.district || trainerData.city)
+                .where('isApproved', '==', true)
+                .get();
 
-        if (trainerSnapshot.empty) {
-            return res.status(404).render('trainerDashboard', {
-                trainerName: 'Unknown',
+            const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    schoolName: data.schoolName || 'N/A',
+                    schoolEmail: data.schoolEmail || 'N/A',
+                    city: data.city || 'N/A',
+                    district: data.district || 'N/A',
+                    eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                    }) : 'Not assigned',
+                    assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
+                    trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
+                };
+            });
+
+            // Fetch media uploads
+            const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
+            const mediaUploads = mediaSnapshot.docs.map(doc => ({
+                ...doc.data(),
+                uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
+            }));
+
+            // Fetch approved ZIP files for trainers
+            const zipSnapshot = await db.collection('trainerZips')
+                .where('trainerId', '==', trainerId)
+                .where('approved', '==', true)
+                .get();
+
+                 const approvedZips = zipSnapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    ...data,
+                    downloadUrl: `/zipfiles/${data.fileName}`, // Path for downloading
+                    uploadedAt: data.uploadedAt ? data.uploadedAt.toDate() : null
+                };
+            });
+
+
+            // Render Dashboard with all data
+            res.render('trainerDashboard', {
+                trainerName: trainerData.trainerName || 'Unknown',
                 email: trainerEmail,
+                city: trainerData.city || '',
+                district: trainerData.district || trainerData.city || '',
+                profession: trainerData.profession || '',
+                assignedSchools,
+                availableDates: trainerData.availableDates || [],
+                schoolsInDistrict,
+                mediaUploads,
+                approvedZips,
+                error: null,
+                success: null,
+                trainerData
+            });
+
+        } catch (error) {
+            console.error('Error in trainer-dashboard route:', error.message, error.stack);
+            res.status(500).render('trainerDashboard', {
+                trainerName: 'Unknown',
+                email: req.query.username || '',
                 city: '',
                 district: '',
                 profession: '',
                 assignedSchools: [],
-                completedSchools: [],
                 availableDates: [],
                 schoolsInDistrict: [],
                 mediaUploads: [],
                 approvedZips: [],
-                error: 'Trainer not found',
+                error: `Error loading dashboard: ${error.message}`,
                 success: null,
                 trainerData: {}
             });
         }
-
-        const trainerId = trainerSnapshot.docs[0].id;
-        const trainerData = trainerSnapshot.docs[0].data();
-
-        // Fetch assigned schools
-        const schoolsSnapshot1 = await db.collection('schools')
-            .where('isApproved', '==', true)
-            .where('trainerId1', '==', trainerId)
-            .get();
-
-        const schoolsSnapshot2 = await db.collection('schools')
-            .where('isApproved', '==', true)
-            .where('trainerId2', '==', trainerId)
-            .get();
-
-        const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
-            const data = doc.data();
-            return {
-                schoolName: data.schoolName || 'N/A',
-                city: data.city || 'N/A',
-                district: data.district || data.city || 'N/A',
-                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) : 'Not assigned',
-                resourcesConfirmed: data.resourcesConfirmed || false,
-                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : 'Trainer 2',
-                schoolPhoneNumber: data.schoolPhoneNumber || 'N/A',
-                civicsTeacherNumber: data.civicsTeacherNumber || 'N/A',
-                principalNumber: data.principalNumber || 'N/A',
-                principalEmail: data.principalEmail || 'N/A',
-                schoolCode: data.schoolCode || data.schoolNumber || 'N/A'
-            };
-        });
-
-        // ✅ Fetch completed schools
-        const completedSnapshot1 = await db.collection('schools')
-            .where('trainerId1', '==', trainerId)
-            .where('isCompleted', '==', true)
-            .get();
-
-        const completedSnapshot2 = await db.collection('schools')
-            .where('trainerId2', '==', trainerId)
-            .where('isCompleted', '==', true)
-            .get();
-
-        const completedSchools = [...completedSnapshot1.docs, ...completedSnapshot2.docs].map(doc => {
-            const data = doc.data();
-            return {
-                schoolName: data.schoolName || 'N/A',
-                city: data.city || 'N/A',
-                district: data.district || data.city || 'N/A',
-                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-IN') : 'Not assigned',
-                completionDate: data.completionDate ? data.completionDate.toDate().toLocaleDateString('en-IN') : 'N/A',
-                remarks: data.remarks || 'N/A'
-            };
-        });
-
-        // Fetch schools in trainer's district
-        const schoolsInDistrictSnapshot = await db.collection('schools')
-            .where('district', '==', trainerData.district || trainerData.city)
-            .where('isApproved', '==', true)
-            .get();
-
-        const schoolsInDistrict = schoolsInDistrictSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                schoolName: data.schoolName || 'N/A',
-                schoolEmail: data.schoolEmail || 'N/A',
-                city: data.city || 'N/A',
-                district: data.district || 'N/A',
-                eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                }) : 'Not assigned',
-                assignedTrainerId: data.trainerId1 || data.trainerId2 || null,
-                trainerRole: data.trainerId1 === trainerId ? 'Trainer 1' : data.trainerId2 === trainerId ? 'Trainer 2' : null
-            };
-        });
-
-        // Fetch media uploads
-        const mediaSnapshot = await db.collection('trainers').doc(trainerId).collection('mediaUploads').get();
-        const mediaUploads = mediaSnapshot.docs.map(doc => ({
-            ...doc.data(),
-            uploadedAt: doc.data().uploadedAt ? doc.data().uploadedAt.toDate() : null
-        }));
-
-        // Fetch approved ZIP files for trainers
-        const zipSnapshot = await db.collection('trainerZips')
-            .where('trainerId', '==', trainerId)
-            .where('approved', '==', true)
-            .get();
-
-        const approvedZips = zipSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                ...data,
-                downloadUrl: `/zipfiles/${data.fileName}`,
-                uploadedAt: data.uploadedAt ? data.uploadedAt.toDate() : null
-            };
-        });
-
-        // ✅ Render Trainer Dashboard
-        res.render('trainerDashboard', {
-            trainerName: trainerData.trainerName || 'Unknown',
-            email: trainerEmail,
-            city: trainerData.city || '',
-            district: trainerData.district || trainerData.city || '',
-            profession: trainerData.profession || '',
-            assignedSchools,
-            completedSchools, // ✅ added
-            availableDates: trainerData.availableDates || [],
-            schoolsInDistrict,
-            mediaUploads,
-            approvedZips,
-            error: null,
-            success: null,
-            trainerData
-        });
-
-    } catch (error) {
-        console.error('Error in trainer-dashboard route:', error.message, error.stack);
-        res.status(500).render('trainerDashboard', {
-            trainerName: 'Unknown',
-            email: req.query.username || '',
-            city: '',
-            district: '',
-            profession: '',
-            assignedSchools: [],
-            completedSchools: [], // ✅ added fallback to avoid crash
-            availableDates: [],
-            schoolsInDistrict: [],
-            mediaUploads: [],
-            approvedZips: [],
-            error: `Error loading dashboard: ${error.message}`,
-            success: null,
-            trainerData: {}
-        });
-    }
-});
- 
+    });    
 app.post('/trainer-login', async (req, res) => {
             const { username, password } = req.body;
             try {
@@ -3679,44 +3645,34 @@ async function renderFormWithErrors(res, errors) {
 
     // logistic Dashboard route
 app.get("/logistic-dashboard", async (req, res) => {
-  try {
-    const snapshot = await db
-      .collection("schools")
-      .where("isApproved", "==", true)
-      .get();
+  const snapshot = await db
+    .collection("schools")
+    .where("isApproved", "==", true)
+    .get();
 
-    const schools = [];
+  const schools = [];
 
-    snapshot.forEach(doc => {
-      const data = doc.data();
-      const rawDate = data.eventDate?.toDate();
-
-      schools.push({
-        id: doc.id,
-        name: data.schoolName,
-       civicsSirNumber: data.civicsTeacherNumber,
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    schools.push({
+      id: doc.id,
+      name: data.schoolName,
+      civicsSirNumber: data.civicsTeacherNumber,
       schoolPhoneNumber: data.schoolPhoneNumber,
-    principalNumber: data.principalNumber,  
-        city: data.city,
-        district: data.district,
-        rawEventDate: rawDate,
-        eventDate: rawDate ? rawDate.toLocaleDateString("en-IN") : "N/A",
-        status: data.isCompleted ? "delivered" : "pending",
-      });
+    principalNumber: data.principalNumber,       
+      city: data.city,
+      district: data.district,
+      rawEventDate: data.eventDate?.toDate(), // Keep raw Date for sorting
+      eventDate: data.eventDate?.toDate().toLocaleDateString("en-IN"),
+      status: data.isCompleted ? "delivered" : "pending",
     });
+  });
 
-    // Sort by rawEventDate (null-safe)
-    schools.sort((a, b) => {
-      if (!a.rawEventDate) return 1;
-      if (!b.rawEventDate) return -1;
-      return a.rawEventDate - b.rawEventDate;
-    });
+  // Sort by raw date
+  schools.sort((a, b) => a.rawEventDate - b.rawEventDate);
 
-    res.render("logistic-dashboard", { schools });
-  } catch (error) {
-    console.error("Error fetching school data:", error);
-    res.status(500).send("Internal Server Error");
-  } });
+  res.render("logistic-dashboard", { schools });
+});
 
 
 // New POST route to update status

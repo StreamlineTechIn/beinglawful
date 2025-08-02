@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -89,26 +91,122 @@
       cursor: pointer;
     }
     .test-form button:hover { background: #2980b9; }
-    .journey-flow div {
+    .journey-flow {
+      background: #ffffff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
       display: flex;
       align-items: center;
-      font-size: 1.1em;
-      padding: 8px 0;
-      border-left: 4px solid #2ecc71;
-      padding-left: 10px;
+      justify-content: space-between;
+      position: relative;
+      overflow-x: auto;
+    }
+    .journey-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100px;
+      text-align: center;
+      position: relative;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .journey-step:hover {
+      transform: scale(1.1);
+    }
+    .step-icon {
+      font-size: 1.8em;
       margin-bottom: 5px;
-      background: #f9f9f9;
-      border-radius: 4px;
+      transition: transform 0.3s ease;
     }
-    .journey-flow div span {
-      margin-right: 10px;
-      font-weight: bold;
-      color: #27ae60;
+    .journey-step:hover .step-icon {
+      transform: scale(1.2);
     }
-    .journey-flow {
-      background: #ecf0f1;
+    .step-text {
+      font-size: 0.85em;
+      font-weight: 500;
+      color: #2c3e50;
+      line-height: 1.2;
+      margin-bottom: 10px;
+    }
+    .journey-step[data-completed="true"] {
+      background: transparent;
+    }
+    .journey-step[data-completed="true"] .step-icon {
+      color: #28a745;
+      font-weight: 600;
+    }
+    .journey-step[data-completed="true"] .step-text {
+      color: #28a745;
+      font-weight: 600;
+    }
+    .journey-step[data-completed="true"] .step-text::after {
+      content: '✔';
+      display: block;
+      color: #28a745;
+      font-size: 0.9em;
+      background: #d4edda;
+      border-radius: 50%;
+      padding: 2px 6px;
+      margin-top: 5px;
+      text-align: center;
+    }
+    .journey-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      top: 80px;
+      right: -50px;
+      width: 50px;
+      height: 4px;
+      background: #2ecc71;
+      z-index: 1;
+    }
+    .journey-step[data-completed="true"]:not(:last-child)::after {
+      background: #28a745;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    .journey-step[data-completed="true"] .step-icon {
+      animation: pulse 1.5s infinite;
+    }
+    .journey-step.current {
+      background: #fff3cd;
       border-radius: 8px;
-      padding: 15px;
+      padding: 5px;
+    }
+    .journey-step.current .step-text {
+      color: #ffc107;
+      font-weight: 600;
+    }
+    .journey-step.current .step-icon {
+      color: #ffc107;
+    }
+    @media (max-width: 768px) {
+      .journey-flow {
+        padding: 10px;
+      }
+      .journey-step {
+        width: 80px;
+      }
+      .step-icon {
+        font-size: 1.5em;
+      }
+      .step-text {
+        font-size: 0.75em;
+      }
+      .journey-step[data-completed="true"] .step-text::after {
+        font-size: 0.8em;
+        padding: 2px 5px;
+      }
+      .journey-step:not(:last-child)::after {
+        top: 70px;
+        right: -40px;
+        width: 40px;
+      }
     }
     .champion-section {
       background: #d4edda;
@@ -143,6 +241,10 @@
       font-weight: 600;
       margin: 0;
     }
+    .chart-container {
+      max-width: 400px;
+      margin: 10px auto;
+    }
   </style>
 </head>
 <body>
@@ -153,27 +255,22 @@
   <% if (typeof hasCompletedMCQ !== 'undefined' && hasCompletedMCQ) { %>
     <a href="/gamezone/<%= parentMobile1 || '' %>">Game Zone</a>
     <a href="/certificate/<%= parentMobile1 || '' %>">Certificate</a>
+    <a href="/student-dashboard/media-upload/<%= parentMobile1 || '' %>">Upload Media</a>
     <div class="note <%= typeof eventDateMissing !== 'undefined' && eventDateMissing ? 'missing' : '' %>">
       <% if (typeof eventDateMissing !== 'undefined' && eventDateMissing) { %>
         Event date yet to decide.
       <% } else if (typeof isOnOrAfterEventDate !== 'undefined' && isOnOrAfterEventDate) { %>
-        Game Zone and Certificate are now available (since event date: <%= eventDate || 'N/A' %>).
+        Game Zone, Certificate, and Upload Media are now available (since event date: <%= eventDate || 'N/A' %>).
       <% } else { %>
-        Game Zone and Certificate will be available on or after the event date: <%= eventDate || 'N/A' %>.
+        Game Zone, Certificate, and Upload Media will be available on or after the event date: <%= eventDate || 'N/A' %>.
       <% } %>
     </div>
-    <% if (typeof eventDateMissing === 'undefined' || !eventDateMissing && typeof isOnOrAfterEventDate !== 'undefined' && isOnOrAfterEventDate) { %>
-      <a href="/student-dashboard/media-upload/<%= parentMobile1 || '' %>">Upload Media</a>
-    <% } else { %>
-      <div class="note missing">Upload Media will be available on or after the event date: <%= eventDate || 'N/A' %>.</div>
-    <% } %>
   <% } %>
   <a href="/login">Logout</a>
 </div>
 
 <div class="main-content">
   <div class="container">
-    <!-- Debugging Log -->
     <% console.log('Student Dashboard Data:', { 
         studentName: typeof studentName !== 'undefined' ? studentName : 'undefined', 
         parentMobile1: typeof parentMobile1 !== 'undefined' ? parentMobile1 : 'undefined',
@@ -193,7 +290,18 @@
         <div class="champion-badge">Champion</div>
         <p class="champion-message"><%= championMessage || 'Selected as champion for Being Lawful' %></p>
       </div>
-      <!-- Browser Console Log for Champion Section -->
+      <script>
+        // Confetti animation for champion
+        window.addEventListener('DOMContentLoaded', function () {
+          confetti({
+            particleCount: 250,
+            spread: 120,
+            angle: 90,
+            origin: { y: 0.4 },
+            colors: ['#28a745', '#ffd700', '#6ab04c', '#ffeaa7']
+          });
+        });
+      </script>
       <script>
         console.log('Champion Section:', {
           isChampion: <%= JSON.stringify(typeof isChampion !== 'undefined' ? isChampion : false) %>,
@@ -214,19 +322,45 @@
       </div>
     </div>
 
-    <!-- Student Journey Flow -->
     <div class="section">
       <h3>🛤️ Your Being Lawful Journey</h3>
-      <div class="summary-card journey-flow">
-        <div><span>1️⃣</span> Registration</div>
-        <div><span>2️⃣</span> Approved by School</div>
-        <div><span>3️⃣</span> MCQ Test (Main Exam)</div>
-        <div><span>4️⃣</span> Certificate Issued</div>
-        <div><span>5️⃣</span> Workshop Attended</div>
-        <div><span>6️⃣</span> Being Lawful Champion</div>
-        <div><span>7️⃣</span> Media Upload</div>
-        <div><span>8️⃣</span> Judiciary Selection</div>
-        <div><span>9️⃣</span> State Level Felicitation</div>
+      <div class="journey-flow">
+        <div class="journey-step" data-step="1" data-completed="true">
+          <span class="step-icon">📝</span>
+          <span class="step-text">Registration</span>
+        </div>
+        <div class="journey-step" data-step="2" data-completed="<%= typeof hasCompletedRegistration !== 'undefined' && hasCompletedRegistration ? 'true' : 'false' %>">
+          <span class="step-icon">🏫</span>
+          <span class="step-text">Approved by School</span>
+        </div>
+        <div class="journey-step" data-step="3" data-completed="<%= typeof hasCompletedMCQ !== 'undefined' && hasCompletedMCQ ? 'true' : 'false' %>">
+          <span class="step-icon">📚</span>
+          <span class="step-text">MCQ Test</span>
+        </div>
+        <div class="journey-step" data-step="4" data-completed="<%= typeof hasCertificate !== 'undefined' && hasCertificate ? 'true' : 'false' %>">
+          <span class="step-icon">🏆</span>
+          <span class="step-text">Certificate Issued</span>
+        </div>
+        <div class="journey-step" data-step="5" data-completed="<%= typeof hasAttendedWorkshop !== 'undefined' && hasAttendedWorkshop ? 'true' : 'false' %>">
+          <span class="step-icon">🎤</span>
+          <span class="step-text">Workshop Attended</span>
+        </div>
+        <div class="journey-step" data-step="6" data-completed="<%= typeof isChampion !== 'undefined' && isChampion ? 'true' : 'false' %>">
+          <span class="step-icon">🌟</span>
+          <span class="step-text">Champion</span>
+        </div>
+        <div class="journey-step" data-step="7" data-completed="<%= typeof hasUploadedMedia !== 'undefined' && hasUploadedMedia ? 'true' : 'false' %>">
+          <span class="step-icon">📸</span>
+          <span class="step-text">Media Upload</span>
+        </div>
+        <div class="journey-step" data-step="8" data-completed="<%= typeof isJudiciarySelected !== 'undefined' && isJudiciarySelected ? 'true' : 'false' %>">
+          <span class="step-icon">⚖️</span>
+          <span class="step-text">Judiciary Selection</span>
+        </div>
+        <div class="journey-step" data-step="9" data-completed="<%= typeof isStateFelicitated !== 'undefined' && isStateFelicitated ? 'true' : 'false' %>">
+          <span class="step-icon">🎉</span>
+          <span class="step-text">State Felicitation</span>
+        </div>
       </div>
     </div>
 
@@ -287,8 +421,48 @@
         <h3>Main Exam Results</h3>
         <div class="results-card">
           <div class="score-message">Your Score: <%= typeof score !== 'undefined' && typeof totalQuestions !== 'undefined' ? `${score}/${totalQuestions} (${percentage}%)` : 'N/A' %></div>
+          
         </div>
       </div>
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          const ctx = document.getElementById('examResultsChart').getContext('2d');
+          new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: ['Trial Test 1', 'Trial Test 2', 'Main Exam'],
+              datasets: [{
+                label: 'Status',
+                data: [
+                  <%= typeof hasCompletedTrial1 !== 'undefined' && hasCompletedTrial1 ? 100 : 0 %>,
+                  <%= typeof hasCompletedTrial2 !== 'undefined' && hasCompletedTrial2 ? 100 : 0 %>,
+                  <%= typeof hasCompletedMCQ !== 'undefined' && hasCompletedMCQ ? 100 : 0 %>
+                ],
+                backgroundColor: ['#2ecc71', '#2ecc71', '#3498db'],
+                borderColor: ['#27ae60', '#27ae60', '#2980b9'],
+                borderWidth: 1
+              }]
+            },
+            options: {
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  max: 100,
+                  title: {
+                    display: true,
+                    text: 'Completion (%)'
+                  }
+                }
+              },
+              plugins: {
+                legend: {
+                  display: false
+                }
+              }
+            }
+          });
+        });
+      </script>
     <% } %>
 
     <% if (typeof isEventDate !== 'undefined' && isEventDate) { %>
@@ -297,51 +471,66 @@
       </div>
     <% } %>
 
-    <!-- Media Upload Section -->
-    <% if (typeof hasCompletedMCQ !== 'undefined' && hasCompletedMCQ && typeof isOnOrAfterEventDate !== 'undefined' && isOnOrAfterEventDate) { %>
-      <% if (typeof showMediaSection !== 'undefined' && showMediaSection) { %>
-        <div class="section">
-          <h3>Upload Your Media</h3>
-          <form action="/student-dashboard/upload-media" method="POST" enctype="multipart/form-data" class="test-form">
-            <input type="hidden" name="parentMobile1" value="<%= parentMobile1 || '' %>">
-            <p>Media Description (Max 1000 words):</p>
-            <textarea name="mediaDescription" rows="4" style="width: 100%; margin-bottom: 10px;" required></textarea>
-            <p>External Media Link (Optional):</p>
-            <input type="url" name="mediaLink" style="width: 100%; margin-bottom: 10px;" placeholder="https://yourlink.com">
-            <p>Upload Photos (Max 2):</p>
-            <input type="file" name="photos" accept="image/*" multiple style="margin-bottom: 10px;">
-            <p>Upload Videos (Max 2):</p>
-            <input type="file" name="videos" accept="video/*" multiple style="margin-bottom: 10px;">
-            <button type="submit">Upload Media</button>
-          </form>
-        </div>
-
-        <div class="section">
-          <h3>Your Uploaded Media</h3>
-          <% if (typeof mediaUploads !== 'undefined' && mediaUploads.length > 0) { %>
-            <% mediaUploads.forEach(function(media) { %>
-              <div style="margin-bottom: 15px; background: #ecf0f1; padding: 10px; border-radius: 5px;">
-                <% if (media.type === 'image') { %>
-                  <img src="<%= media.url %>" alt="Uploaded Image" style="max-width: 100%;">
-                <% } else if (media.type === 'video') { %>
-                  <video controls style="max-width: 100%;">
-                    <source src="<%= media.url %>" type="video/mp4">
-                    Your browser does not support the video tag.
-                  </video>
-                <% } %>
-                <p><strong>Description:</strong> <%= media.description || 'No description' %></p>
-                <% if (media.link) { %>
-                  <p><strong>Link:</strong> <a href="<%= media.link %>" target="_blank"><%= media.link %></a></p>
-                <% } %>
-              </div>
-            <% }); %>
-          <% } else { %>
-            <p>No media uploaded yet.</p>
-          <% } %>
-        </div>
-      <% } %>
+    <% if (typeof hasCompletedMCQ !== 'undefined' && hasCompletedMCQ && typeof showMediaSection !== 'undefined' && showMediaSection) { %>
+      <div class="section">
+        <h3>Upload Your Media</h3>
+        <form action="/student-dashboard/upload-media" method="POST" enctype="multipart/form-data" class="test-form">
+          <input type="hidden" name="parentMobile1" value="<%= parentMobile1 || '' %>">
+          <p>Media Description (Max 1000 words):</p>
+          <textarea name="mediaDescription" rows="4" style="width: 100%; margin-bottom: 10px;" required></textarea>
+          <p>External Media Link (Optional):</p>
+          <input type="url" name="mediaLink" style="width: 100%; margin-bottom: 10px;" placeholder="https://yourlink.com">
+          <p>Upload Photos (Max 2):</p>
+          <input type="file" name="photos" accept="image/*" multiple style="margin-bottom: 10px;">
+          <p>Upload Videos (Max 2):</p>
+          <input type="file" name="videos" accept="video/*" multiple style="margin-bottom: 10px;">
+          <button type="submit">Upload Media</button>
+        </form>
+      </div>
+      <div class="section">
+        <h3>Your Uploaded Media</h3>
+        <% if (typeof mediaUploads !== 'undefined' && mediaUploads.length > 0) { %>
+          <% mediaUploads.forEach(function(media) { %>
+            <div style="margin-bottom: 15px; background: #ecf0f1; padding: 10px; border-radius: 5px;">
+              <% if (media.type === 'image') { %>
+                <img src="<%= media.url %>" alt="Uploaded Image" style="max-width: 100%;">
+              <% } else if (media.type === 'video') { %>
+                <video controls style="max-width: 100%;">
+                  <source src="<%= media.url %>" type="video/mp4">
+                  Your browser does not support the video tag.
+                </video>
+              <% } %>
+              <p><strong>Description:</strong> <%= media.description || 'No description' %></p>
+              <% if (media.link) { %>
+                <p><strong>Link:</strong> <a href="<%= media.link %>" target="_blank"><%= media.link %></a></p>
+              <% } %>
+            </div>
+          <% }); %>
+        <% } else { %>
+          <p>No media uploaded yet.</p>
+        <% } %>
+      </div>
     <% } %>
   </div>
 </div>
 
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const steps = document.querySelectorAll('.journey-step');
+    let lastCompletedStep = 0;
+    steps.forEach((step, index) => {
+      if (step.dataset.completed === 'true') {
+        lastCompletedStep = Math.max(lastCompletedStep, parseInt(step.dataset.step));
+      }
+    });
+    steps.forEach((step) => {
+      const stepNumber = parseInt(step.dataset.step);
+      if (stepNumber === lastCompletedStep + 1) {
+        step.classList.add('current');
+      }
+    });
+  });
+</script>
+
 </body>
+</html>

@@ -859,28 +859,43 @@ app.post('/student-login', async (req, res) => {
     });
 
 // Game Zone (renders gamezone.ejs)
-    app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
-        try {
-            const parentMobile1 = req.session.parentMobile1;
-            const user = res.locals.user;
+app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
+    try {
+        const parentMobile1 = req.session.parentMobile1 || req.params.parentMobile1;
 
-            if (!(user.hasCompletedMCQ || false)) {
-                return res.status(400).send('Please complete the main exam to access the Game Zone.');
-            }
-            if (res.locals.eventDateMissing) {
-                return res.status(400).send('Event date yet to decide.');
-            }
-            if (!res.locals.isOnOrAfterEventDate) {
-                return res.status(400).send(`Game Zone is only available on or after the event date: ${res.locals.eventDate}.`);
-            }
+        const snapshot = await db.collection('participants')
+            .where('parentMobile1', '==', parentMobile1)
+            .limit(1)
+            .get();
 
-            res.render('gamezone', { studentName: user.studentName || 'Unknown Student', parentMobile1 });
-        } catch (error) {
-            console.error('Error in gamezone route:', error.message, error.stack);
-            res.status(500).send('Error loading Game Zone.');
+        if (snapshot.empty) {
+            return res.status(404).send('User not found.');
         }
-    });
 
+        const user = snapshot.docs[0].data();
+
+        if (!user.hasCompletedMCQ) {
+            return res.status(400).send('Please complete the main exam to access the Game Zone.');
+        }
+
+        if (res.locals.eventDateMissing) {
+            return res.status(400).send('Event date yet to decide.');
+        }
+
+        if (!res.locals.isOnOrAfterEventDate) {
+            return res.status(400).send(`Game Zone is only available on or after the event date: ${res.locals.eventDate}.`);
+        }
+
+        res.render('gamezone', {
+            studentName: user.studentName || 'Unknown Student',
+            parentMobile1
+        });
+
+    } catch (error) {
+        console.error('Error in gamezone route:', error.message, error.stack);
+        res.status(500).send('Error loading Game Zone.');
+    }
+});
     //student dashboard upload media
    app.post('/student-dashboard/upload-media', upload, async (req, res) => {
     try {
@@ -1413,7 +1428,7 @@ app.post('/school-dashboard/delete-student/:id', async (req, res) => {
             }
 
             const schoolEmail = rawEmail.trim().toLowerCase();
-            const { resources, trainerId1, trainerId2 } = req.body;
+            const { resources, trainerId1, trainerId2 ,workshopStartTime, workshopEndTime} = req.body;
 
             console.log("📨 Cleaned Email:", schoolEmail);
 
@@ -1464,6 +1479,8 @@ app.post('/school-dashboard/delete-student/:id', async (req, res) => {
                     selectedResources: [],
                     selectedTrainers: [],
                     trainers: [],
+                     workshopStartTime: null,
+                    workshopEndTime: null,
                     mediaUploads: [],
                     trialTests,
                     error: 'School not found.'
@@ -1510,6 +1527,8 @@ app.post('/school-dashboard/delete-student/:id', async (req, res) => {
             await db.collection('schools').doc(schoolId).update({
                 resourcesConfirmed: true,
                 selectedResources,
+                 workshopStartTime: workshopStartTime || '',
+                workshopEndTime: workshopEndTime || '',
                 trainerId1,
                 trainerId2
             });
@@ -1549,6 +1568,8 @@ app.post('/school-dashboard/delete-student/:id', async (req, res) => {
                 resourcesConfirmed: true,
                 selectedResources,
                 selectedTrainers,
+                 workshopStartTime: workshopStartTime || null,
+                workshopEndTime: workshopEndTime || null,
                 trainers,
                 mediaUploads: [], // optional: pass uploads if you have them
                 trialTests,
@@ -1577,6 +1598,8 @@ app.post('/school-dashboard/delete-student/:id', async (req, res) => {
                 selectedTrainers: [],
                 trainers: [],
                 mediaUploads: [],
+                  workshopStartTime: null,
+                workshopEndTime: null,
                 trialTests,
                 error: 'Something went wrong while submitting resources.'
             });
@@ -1965,23 +1988,24 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
 });
 
 //champ student
-  app.post('/school-dashboard/mark-champ/:id', async (req, res) => {
+ app.post('/school-dashboard/mark-champ/:id', async (req, res) => {
     const studentId = req.params.id;
-    const { username } = req.query;
+    const { username } = req.query; // This is the schoolEmail
 
     try {
-        //  Count existing champions
+        // ✅ Count champions for this school only
         const championsSnapshot = await db.collection('participants')
             .where('isChampion', '==', true)
+            .where('schoolEmail', '==', username)
             .get();
 
-        if (championsSnapshot.size >= 57) {
-            return res.send(' Only 50 students can be marked as Champion.');
+        if (championsSnapshot.size >= 50) {
+            return res.send('⚠️ Only 50 students can be marked as Champion for your school.');
         }
 
         const championMessage = '🎉 Congratulations! You have been selected as a Being Lawful Champ!';
 
-        //  Update the participant
+        // ✅ Mark this student as Champion
         await db.collection('participants').doc(studentId).update({
             isChampion: true,
             championMessage: championMessage
@@ -2023,109 +2047,124 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         }
     });
 
-    app.post('/participate', async (req, res) => {
-        try {
-            const participant = {
-                studentName: req.body.studentName,
-                schoolNameDropdown: req.body.schoolNameDropdown,
-                birthdate: req.body.birthdate,
-                studentClass: req.body.studentClass,
-                parentMobile1: req.body.parentMobile1,
-                parentMobile2: req.body.parentMobile2,
-                parentEmail: req.body.parentEmail,
-                address: req.body.address,
-                city: req.body.city,
-                pincode: req.body.pincode,
-                type: req.body.type,
-                
-            };
+   app.post('/participate', async (req, res) => {
+    try {
+        const participant = {
+            studentName: req.body.studentName,
+            schoolNameDropdown: req.body.schoolNameDropdown,
+            birthdate: req.body.birthdate,
+            studentClass: req.body.studentClass,
+            parentMobile1: req.body.parentMobile1,
+            parentMobile2: req.body.parentMobile2,
+            parentEmail: req.body.parentEmail,
+            address: req.body.address,
+            city: req.body.city,
+            pincode: req.body.pincode,
+            type: req.body.type,
+        };
 
-            const errors = {};
+        const errors = {};
 
-            // Check for duplicate email or phone number
-            const emailSnapshot = await db.collection('participants')
-                .where('parentEmail', '==', participant.parentEmail)
+        // 🔍 Find schoolEmail using selected school name
+        const schoolSnapshot = await db.collection('schools')
+            .where('schoolName', '==', participant.schoolNameDropdown)
+            .limit(1)
+            .get();
+
+        if (!schoolSnapshot.empty) {
+            const schoolData = schoolSnapshot.docs[0].data();
+            participant.schoolEmail = schoolData.email || '';
+        } else {
+            errors.schoolNameDropdown = 'Selected school not found';
+        }
+
+        // ✅ Validation checks
+        const emailSnapshot = await db.collection('participants')
+            .where('parentEmail', '==', participant.parentEmail)
+            .get();
+        if (!emailSnapshot.empty) {
+            errors.parentEmail = 'User with this email already exists';
+        }
+
+        const mobileSnapshot = await db.collection('participants')
+            .where('parentMobile1', '==', participant.parentMobile1)
+            .get();
+        if (!mobileSnapshot.empty) {
+            errors.parentMobile1 = 'User with this mobile number already exists';
+        }
+
+        const requiredFields = ['studentName', 'schoolNameDropdown', 'birthdate', 'studentClass', 'parentMobile1', 'parentEmail', 'address', 'city', 'pincode', 'type'];
+        requiredFields.forEach(field => {
+            if (!participant[field]) {
+                errors[field] = 'This field is required';
+            }
+        });
+
+        if (participant.pincode && !/^\d{6}$/.test(participant.pincode)) {
+            errors.pincode = 'Pincode must be 6 digits';
+        }
+
+        if (participant.parentMobile1 && !/^\d{10}$/.test(participant.parentMobile1)) {
+            errors.parentMobile1 = 'Mobile number must be 10 digits';
+        }
+
+        if (participant.parentMobile2 && participant.parentMobile2 !== '' && !/^\d{10}$/.test(participant.parentMobile2)) {
+            errors.parentMobile2 = 'Mobile number must be 10 digits';
+        }
+
+        if (participant.parentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(participant.parentEmail)) {
+            errors.parentEmail = 'Invalid email address';
+        }
+
+        if (participant.birthdate && !/^\d{4}-\d{2}-\d{2}$/.test(participant.birthdate)) {
+            errors.birthdate = 'Birthdate must be YYYY-MM-DD';
+        }
+
+        // ❌ If any errors, re-render form
+        if (Object.keys(errors).length > 0) {
+            const snapshot = await db.collection('schools')
+                .where('isApproved', '==', true)
                 .get();
-            if (!emailSnapshot.empty) {
-                errors.parentEmail = 'User with this email already exists';
-            }
+            const schoolNames = snapshot.docs.map(doc => doc.data().schoolName);
 
-            const mobileSnapshot = await db.collection('participants')
-                .where('parentMobile1', '==', participant.parentMobile1)
-                .get();
-            if (!mobileSnapshot.empty) {
-                errors.parentMobile1 = 'User with this mobile number already exists';
-            }
-
-            const requiredFields = ['studentName', 'schoolNameDropdown', 'birthdate', 'studentClass', 'parentMobile1', 'parentEmail', 'address', 'city', 'pincode', 'type'];
-            requiredFields.forEach(field => {
-                if (!participant[field]) {
-                    errors[field] = 'This field is required';
-                }
-            });
-
-            if (participant.pincode && !/^\d{6}$/.test(participant.pincode)) {
-                errors.pincode = 'Pincode must be 6 digits';
-            }
-
-            if (participant.parentMobile1 && !/^\d{10}$/.test(participant.parentMobile1)) {
-                errors.parentMobile1 = 'Mobile number must be 10 digits';
-            }
-
-            if (participant.parentMobile2 && participant.parentMobile2 !== '' && !/^\d{10}$/.test(participant.parentMobile2)) {
-                errors.parentMobile2 = 'Mobile number must be 10 digits';
-            }
-
-            if (participant.parentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(participant.parentEmail)) {
-                errors.parentEmail = 'Invalid email address';
-            }
-
-            if (participant.birthdate && !/^\d{4}-\d{2}-\d{2}$/.test(participant.birthdate)) {
-                errors.birthdate = 'Birthdate must be YYYY-MM-DD';
-            }
-
-            if (Object.keys(errors).length > 0) {
-                const snapshot = await db.collection('schools')
-                    .where('isApproved', '==', true)
-                    .get();
-                const schoolNames = snapshot.docs.map(doc => doc.data().schoolName);
-
-                return res.render('participation', {
-                    type: participant.type || 'Student',
-                    schoolNames,
-                    errors,
-                    values: participant
-                });
-            }
-
-            await db.collection('participants').add({
-                ...participant,
-                hasCompletedTrial1: false,
-                hasCompletedTrial2: false,
-                hasCompletedMCQ: false,
-                trainerApprove : false, 
-                score: 0
-            });
-
-            const [year, month, day] = participant.birthdate.split('-');
-            const password = `${day}${month}${year}`;
-
-            res.render('studentConfirmation', {
-                studentName: participant.studentName,
-                username: participant.parentMobile1,
-                password
-            });
-
-        } catch (error) {
-            console.error('Error in participate route:', error.message, error.stack);
-            res.status(500).render('participation', {
-                type: 'Student',
-                schoolNames: [],
-                errors: { server: 'Something went wrong. Please try again.' },
-                values: req.body
+            return res.render('participation', {
+                type: participant.type || 'Student',
+                schoolNames,
+                errors,
+                values: participant
             });
         }
-    });
+
+        // ✅ Save participant with schoolEmail
+        await db.collection('participants').add({
+            ...participant,
+            hasCompletedTrial1: false,
+            hasCompletedTrial2: false,
+            hasCompletedMCQ: false,
+            trainerApprove: false,
+            score: 0
+        });
+
+        const [year, month, day] = participant.birthdate.split('-');
+        const password = `${day}${month}${year}`;
+
+        res.render('studentConfirmation', {
+            studentName: participant.studentName,
+            username: participant.parentMobile1,
+            password
+        });
+
+    } catch (error) {
+        console.error('Error in participate route:', error.message, error.stack);
+        res.status(500).render('participation', {
+            type: 'Student',
+            schoolNames: [],
+            errors: { server: 'Something went wrong. Please try again.' },
+            values: req.body
+        });
+    }
+});
+
 
  app.post('/admin/complete-school/:schoolId', async (req, res) => {
     try {
@@ -2163,7 +2202,7 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         }
     });
 
-    app.post('/school-participate', [
+   app.post('/school-participate', [
         body('schoolName').trim().notEmpty().withMessage('School name is required'),
         body('city').trim().notEmpty().withMessage('City is required'),
         body('district').trim().notEmpty().withMessage('District is required'),
@@ -2177,7 +2216,9 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         body('eventDate1').isDate().withMessage('Invalid date format for Event Date 1'),
         body('eventDate2').isDate().withMessage('Invalid date format for Event Date 2'),
         body('eventDate3').isDate().withMessage('Invalid date format for Event Date 3'),
-        body('eventDate4').isDate().withMessage('Invalid date format for Event Date 4')
+        body('eventDate4').isDate().withMessage('Invalid date format for Event Date 4'),
+        body('referenceSource').trim().notEmpty().withMessage('Reference source is required'),
+        body('referenceName').if(body('referenceSource').equals('Person')).trim().notEmpty().withMessage('Reference name is required when reference source is Person')
     ], async (req, res) => {
         try {
             const errors = validationResult(req).array();
@@ -2197,7 +2238,9 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
                 eventDate1,
                 eventDate2,
                 eventDate3,
-                eventDate4
+                eventDate4,
+                referenceSource,
+                referenceName
             } = req.body;
 
             const checks = [
@@ -2244,6 +2287,8 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
                 civicsTeacherNumber,
                 civicsTeacherEmail,
                 eventDates: [eventDate1, eventDate2, eventDate3, eventDate4],
+                referenceSource,
+                referenceName: referenceSource === 'Person' ? referenceName : null,
                 registeredAt: admin.firestore.FieldValue.serverTimestamp(),
                 isApproved: false,
                 resourcesConfirmed: false,
@@ -2340,6 +2385,17 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         try {
             console.log('---- Admin Dashboard Route Triggered ----');
 
+            // ✅ Define formatTime ONCE at top
+        const formatTime = (timestamp) => {
+        if (!timestamp) return null;
+        const dateObj = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+        return dateObj.toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    };
+
             // 1️⃣ Parse Filters
             const filters = {
                 schoolApproved: req.query.schoolApproved || '',
@@ -2365,6 +2421,10 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
                 const schoolData = doc.data();
                 const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
 
+                // ✅ Apply formatting to times here
+                    const workshopStartTime = formatTime(schoolData.workshopStartTime);
+                    const workshopEndTime = formatTime(schoolData.workshopEndTime);
+
                 schoolMediaPromises.push(
                     db.collection('schools').doc(doc.id).collection('mediaUploads').get()
                         .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
@@ -2384,10 +2444,19 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
                     if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
                 }
 
-                schools.push({ id: doc.id, ...schoolData, eventDate, trainer1, trainer2 });
+                schools.push({
+                    id: doc.id,
+                    ...schoolData,
+                    eventDate,
+                    workshopStartTime,  // ⏰ formatted time
+            workshopEndTime,    // ⏰ formatted
+                    trainer1,
+                    trainer2
+                });
             }
 
-            // 3️⃣ Fetch Trainers + Trainer Media
+            // ✅ All remaining code unchanged...
+
             let trainersQuery = db.collection('trainers');
             if (filters.trainerApproved) trainersQuery = trainersQuery.where('isApproved', '==', filters.trainerApproved === 'true');
             if (filters.trainerCity) trainersQuery = trainersQuery.where('city', '==', filters.trainerCity);
@@ -2415,7 +2484,6 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
                 });
             }
 
-            // 4️⃣ Fetch Participants
             let participantsQuery = db.collection('participants');
             if (filters.studentCompleted) participantsQuery = participantsQuery.where('hasCompletedMCQ', '==', filters.studentCompleted === 'true');
             if (filters.studentCity) participantsQuery = participantsQuery.where('city', '==', filters.studentCity);
@@ -2451,12 +2519,10 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
                 };
             });
 
-            // 5️⃣ Collect All Media Uploads
             const schoolMedia = (await Promise.all(schoolMediaPromises)).flat();
             const trainerMedia = (await Promise.all(trainerMediaPromises)).flat();
             const mediaUploads = [...schoolMedia, ...trainerMedia].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
 
-            // 6️⃣ Today's Participants Summary
             const today = new Date(); today.setHours(0, 0, 0, 0);
             const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
             let studentsTodayCount = 0;
@@ -2476,7 +2542,6 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
                 console.error('🔥 Firestore Index Error:', indexErr.message);
             }
 
-            // 7️⃣ Fetch Trainer ZIPs
             const zipSnapshot = await db.collection('trainerZips').get();
             const zips = zipSnapshot.docs.map(doc => ({
                 id: doc.id,
@@ -2484,7 +2549,6 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
                 uploadedAt: doc.data().uploadedAt?.toDate() || null
             }));
 
-            // 8️⃣ Render Admin Dashboard View
             res.render('adminDashboard', {
                 schools,
                 trainers,
@@ -2512,18 +2576,6 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
                 error: 'Failed to load dashboard data.',
                 success: null
             });
-        }
-    });
-
-    app.post('/admin-dashboard/delete-trainer/:id', requireAdmin, async (req, res) => {
-        const trainerId = req.params.id;
-
-        try {
-            await db.collection('trainers').doc(trainerId).delete();
-            res.redirect('/admin-dashboard?success=Trainer deleted successfully');
-        } catch (err) {
-            console.error('❌ Error deleting trainer:', err.message);
-            res.redirect('/admin-dashboard?error=Failed to delete trainer');
         }
     });
 

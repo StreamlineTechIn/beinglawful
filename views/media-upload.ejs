@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upload Media</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0; padding: 0;
+      background-color: #f4f4f4;
+      display: flex;
+    }
+    .sidebar {
+      width: 250px;
+      background: linear-gradient(180deg, #1e7e34, #145a32);
+      color: #fff;
+      height: 100vh;
+      position: fixed;
+      padding-top: 20px;
+      box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+    }
+    .sidebar h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 1.5em;
+    }
+    .sidebar a {
+      display: block;
+      color: #fff;
+      padding: 15px 20px;
+      text-decoration: none;
+      font-size: 1.1em;
+    }
+    .sidebar a:hover { background: #51ca6d; }
+    .sidebar .note {
+      font-size: 0.9em;
+      padding: 10px 20px;
+      color: #ecf0f1;
+    }
+    .sidebar .note.missing {
+      color: #e74c3c;
+      font-style: italic;
+    }
+    .main-content {
+      margin-left: 250px;
+      padding: 20px;
+      width: calc(100% - 250px);
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h1, h3 { color: #333; }
+    .section { margin-bottom: 20px; }
+    .test-form button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      background: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .test-form button:hover { background: #2980b9; }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <h2>Student Portal</h2>
+  <a href="/dashboard/<%= parentMobile1 || '' %>">Dashboard</a>
+  <% if (typeof hasCompletedMCQ !== 'undefined' && hasCompletedMCQ) { %>
+    <a href="/gamezone/<%= parentMobile1 || '' %>">Game Zone</a>
+    <a href="/certificate/<%= parentMobile1 || '' %>">Certificate</a>
+    <a href="/student-dashboard/media-upload/<%= parentMobile1 || '' %>">Upload Media</a>
+    <div class="note <%= typeof eventDateMissing !== 'undefined' && eventDateMissing ? 'missing' : '' %>">
+      <% if (typeof eventDateMissing !== 'undefined' && eventDateMissing) { %>
+        Event date yet to decide.
+      <% } else if (typeof isOnOrAfterEventDate !== 'undefined' && isOnOrAfterEventDate) { %>
+        Game Zone, Certificate, and Upload Media are now available (since event date: <%= eventDate || 'N/A' %>).
+      <% } else { %>
+        Game Zone, Certificate, and Upload Media will be available on or after the event date: <%= eventDate || 'N/A' %>.
+      <% } %>
+    </div>
+  <% } %>
+  <a href="/login">Logout</a>
+</div>
+
+<div class="main-content">
+  <div class="container">
+    <h1>Upload Media</h1>
+    <div class="section">
+      <h3>Upload Your Photos and Videos</h3>
+      <form action="/student-dashboard/upload-media" method="POST" enctype="multipart/form-data" class="test-form">
+        <input type="hidden" name="parentMobile1" value="<%= parentMobile1 || '' %>">
+        <p>Media Description (Max 1000 words):</p>
+        <textarea name="mediaDescription" rows="4" style="width: 100%; margin-bottom: 10px;" required></textarea>
+        <p>External Media Link (Optional):</p>
+        <input type="url" name="mediaLink" style="width: 100%; margin-bottom: 10px;" placeholder="https://yourlink.com">
+        <p>Upload Photos (Max 2):</p>
+        <input type="file" name="photos" accept="image/*" multiple style="margin-bottom: 10px;">
+        <p>Upload Videos (Max 2):</p>
+        <input type="file" name="videos" accept="video/*" multiple style="margin-bottom: 10px;">
+        <button type="submit">Upload Media</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

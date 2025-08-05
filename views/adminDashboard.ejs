@@ -85,10 +85,9 @@
             });
         }
 
-        function confirmDelete(trainerName) {
-            return confirm(`Are you sure you want to delete trainer ${trainerName}? This action cannot be undone.`);
-        }
-
+       function confirmDelete(name) {
+    return confirm(`Are you sure you want to delete trainer "${name}"?`);
+  }
         async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
             event.preventDefault();
             const form = event.target.closest('form');
@@ -347,6 +346,8 @@
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('students')">Students</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('media')">View Media</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('detail-summary')">Detailed Summary</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('upload-media')">Upload Media</button>
+
         </div>
 
         <div id="visualization" class="tab-content">
@@ -909,9 +910,9 @@
                                                     <button type="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-3 rounded">Approve</button>
                                                 </form>
                                             <% } %>
-                                            <form action="/admin-dashboard/delete-trainer/<%= trainer.id %>" method="POST" class="inline" onsubmit="return confirmDelete('<%= trainer.trainerName %>')">
-                                                <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded">Delete</button>
-                                            </form>
+                                         <form action="/admin-dashboard/delete-trainer/<%= trainer.id %>" method="POST" onsubmit="return confirmDelete('<%= trainer.trainerName %>')">
+  <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded">Delete</button>
+</form>
                                         </div>
                                     </td>
                                 </tr>
@@ -1003,7 +1004,24 @@
                 </table>
             </div>
         </div>
-
+<section id="upload-media" class="hidden bg-white min-h-screen py-8 px-4">
+  <h2 class="text-xl font-bold text-center mb-6">Upload Your Photos and Videos</h2>
+  <form action="/upload-media" method="POST" enctype="multipart/form-data" class="max-w-lg mx-auto bg-gray-100 p-6 rounded-lg shadow-md">
+    <div class="mb-4">
+      <label class="block text-gray-700 font-semibold mb-2" for="photo">Select Photo:</label>
+      <input type="file" name="photo" accept="image/*" class="w-full px-3 py-2 border rounded" required />
+    </div>
+    <div class="mb-4">
+      <label class="block text-gray-700 font-semibold mb-2" for="video">Select Video:</label>
+      <input type="file" name="video" accept="video/*" class="w-full px-3 py-2 border rounded" />
+    </div>
+    <div class="mb-4">
+      <label class="block text-gray-700 font-semibold mb-2" for="description">Description:</label>
+      <textarea name="description" rows="3" class="w-full px-3 py-2 border rounded" placeholder="Write something..."></textarea>
+    </div>
+    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Upload</button>
+  </form>
+</section>
         <div id="media" class="tab-content hidden">
             <h2 class="text-2xl font-bold mb-4 text-gray-700">Media Uploads</h2>
             <!-- Filter Dropdowns -->

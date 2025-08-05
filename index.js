@@ -1971,6 +1971,7 @@ app.post('/school-dashboard/delete-student/:id', async (req, res) => {
             });
         }
     });
+    
 
 app.post('/school-dashboard/approve-student/:id', async (req, res) => {
     try {
@@ -2655,6 +2656,17 @@ app.post('/admin-dashboard/toggle-media-seen/:mediaId', async (req, res) => {
         console.error('Error toggling media status:', err.message);
         res.status(500).json({ error: 'Server error' });
     }
+});
+app.post('/admin-dashboard/delete-trainer/:id', async (req, res) => {
+  const trainerId = req.params.id;
+
+  try {
+    await db.collection('trainers').doc(trainerId).delete();
+    res.redirect('/admin-dashboard?success=Trainer deleted successfully');
+  } catch (err) {
+    console.error('Error deleting trainer:', err.message);
+    res.redirect('/admin-dashboard?error=Failed to delete trainer');
+  }
 });
 
     // Approve trainer (general approval, not tied to a specific school)

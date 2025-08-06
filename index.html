@@ -36,7 +36,7 @@
 </script>
   <meta charset="UTF-8" />
   <link rel="sitemap" type="application/xml" href="./sitemap.xml">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
   <link rel="icon" type="image/png" href="./Assets/logo.png">
   <title>Being Lawful: Samvidhan & Constitution for CBSE Schools in India</title>
   <meta name="title" content="Being Lawful: Samvidhan & Constitution for CBSE Schools in India">
@@ -134,9 +134,22 @@
   <meta name="preload" content="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" as="style">
   <meta name="preload" content="https://beinglawful.in/Assets/being_lawful.jpg" as="image">
   <meta name="preload" content="./Assets/Activities/videoactivity_thumbnail.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy2.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy3.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy4.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy5.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy6.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy7.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy8.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy9.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy11.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy12.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy13.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/Product Photoggraphy14.jpg" as="image">
   <meta name="content-security-policy" content="default-src 'self'; img-src 'self' https://beinglawful.in https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; object-src 'none'; frame-src 'self' https://samvidhanai.beinglawful.in; media-src 'self' https://beinglawful.in;">
-  <meta property="og:video" content="https://beinglawful.in./Assets/videoactivity.mp4">
-  <meta property="og:video:secure_url" content="https://beinglawful.in./Assets/videoactivity.mp4">
+  <meta property="og:video" content="https://beinglawful.in/Assets/videoactivity.mp4">
+  <meta property="og:video:secure_url" content="https://beinglawful.in/Assets/videoactivity.mp4">
   <meta property="og:video:type" content="video/mp4">
   <link rel="canonical" href="https://beinglawful.in/">
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" as="style">
@@ -155,10 +168,6 @@
       overflow-x: hidden;
       width: 100%;
       box-sizing: border-box;
-      -webkit-user-select: none;
-      -moz-user-select: none;
-      -ms-user-select: none;
-      user-select: none;
     }
     ::-webkit-scrollbar {
       display: none;
@@ -317,7 +326,7 @@
       background-color: #d2b48c;
     }
     .author-bg-section {
-         background-color: #ffffff; /* New soft blue color for Author Note section */
+      background-color: #ffffff;
     }
     .hero-section {
       padding: 40px 0.5rem 1rem;
@@ -422,7 +431,6 @@
     .transform {
       will-change: transform;
     }
-    /* Modal Styles */
     .modal {
       display: none;
       position: fixed;
@@ -440,12 +448,16 @@
     }
     .modal-content {
       max-width: 90%;
-      max-height: 90vh;
+      max-height: 80vh;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .modal-content img {
       width: 100%;
       height: auto;
-      max-height: 90vh;
+      max-height: 80vh;
       object-fit: contain;
     }
     .close-modal {
@@ -455,8 +467,38 @@
       color: white;
       font-size: 24px;
       cursor: pointer;
+      z-index: 1001;
     }
-    /* Gallery Grid Styles */
+    .modal-caption {
+      color: white;
+      text-align: center;
+      margin-top: 10px;
+      font-size: 1rem;
+      max-width: 90%;
+    }
+    .prev, .next {
+      cursor: pointer;
+      position: absolute;
+      top: 50%;
+      width: auto;
+      padding: 10px;
+      color: white;
+      font-weight: bold;
+      font-size: 18px;
+      transition: background-color 0.3s ease;
+      border-radius: 3px;
+      user-select: none;
+      background: rgba(0, 0, 0, 0.5);
+    }
+    .prev {
+      left: 10px;
+    }
+    .next {
+      right: 10px;
+    }
+    .prev:hover, .next:hover {
+      background: rgba(0, 0, 0, 0.8);
+    }
     .gallery-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -538,7 +580,6 @@
       50% { opacity: 0.7; }
       100% { opacity: 1; }
     }
-    /* AI Icon Styles */
     .ai-icon {
       position: fixed;
       bottom: 20px;
@@ -564,7 +605,6 @@
       height: 40px;
       object-fit: contain;
     }
-    /* AI Modal Styles */
     .ai-modal {
       display: none;
       position: fixed;
@@ -603,7 +643,6 @@
       cursor: pointer;
       z-index: 1002;
     }
-    /* Video Section Styles */
     .gallery-item video {
       width: 100%;
       height: 100%;
@@ -782,7 +821,7 @@
     }
   </style>
 </head>
-<body class="font-sans text-gray-800" oncontextmenu="return false;" onkeydown="disableDevTools(event);" onselectstart="return false;">
+<body class="font-sans text-gray-800">
   <!-- Navbar -->
   <nav class="navbar navbar-expand-lg fixed-top">
     <div class="container">
@@ -805,9 +844,9 @@
           <li class="nav-item">
             <a class="nav-link" href="#activities">Gallery</a>
           </li>
-          <!-- <li class="nav-item">
-            <a class="nav-link" href="#videos">Videos</a>
-          </li> -->
+          <li class="nav-item">
+            <a class="nav-link" href="#workshop-kit">Workshop Kit</a>
+          </li>
           <li class="nav-item">
             <a class="nav-link" href="/login">Login</a>
           </li>
@@ -878,59 +917,55 @@
   </section>
 
   <!-- Stakeholders Section -->
-<!-- Stakeholders Section -->
-<section class="min-h-[80vh] flex flex-col items-center justify-center py-8 px-4" id="stakeholders" data-aos="fade-up">
-  <div class="wave-bg"></div>
-  <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-6 relative z-10" data-aos="fade-up" data-aos-delay="200">Our Stakeholders</h2>
-  <div class="stakeholder-container flex flex-col md:flex-row gap-6 px-4 relative z-10">
-    <!-- Schools Card -->
-   <div class="stakeholder-card" data-aos="fade-right" data-aos-delay="300">
-  <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🏫</span> Benefits for Schools</h3>
-  <ul class="list-none text-gray-600 text-xs sm:text-sm">
-    <li><span>📚</span> <strong>Enhanced Curriculum</strong> : Provides experiential civics education aligned with CBSE and National Curriculum standards.</li>
-    <li><span>🏆</span> <strong>Institutional Prestige</strong> : Showcases dedication to fostering legal awareness and democratic values.</li>
-    <li><span>🎮</span> <strong>Student Engagement</strong> : Promotes active learning through interactive and gamified educational modules.</li>
-    <li><span>⚙️</span> <strong>Seamless Implementation</strong> : The Being Lawful team manages all aspects of program design, content, and trainer support.</li>
-    <li><span>🎖️</span> <strong>Recognition</strong> : Participating schools earn digital certificates and prominent social media acknowledgment.</li>
-  </ul>
-  <div class="button-row">
-    <a href="/school-participation" class="px-3 py-1 font-semibold text-xs sm:text-sm">Join as a School</a>
-  </div>
-</div>
-    <!-- Trainers Card -->
-    <div class="stakeholder-card" data-aos="fade-up" data-aos-delay="400">
-      <h3 class="text-base sm:text-lg font-semibold mb-2"><span>👩‍🏫</span> Benefits for Trainers</h3>
-      <ul class="list-none text-gray-600 text-xs sm:text-sm">
-        <li><span>📜</span> <strong>Certification</strong>: Get certified after completing the Train-the-Trainer (ToT) program.</li>
-        <li><span>🌟</span> <strong>Leadership Opportunity</strong>: Lead a legal awareness initiative within your school.</li>
-        <li><span>🛠️</span> <strong>Skill Development</strong>: Gain public speaking, facilitation, and student engagement skills.</li>
-        <li><span>🏅</span> <strong>Recognition</strong>: Trainers receive a certificate and can be highlighted in Being Lawful’s community.</li>
-        <li><span>🌍</span> <strong>Impact-Driven Role</strong>: Play a direct role in shaping civic understanding among students.</li>
-      </ul>
-      <div class="button-row">
-        <a href="/trainer-participation" class="px-3 py-1 font-semibold text-xs sm:text-sm">Join as a Trainer</a>
+  <section class="min-h-[80vh] flex flex-col items-center justify-center py-8 px-4" id="stakeholders" data-aos="fade-up">
+    <div class="wave-bg"></div>
+    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-6 relative z-10" data-aos="fade-up" data-aos-delay="200">Our Stakeholders</h2>
+    <div class="stakeholder-container flex flex-col md:flex-row gap-6 px-4 relative z-10">
+      <div class="stakeholder-card" data-aos="fade-right" data-aos-delay="300">
+        <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🏫</span> Benefits for Schools</h3>
+        <ul class="list-none text-gray-600 text-xs sm:text-sm">
+          <li><span>📚</span> <strong>Enhanced Curriculum</strong>: Provides experiential civics education aligned with CBSE and National Curriculum standards.</li>
+          <li><span>🏆</span> <strong>Institutional Prestige</strong>: Showcases dedication to fostering legal awareness and democratic values.</li>
+          <li><span>🎮</span> <strong>Student Engagement</strong>: Promotes active learning through interactive and gamified educational modules.</li>
+          <li><span>⚙️</span> <strong>Seamless Implementation</strong>: The Being Lawful team manages all aspects of program design, content, and trainer support.</li>
+          <li><span>🎖️</span> <strong>Recognition</strong>: Participating schools earn digital certificates and prominent social media acknowledgment.</li>
+        </ul>
+        <div class="button-row">
+          <a href="/school-participation" class="px-3 py-1 font-semibold text-xs sm:text-sm">Join as a School</a>
+        </div>
+      </div>
+      <div class="stakeholder-card" data-aos="fade-up" data-aos-delay="400">
+        <h3 class="text-base sm:text-lg font-semibold mb-2"><span>👩‍🏫</span> Benefits for Trainers</h3>
+        <ul class="list-none text-gray-600 text-xs sm:text-sm">
+          <li><span>📜</span> <strong>Certification</strong>: Get certified after completing the Train-the-Trainer (ToT) program.</li>
+          <li><span>🌟</span> <strong>Leadership Opportunity</strong>: Lead a legal awareness initiative within your school.</li>
+          <li><span>🛠️</span> <strong>Skill Development</strong>: Gain public speaking, facilitation, and student engagement skills.</li>
+          <li><span>🏅</span> <strong>Recognition</strong>: Trainers receive a certificate and can be highlighted in Being Lawful’s community.</li>
+          <li><span>🌍</span> <strong>Impact-Driven Role</strong>: Play a direct role in shaping civic understanding among students.</li>
+        </ul>
+        <div class="button-row">
+          <a href="/trainer-participation" class="px-3 py-1 font-semibold text-xs sm:text-sm">Join as a Trainer</a>
+        </div>
+      </div>
+      <div class="stakeholder-card" data-aos="fade-left" data-aos-delay="500">
+        <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🎓</span> Benefits for Students</h3>
+        <ul class="list-none text-gray-600 text-xs sm:text-sm">
+          <li><span>⚖️</span> <strong>Legal Awareness</strong>: Understand the Indian Constitution, rights, duties, and democratic values.</li>
+          <li><span>🧩</span> <strong>Interactive Learning</strong>: Participate in quizzes, games, and role-play scenarios.</li>
+          <li><span>🧠</span> <strong>Critical Thinking</strong>: Develop reasoning skills through real-life law-based situations.</li>
+          <li><span>💪</span> <strong>Confidence Building</strong>: Learn to ask questions and understand justice and fairness.</li>
+          <li><span>🥇</span> <strong>Certification & Recognition</strong>: Students receive participation certificates, adding value to their profile.</li>
+        </ul>
+        <div class="button-row">
+          <a href="/participation?type=Student" class="px-3 py-1 font-semibold text-xs sm:text-sm">Join as a Student</a>
+        </div>
       </div>
     </div>
-    <!-- Students Card -->
-    <div class="stakeholder-card" data-aos="fade-left" data-aos-delay="500">
-      <h3 class="text-base sm:text-lg font-semibold mb-2"><span>🎓</span> Benefits for Students</h3>
-      <ul class="list-none text-gray-600 text-xs sm:text-sm">
-        <li><span>⚖️</span> <strong>Legal Awareness</strong>: Understand the Indian Constitution, rights, duties, and democratic values.</li>
-        <li><span>🧩</span> <strong>Interactive Learning</strong>: Participate in quizzes, games, and role-play scenarios.</li>
-        <li><span>🧠</span> <strong>Critical Thinking</strong>: Develop reasoning skills through real-life law-based situations.</li>
-        <li><span>💪</span> <strong>Confidence Building</strong>: Learn to ask questions and understand justice and fairness.</li>
-        <li><span>🥇</span> <strong>Certification & Recognition</strong>: Students receive participation certificates, adding value to their profile.</li>
-      </ul>
-      <div class="button-row">
-        <a href="/participation?type=Student" class="px-3 py-1 font-semibold text-xs sm:text-sm">Join as a Student</a>
-      </div>
-    </div>
-  </div>
-</section>
+  </section>
 
   <!-- Workflow -->
   <section class="Workflow py-8 px-4" data-aos="fade-up" style="display: flex; justify-content: center; align-items: center;">
-    <img src="./Assets/beinglawfulworkflow.jpg" alt="workflow" class="mx-auto" style="max-height: 80vh; display: block;">
+    <img src="./Assets/beinglawfulworkflow.jpg" alt="Being Lawful Workflow" class="mx-auto" style="max-height: 80vh; display: block;">
   </section>
 
   <!-- Book Overview Section -->
@@ -955,9 +990,12 @@
 
   <!-- Image Modal -->
   <div id="imageModal" class="modal" onclick="closeModal(event)">
-    <span class="close-modal" onclick="closeModal(event)">×</span>
+    <span class="close-modal" onclick="closeModal(event)" aria-label="Close Image Modal">×</span>
     <div class="modal-content">
       <img id="modalImage" src="" alt="Modal Image">
+      <div id="modalCaption" class="modal-caption"></div>
+      <button class="prev" onclick="changeImage(-1)" aria-label="Previous Image">&#10094;</button>
+      <button class="next" onclick="changeImage(1)" aria-label="Next Image">&#10095;</button>
     </div>
   </div>
 
@@ -977,7 +1015,7 @@
   </div>
 
   <!-- Author Note Section -->
-<section class="author-bg-section min-h-[70vh] flex flex-col items-center justify-center py-8 px-4" id="author" data-aos="fade-up">
+  <section class="author-bg-section min-h-[70vh] flex flex-col items-center justify-center py-8 px-4" id="author" data-aos="fade-up">
     <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Author Note</h2>
     <div class="flex flex-col md:flex-row gap-4 max-w-3xl w-full items-center px-1">
       <div class="author-bg w-44 h-48 rounded-full transform hover:scale-105 transition-all duration-300" data-aos="fade-right" data-aos-delay="300"></div>
@@ -993,7 +1031,7 @@
         </p>
       </div>
     </div>
-</section>
+  </section>
 
   <!-- Samvidhan Hero Section -->
   <section class="samvidhan-bg min-h-screen flex items-center px-4 py-8" id="samvidhan" data-aos="fade-up">
@@ -1011,123 +1049,211 @@
     <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Gallery</h2>
     <div class="gallery-grid">
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="300">
-        <img src="./Assets/Activities/Activity1.jpg" alt="Activity 1" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity1.jpg" alt="Being Lawful's First Workshop" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Being Lawful's First Workshop</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="350">
-        <img src="./Assets/Activities/Activity2.jpg" alt="Activity 2" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity2.jpg" alt="Students Writing About Local Issues" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Students Writing About Local Issues</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="400">
-        <img src="./Assets/Activities/Activity3.jpg" alt="Activity 3" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity3.jpg" alt="Being Lawful Workshop Activity" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Being Lawful Workshop Activity</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="450">
-        <img src="./Assets/Activities/Activity4.jpg" alt="Activity 4" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity4.jpg" alt="Workshop Conducted by the Author" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Workshop Conducted by the Author</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="500">
-        <img src="./Assets/Activities/Activity5.jpg" alt="Activity 5" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity5.jpg" alt="Workshop Group Activity" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Workshop Group Activity</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="550">
-        <img src="./Assets/Activities/Activity6.jpg" alt="Activity 6" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity6.jpg" alt="Workshop Setup and Arrangements" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Workshop Setup and Arrangements</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="600">
-        <img src="./Assets/Activities/Activity7.jpg" alt="Activity 7" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity7.jpg" alt="Being Lawful Book Display" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Being Lawful Book Display</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="650">
-        <img src="./Assets/Activities/Activity8.jpg" alt="Activity 8" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity8.jpg" alt="Workshop Kit Arrangement" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Workshop Kit Arrangement</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="700">
-        <img src="./Assets/Activities/Activity9.jpg" alt="Activity 9" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity9.jpg" alt="Student Gift Crafting Activity" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Student Gift Crafting Activity</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="750">
-        <img src="./Assets/Activities/Activity10.jpg" alt="Activity 10" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity10.jpg" alt="Gifts for Being Lawful Champions" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Gifts for Being Lawful Champions</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="800">
-        <img src="./Assets/Activities/Activity11.jpg" alt="Activity 11" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity11.jpg" alt="Author with Principal of Lord Ganesha School" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Author with Principal of Lord Ganesha School</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="850">
-        <img src="./Assets/Activities/Activity12.jpg" alt="Activity 12" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity12.jpg" alt="Being Lawful Group Activity" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Being Lawful Group Activity</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="900">
-        <img src="./Assets/Activities/Activity13.jpg" alt="Activity 13" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity13.jpg" alt="Students Participating in Being Lawful" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Students Participating in Being Lawful</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="950">
-        <img src="./Assets/Activities/Activity14.jpg" alt="Activity 14" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity14.jpg" alt="Online Trainer Orientation Session" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Online Trainer Orientation Session</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-        <img src="./Assets/Activities/Activity16.JPG" alt="Activity 16" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity16.JPG" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-        <img src="./Assets/Activities/Activity17.JPG" alt="Activity 17" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity17.JPG" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-        <img src="./Assets/Activities/Activity18.JPG" alt="Activity 18" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity18.JPG" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-        <img src="./Assets/Activities/Activity19.JPG" alt="Activity 19" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity19.JPG" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-        <img src="./Assets/Activities/Activity20.jpg" alt="Activity 20" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity20.jpg" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
-        <img src="./Assets/Activities/Activity21.JPG" alt="Activity 21" onclick="openModal(this)">
+        <img src="./Assets/Activities/Activity21.JPG" alt="Adv. S.K Jain addressed the trainers" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Adv. S.K Jain addressed the trainers</span>
+        </div>
+      </div>
+    </div>
+    <div class="mt-6">
+      <a href="./gallery.html" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transform hover:-translate-y-1 transition-all duration-300 text-sm" data-aos="zoom-in" data-aos-delay="1100">View More</a>
+    </div>
+  </section>
+
+  <!-- Workshop Kit Section -->
+  <section class="bg-white min-h-screen flex flex-col items-center justify-center py-8 px-4" id="workshop-kit" data-aos="fade-up">
+    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Workshop Kit</h2>
+    <div class="gallery-grid">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="300">
+        <img src="./Assets/Activities/Product Photoggraphy.jpg" alt="Workshop Kit Item 1" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Being Lawful Hand Book</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="350">
+        <img src="./Assets/Activities/Product Photoggraphy2.jpg" alt="Workshop Kit Item 2" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Being Lawful Hand Book</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="400">
+        <img src="./Assets/Activities/Product Photoggraphy3.jpg" alt="Workshop Kit Item 3" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Being Lawful Hand Book</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="450">
+        <img src="./Assets/Activities/Product Photoggraphy4.jpg" alt="Workshop Kit Item 4" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Bingo Game</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="500">
+        <img src="./Assets/Activities/Product Photoggraphy5.jpg" alt="Workshop Kit Item 5" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Bingo Game</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="550">
+        <img src="./Assets/Activities/Product Photoggraphy6.jpg" alt="Workshop Kit Item 6" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Being Lawful Hand Book</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="600">
+        <img src="./Assets/Activities/Product Photoggraphy7.jpg" alt="Workshop Kit Item 7" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Feedback form</span>
+        </div>
+      </div>
+      <!-- <div class="gallery-item" data-aos="fade-up" data-aos-delay="650">
+        <img src="./Assets/Activities/Product Photoggraphy8.jpg" alt="Workshop Kit Item 8" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Workshop Kit Item 8</span>
+        </div>
+      </div> -->
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="700">
+        <img src="./Assets/Activities/Product Photoggraphy9.jpg" alt="Workshop Kit Item 9" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Gift</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="750">
+        <img src="./Assets/Activities/Product Photoggraphy11.jpg" alt="Workshop Kit Item 10" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Gift</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="800">
+        <img src="./Assets/Activities/Product Photoggraphy12.jpg" alt="Workshop Kit Item 11" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Being Lawful Badge</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="850">
+        <img src="./Assets/Activities/Product Photoggraphy13.jpg" alt="Workshop Kit Item 12" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Memento</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="900">
+        <img src="./Assets/Activities/Product Photoggraphy14.jpg" alt="Workshop Kit Item 13" onclick="openModal(this)">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Memento</span>
         </div>
       </div>
     </div>
@@ -1138,13 +1264,13 @@
     <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Our Partners</h2>
     <div class="flex flex-wrap gap-4 justify-center max-w-3xl w-full px-1">
       <div class="partner-logo-container" data-aos="fade-up" data-aos-delay="300">
-        <img src="./Assets/MHKC.png" alt="MHKC Logo" class="partner-logo">
+        <img src="./Assets/MHKC.png" alt="MHKC Partner Logo" class="partner-logo">
       </div>
       <div class="partner-logo-container" data-aos="fade-up" data-aos-delay="400">
-        <a href="https://shodhsetu.com/"><img src="./Assets/shodhsetu.png" alt="Shodhsetu Logo" class="partner-logo"></a>
+        <a href="https://shodhsetu.com/"><img src="./Assets/shodhsetu.png" alt="Shodhsetu Partner Logo" class="partner-logo"></a>
       </div>
       <div class="partner-logo-container" data-aos="fade-up" data-aos-delay="500">
-        <a href="https://vayuveg.com/"><img src="./Assets/vayuveg.png" alt="Vayuveg Logo" class="partner-logo"></a>
+        <a href="https://vayuveg.com/"><img src="./Assets/vayuveg.png" alt="Vayuveg Partner Logo" class="partner-logo"></a>
       </div>
     </div>
   </section>
@@ -1159,7 +1285,7 @@
           <li><a href="#vision" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">About</a></li>
           <li><a href="#book" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Book</a></li>
           <li><a href="#activities" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Gallery</a></li>
-          <!-- <li><a href="#videos" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Videos</a></li> -->
+          <li><a href="#workshop-kit" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Workshop Kit</a></li>
         </ul>
       </div>
       <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="300">
@@ -1205,7 +1331,6 @@
       }
     });
 
-    // Image Modal functions
     function openModal(imgElement) {
       const modal = document.getElementById('imageModal');
       const modalImg = document.getElementById('modalImage');
@@ -1216,7 +1341,7 @@
         modal.style.display = 'flex';
       };
       modalImg.onerror = function() {
-        // Removed alert
+        console.error('Failed to load image:', modalImg.src);
       };
     }
 
@@ -1228,28 +1353,6 @@
       }
     }
 
-    // Video Modal functions
-    function openVideoModal(videoElement) {
-      const modal = document.getElementById('videoModal');
-      const modalVideo = document.getElementById('modalVideo');
-      const source = videoElement.querySelector('source');
-      modalVideo.querySelector('source').src = source.src;
-      modalVideo.load();
-      modal.classList.add('active');
-      modal.style.display = 'flex';
-    }
-
-    function closeVideoModal(event) {
-      const modal = document.getElementById('videoModal');
-      if (event.target.classList.contains('modal') || event.target.classList.contains('close-modal')) {
-        const modalVideo = document.getElementById('modalVideo');
-        modalVideo.pause();
-        modal.style.display = 'none';
-        modal.classList.remove('active');
-      }
-    }
-
-    // AI Modal functions
     function openAIModal() {
       const aiModal = document.getElementById('aiModal');
       aiModal.classList.add('active');
@@ -1264,29 +1367,13 @@
       }
     }
 
-    // Initialize event listeners after DOM loads
     document.addEventListener('DOMContentLoaded', function() {
-      // Image event listeners
       document.querySelectorAll('.gallery-item img').forEach(img => {
         img.addEventListener('click', function() {
           openModal(this);
         });
       });
-      // Video event listeners
-      document.querySelectorAll('.gallery-item video').forEach(video => {
-        video.addEventListener('click', function() {
-          openVideoModal(this);
-        });
-      });
     });
-
-    // Disable developer tools (optional, as per original code)
-    function disableDevTools(event) {
-      if (event.keyCode === 123 || (event.ctrlKey && event.shiftKey && event.keyCode === 73)) {
-        event.preventDefault();
-        return false;
-      }
-    }
   </script>
 </body>
 </html>

@@ -6,286 +6,484 @@
     <title>Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <script>
-        function openTab(tabName) {
-            const tabContents = document.querySelectorAll('.tab-content');
-            tabContents.forEach(content => content.classList.add('hidden'));
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => {
-                tab.classList.remove('bg-blue-600', 'text-white');
-                tab.classList.add('bg-gray-200', 'text-gray-700');
-            });
-            document.getElementById(tabName).classList.remove('hidden');
-            const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
-            activeTab.classList.remove('bg-gray-200', 'text-gray-700');
-            activeTab.classList.add('bg-blue-600', 'text-white');
-        }
+<script>
+       function openTab(tabName) {
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.add('hidden'));
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        tab.classList.remove('bg-blue-600', 'text-white');
+        tab.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    document.getElementById(tabName).classList.remove('hidden');
+    const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
+    activeTab.classList.remove('bg-gray-200', 'text-gray-700');
+    activeTab.classList.add('bg-blue-600', 'text-white');
+}
 
-        function applyFilters(tableId) {
-            const table = document.getElementById(tableId);
-            const rows = table.querySelectorAll('tbody tr');
-            const filters = {};
+function applyFilters(tableId) {
+    const table = document.getElementById(tableId);
+    const rows = table.querySelectorAll('tbody tr');
+    const filters = {};
 
-            table.querySelectorAll('.filter-select').forEach(select => {
-                filters[select.dataset.column] = select.value.trim();
-            });
+    table.querySelectorAll('.filter-select').forEach(select => {
+        filters[select.dataset.column] = select.value.trim();
+    });
 
-            rows.forEach(row => {
-                let show = true;
-                for (const [column, value] of Object.entries(filters)) {
-                    if (value && value !== 'All' && value !== '') {
-                        const cell = row.querySelector(`td[data-column="${column}"]`);
-                        if (cell) {
-                            let cellText = cell.textContent.trim();
-                            if (cellText !== value) {
-                                show = false;
-                                break;
-                            }
-                        }
+    rows.forEach(row => {
+        let show = true;
+        for (const [column, value] of Object.entries(filters)) {
+            if (value && value !== 'All' && value !== '') {
+                const cell = row.querySelector(`td[data-column="${column}"]`);
+                if (cell) {
+                    let cellText = cell.textContent.trim();
+                    if (cellText !== value) {
+                        show = false;
+                        break;
                     }
                 }
-                row.style.display = show ? '' : 'none';
-            });
+            }
         }
+        row.style.display = show ? '' : 'none';
+    });
+}
 
-        function initializeFilters(tableId) {
-            const table = document.getElementById(tableId);
-            const headers = table.querySelectorAll('th[data-filter]');
-            const rows = table.querySelectorAll('tbody tr');
+function initializeFilters(tableId) {
+    const table = document.getElementById(tableId);
+    const headers = table.querySelectorAll('th[data-filter]');
+    const rows = table.querySelectorAll('tbody tr');
 
-            headers.forEach(header => {
-                const column = header.dataset.filter;
-                const select = header.querySelector('.filter-select');
+    headers.forEach(header => {
+        const column = header.dataset.filter;
+        const select = header.querySelector('.filter-select');
 
-                const values = new Set(['All']);
-                rows.forEach(row => {
-                    const cell = row.querySelector(`td[data-column="${column}"]`);
-                    if (cell) {
-                        let cellText = cell.textContent.trim();
-                        if (cellText && !values.has(cellText)) {
-                            values.add(cellText);
-                        }
-                    }
-                });
+        const values = new Set(['All']);
+        rows.forEach(row => {
+            const cell = row.querySelector(`td[data-column="${column}"]`);
+            if (cell) {
+                let cellText = cell.textContent.trim();
+                if (cellText && !values.has(cellText)) {
+                    values.add(cellText);
+                }
+            }
+        });
 
-                select.innerHTML = '';
-                let isAllSet = false;
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    if (value === 'All' && !isAllSet) {
-                        option.selected = true;
-                        isAllSet = true;
-                    }
-                    select.appendChild(option);
-                });
+        select.innerHTML = '';
+        let isAllSet = false;
+        [...values].sort().forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            if (value === 'All' && !isAllSet) {
+                option.selected = true;
+                isAllSet = true;
+            }
+            select.appendChild(option);
+        });
 
-                select.addEventListener('change', () => applyFilters(tableId));
-            });
-        }
+        select.addEventListener('change', () => applyFilters(tableId));
+    });
+}
 
-       function confirmDelete(name) {
+function confirmDelete(name) {
     return confirm(`Are you sure you want to delete trainer "${name}"?`);
-  }
-        async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
-            event.preventDefault();
-            const form = event.target.closest('form');
-            const formData = new FormData(form);
-            const response = await fetch(url.replace(':schoolId', schoolId), {
+}
+
+async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
+    event.preventDefault();
+    const form = event.target.closest('form');
+    const formData = new FormData(form);
+    const response = await fetch(url.replace(':schoolId', schoolId), {
+        method: 'POST',
+        body: formData
+    });
+    const redirectUrl = new URL(window.location.href);
+    if (response.ok) {
+        redirectUrl.searchParams.set('success', successMessage);
+    } else {
+        redirectUrl.searchParams.set('error', errorMessage);
+    }
+    window.location.href = redirectUrl.toString();
+}
+
+async function markSchoolCompleted(schoolId, button, row) {
+    try {
+        const response = await fetch(`/admin/complete-school/${schoolId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+
+        if (response.ok) {
+            const completedTable = document.querySelector('#completed-schools tbody');
+            const completedStatusCell = row.querySelector('td[data-column="isCompleted"]');
+            completedStatusCell.textContent = 'Yes';
+            if (button) {
+                button.remove();
+            }
+            completedTable.appendChild(row);
+            applyFilters('completed-schools');
+            console.log(`School ${schoolId} marked as completed`);
+        } else {
+            const errorData = await response.json();
+            console.error('Failed to mark school as completed:', errorData.error);
+            alert(`Failed to mark school as completed: ${errorData.error}`);
+        }
+    } catch (err) {
+        console.error('Error marking school:', err);
+        alert('Error marking school. Please check your connection and try again.');
+    }
+}
+
+function filterMedia() {
+    const uploaderFilter = document.getElementById('uploaderFilter').value;
+    const seenFilter = document.getElementById('seenFilter').value;
+    const mediaCards = document.querySelectorAll('#mediaSection .media-card');
+
+    mediaCards.forEach(card => {
+        const uploader = card.dataset.uploaderType;
+        const seen = card.dataset.seen === 'true';
+        let show = true;
+
+        if (uploaderFilter !== 'All' && uploader !== uploaderFilter) {
+            show = false;
+        }
+
+        if (seenFilter === 'Seen' && !seen) {
+            show = false;
+        } else if (seenFilter === 'Unseen' && seen) {
+            show = false;
+        }
+
+        card.style.display = show ? '' : 'none';
+    });
+}
+
+async function markMediaSeen(mediaId, checkbox, cardElement) {
+    const isSeen = checkbox.checked;
+
+    try {
+        const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ seen: isSeen })
+        });
+
+        if (response.ok) {
+            cardElement.dataset.seen = isSeen;
+            checkbox.classList.toggle('bg-green-500', isSeen);
+            checkbox.classList.toggle('border-green-500', isSeen);
+            filterMedia();
+            console.log(`Media ${mediaId} marked as ${isSeen ? 'seen' : 'unseen'}`);
+        } else {
+            console.error('Failed to update seen status:', await response.text());
+            checkbox.checked = !isSeen;
+            alert('Failed to update seen status. Please try again.');
+        }
+    } catch (err) {
+        console.error('Error marking media:', err);
+        checkbox.checked = !isSeen;
+        alert('Error marking media. Please check your connection and try again.');
+    }
+}
+
+function openMediaModal(mediaId, mediaUrl, mediaType) {
+    const modal = document.getElementById('mediaModal');
+    const content = document.getElementById('mediaContent');
+
+    content.innerHTML = '';
+
+    if (mediaType === 'image') {
+        content.innerHTML = `<img src="${mediaUrl}" alt="Media" class="w-full rounded shadow">`;
+    } else if (mediaType === 'video') {
+        content.innerHTML = `
+            <video controls class="w-full rounded shadow">
+                <source src="${mediaUrl}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        `;
+    }
+
+    modal.classList.remove('hidden');
+}
+
+function toggleDescriptionEdit(button) {
+    const parentDiv = button.closest(".text-gray-700");
+    const span = parentDiv.querySelector(".description-text");
+    const input = parentDiv.querySelector(".edit-description-input");
+    const saveBtn = parentDiv.querySelector(".save-description-btn");
+
+    span.classList.add("hidden");
+    input.classList.remove("hidden");
+    button.classList.add("hidden");
+    saveBtn.classList.remove("hidden");
+}
+
+async function saveDescription(button) {
+    const parentDiv = button.closest(".text-gray-700");
+    const span = parentDiv.querySelector(".description-text");
+    const input = parentDiv.querySelector(".edit-description-input");
+    const editBtn = parentDiv.querySelector(".edit-description-btn");
+    const mediaId = input.dataset.mediaId;
+    const newDescription = input.value.trim();
+
+    try {
+        const response = await fetch(`/update-description/${mediaId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ description: newDescription })
+        });
+
+        if (response.ok) {
+            span.textContent = newDescription || 'No description provided';
+            span.classList.remove("hidden");
+            input.classList.add("hidden");
+            button.classList.add("hidden");
+            editBtn.classList.remove("hidden");
+        } else {
+            alert("Failed to update description.");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("An error occurred while updating description.");
+    }
+}
+
+async function downloadMedia(mediaId, type) {
+    try {
+        const response = await fetch(`/download-media/${mediaId}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch media: ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const extension = type === 'video' ? 'mp4' : 'jpg';
+        const filename = `${mediaId}.${extension}`;
+
+        const anchor = document.createElement('a');
+        anchor.href = blobUrl;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+        console.error('Error downloading media:', err);
+        alert('Failed to download media. Please check your connection or try again.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Post to social media
+    document.querySelectorAll('.post-to-fb-btn').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const id = button.dataset.id;
+            const url = decodeURI(button.dataset.url);
+            const type = button.dataset.type;
+            const caption = decodeURI(button.dataset.caption || '');
+
+            const postText = button.querySelector('.post-text');
+            const postingText = button.querySelector('.posting-text');
+            postText.classList.add('hidden');
+            postingText.classList.remove('hidden');
+            button.disabled = true;
+
+            try {
+                const res = await fetch('/post-to-socials', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id, url, type, caption })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    alert(`✅ ${data.message}`);
+                } else {
+                    console.error('Server error:', data);
+                    alert(`❌ Failed: ${data.message || 'Unknown error'}`);
+                }
+            } catch (err) {
+                console.error('Fetch error:', err);
+                alert('❌ Error posting to social platforms. Please check your connection or try again later.');
+            } finally {
+                button.disabled = false;
+                postText.classList.remove('hidden');
+                postingText.classList.add('hidden');
+            }
+        });
+    });
+
+    // Upload photo form submission
+    document.getElementById('upload-form').addEventListener('submit', async function(event) {
+        event.preventDefault(); // Prevent default form submission
+
+        const form = event.target;
+        const formData = new FormData(form);
+        const successMessageDiv = document.getElementById('success-message');
+
+        try {
+            const response = await fetch(form.action, {
+                method: form.method,
+                body: formData
+            });
+
+            const result = await response.json();
+            // Display only the message from the JSON response
+            successMessageDiv.textContent = result.message;
+            successMessageDiv.classList.remove('hidden');
+            // Optionally clear the input
+            form.reset();
+            // Hide the message after 5 seconds
+            setTimeout(() => {
+                successMessageDiv.classList.add('hidden');
+            }, 5000);
+        } catch (error) {
+            successMessageDiv.textContent = 'Error uploading files. Please try again.';
+            successMessageDiv.classList.remove('hidden');
+            successMessageDiv.classList.add('bg-red-100', 'text-red-700');
+            setTimeout(() => {
+                successMessageDiv.classList.add('hidden');
+                successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
+            }, 5000);
+        }
+    });
+
+    // Existing media upload form
+    document.getElementById('mediaUploadForm').addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const uploadStatus = document.getElementById('uploadStatus');
+        const file = document.getElementById('mediaFile').files[0];
+        const formData = new FormData();
+        formData.append('mediaFile', file);
+        const button = document.getElementById('uploadButton');
+
+        uploadStatus.innerHTML = 'Uploading...';
+        button.disabled = true;
+
+        try {
+            const res = await fetch('/upload-image', {
                 method: 'POST',
                 body: formData
             });
-            const redirectUrl = new URL(window.location.href);
-            if (response.ok) {
-                redirectUrl.searchParams.set('success', successMessage);
+
+            const result = await res.json();
+
+            if (res.ok) {
+                uploadStatus.innerHTML = `✅ Upload successful! <a href="${result.files[0].downloadUrl}" target="_blank">View</a>`;
             } else {
-                redirectUrl.searchParams.set('error', errorMessage);
+                uploadStatus.innerHTML = `❌ Upload failed: ${result.error}`;
             }
-            window.location.href = redirectUrl.toString();
+        } catch (err) {
+            uploadStatus.innerHTML = '❌ Upload error.';
+        } finally {
+            button.disabled = false;
         }
+    });
+});
 
-        async function markSchoolCompleted(schoolId, button, row) {
-            try {
-                const response = await fetch(`/admin/complete-school/${schoolId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
+window.onload = function () {
+    openTab('visualization');
 
-                if (response.ok) {
-                    const completedTable = document.querySelector('#completed-schools tbody');
-                    const completedStatusCell = row.querySelector('td[data-column="isCompleted"]');
-                    completedStatusCell.textContent = 'Yes';
-                    if (button) {
-                        button.remove();
-                    }
-                    completedTable.appendChild(row);
-                    applyFilters('completed-schools');
-                    console.log(`School ${schoolId} marked as completed`);
-                } else {
-                    const errorData = await response.json();
-                    console.error('Failed to mark school as completed:', errorData.error);
-                    alert(`Failed to mark school as completed: ${errorData.error}`);
-                }
-            } catch (err) {
-                console.error('Error marking school:', err);
-                alert('Error marking school. Please check your connection and try again.');
+    ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students'].forEach(tableId => {
+        initializeFilters(tableId);
+    });
+
+    const districtData = <%- JSON.stringify(
+        schools ? schools.reduce((acc, school) => {
+            acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
+            acc[school.district].schools += 1;
+            acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
+            acc[school.district].trainers += (school.trainerId1 || school.trainerId2 ? (school.trainerId1 && school.trainerId2 ? 2 : 1) : 0);
+            return acc;
+        }, {}) : {}
+    ) %>;
+    const districtChart = new Chart(document.getElementById('districtChart'), {
+        type: 'bar',
+        data: {
+            labels: Object.keys(districtData),
+            datasets: [
+                { label: 'Schools', data: Object.values(districtData).map(d => d.schools), backgroundColor: 'rgba(54, 162, 235, 0.5)' },
+                { label: 'Students', data: Object.values(districtData).map(d => d.students), backgroundColor: 'rgba(75, 192, 192, 0.5)' },
+                { label: 'Trainers', data: Object.values(districtData).map(d => d.trainers), backgroundColor: 'rgba(255, 99, 132, 0.5)' }
+            ]
+        },
+        options: { scales: { y: { beginAtZero: true }, x: { stacked: false } } }
+    });
+
+    const professionData = <%- JSON.stringify(
+        trainers ? trainers.reduce((acc, trainer) => {
+            acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
+            return acc;
+        }, {}) : {}
+    ) %>;
+    const professionChart = new Chart(document.getElementById('professionChart'), {
+        type: 'pie',
+        data: {
+            labels: Object.keys(professionData),
+            datasets: [{ data: Object.values(professionData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top' } } }
+    });
+
+    const uploaderFilter = document.getElementById('uploaderFilter');
+    const seenFilter = document.getElementById('seenFilter');
+    if (uploaderFilter && seenFilter) {
+        uploaderFilter.addEventListener('change', filterMedia);
+        seenFilter.addEventListener('change', filterMedia);
+        filterMedia();
+    }
+
+    document.querySelectorAll('.mark-seen-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', (event) => {
+            event.stopPropagation();
+            const mediaId = checkbox.dataset.mediaId;
+            const cardElement = checkbox.closest('.media-card');
+            markMediaSeen(mediaId, checkbox, cardElement);
+        });
+    });
+
+    document.querySelectorAll('.mark-seen-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+    });
+
+    document.getElementById('closeModal').addEventListener('click', () => {
+        document.getElementById('mediaModal').classList.add('hidden');
+    });
+
+    document.querySelectorAll('.complete-school-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            const schoolId = button.dataset.schoolId;
+            const row = button.closest('tr');
+            markSchoolCompleted(schoolId, button, row);
+        });
+    });
+
+    function downloadMedia(url, type, id) {
+        fetch(url, { 
+            headers: { 
+                // Add any required headers, e.g., for authentication
             }
-        }
-
-        function filterMedia() {
-            const uploaderFilter = document.getElementById('uploaderFilter').value;
-            const seenFilter = document.getElementById('seenFilter').value;
-            const mediaCards = document.querySelectorAll('#mediaSection .media-card');
-
-            mediaCards.forEach(card => {
-                const uploader = card.dataset.uploaderType;
-                const seen = card.dataset.seen === 'true';
-                let show = true;
-
-                if (uploaderFilter !== 'All' && uploader !== uploaderFilter) {
-                    show = false;
-                }
-
-                if (seenFilter === 'Seen' && !seen) {
-                    show = false;
-                } else if (seenFilter === 'Unseen' && seen) {
-                    show = false;
-                }
-
-                card.style.display = show ? '' : 'none';
-            });
-        }
-
-        async function markMediaSeen(mediaId, checkbox, cardElement) {
-            const isSeen = checkbox.checked;
-
-            try {
-                const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seen: isSeen })
-                });
-
-                if (response.ok) {
-                    cardElement.dataset.seen = isSeen;
-                    checkbox.classList.toggle('bg-green-500', isSeen);
-                    checkbox.classList.toggle('border-green-500', isSeen);
-                    filterMedia();
-                    console.log(`Media ${mediaId} marked as ${isSeen ? 'seen' : 'unseen'}`);
-                } else {
-                    console.error('Failed to update seen status:', await response.text());
-                    checkbox.checked = !isSeen;
-                    alert('Failed to update seen status. Please try again.');
-                }
-            } catch (err) {
-                console.error('Error marking media:', err);
-                checkbox.checked = !isSeen;
-                alert('Error marking media. Please check your connection and try again.');
-            }
-        }
-
-        function openMediaModal(mediaId, mediaUrl, mediaType) {
-            const modal = document.getElementById('mediaModal');
-            const content = document.getElementById('mediaContent');
-
-            content.innerHTML = '';
-
-            if (mediaType === 'image') {
-                content.innerHTML = `<img src="${mediaUrl}" alt="Media" class="w-full rounded shadow">`;
-            } else if (mediaType === 'video') {
-                content.innerHTML = `
-                    <video controls class="w-full rounded shadow">
-                        <source src="${mediaUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                `;
-            }
-
-            modal.classList.remove('hidden');
-        }
-
-        window.onload = function () {
-            openTab('visualization');
-
-            ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students'].forEach(tableId => {
-                initializeFilters(tableId);
-            });
-
-            const districtData = <%- JSON.stringify(
-                schools ? schools.reduce((acc, school) => {
-                    acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
-                    acc[school.district].schools += 1;
-                    acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
-                    acc[school.district].trainers += (school.trainerId1 || school.trainerId2 ? (school.trainerId1 && school.trainerId2 ? 2 : 1) : 0);
-                    return acc;
-                }, {}) : {}
-            ) %>;
-            const districtChart = new Chart(document.getElementById('districtChart'), {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(districtData),
-                    datasets: [
-                        { label: 'Schools', data: Object.values(districtData).map(d => d.schools), backgroundColor: 'rgba(54, 162, 235, 0.5)' },
-                        { label: 'Students', data: Object.values(districtData).map(d => d.students), backgroundColor: 'rgba(75, 192, 192, 0.5)' },
-                        { label: 'Trainers', data: Object.values(districtData).map(d => d.trainers), backgroundColor: 'rgba(255, 99, 132, 0.5)' }
-                    ]
-                },
-                options: { scales: { y: { beginAtZero: true }, x: { stacked: false } } }
-            });
-
-            const professionData = <%- JSON.stringify(
-                trainers ? trainers.reduce((acc, trainer) => {
-                    acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
-                    return acc;
-                }, {}) : {}
-            ) %>;
-            const professionChart = new Chart(document.getElementById('professionChart'), {
-                type: 'pie',
-                data: {
-                    labels: Object.keys(professionData),
-                    datasets: [{ data: Object.values(professionData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
-                },
-                options: { responsive: true, plugins: { legend: { position: 'top' } } }
-            });
-
-            const uploaderFilter = document.getElementById('uploaderFilter');
-            const seenFilter = document.getElementById('seenFilter');
-            if (uploaderFilter && seenFilter) {
-                uploaderFilter.addEventListener('change', filterMedia);
-                seenFilter.addEventListener('change', filterMedia);
-                filterMedia();
-            }
-
-            document.querySelectorAll('.mark-seen-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('change', (event) => {
-                    event.stopPropagation();
-                    const mediaId = checkbox.dataset.mediaId;
-                    const cardElement = checkbox.closest('.media-card');
-                    markMediaSeen(mediaId, checkbox, cardElement);
-                });
-            });
-
-            document.querySelectorAll('.mark-seen-checkbox').forEach(checkbox => {
-                checkbox.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                });
-            });
-
-            document.getElementById('closeModal').addEventListener('click', () => {
-                document.getElementById('mediaModal').classList.add('hidden');
-            });
-
-            document.querySelectorAll('.complete-school-btn').forEach(button => {
-                button.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    const schoolId = button.dataset.schoolId;
-                    const row = button.closest('tr');
-                    markSchoolCompleted(schoolId, button, row);
-                });
-            });
-        };
+        })
+        .then(response => response.blob())
+        .then(blob => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `image_${id}.${type.split('/')[1]}`; // e.g., image_123.jpg
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        })
+        .catch(error => console.error('Download failed:', error));
+    }
+};
     </script>
     <style>
         .mark-seen-checkbox:checked {
@@ -346,8 +544,9 @@
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('students')">Students</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('media')">View Media</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('detail-summary')">Detailed Summary</button>
-            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('upload-media')">Upload Media</button>
-
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('upload-photo')">Upload Photo</button>
+            
+            
         </div>
 
         <div id="visualization" class="tab-content">
@@ -1004,62 +1203,53 @@
                 </table>
             </div>
         </div>
-<section id="upload-media" class="hidden bg-white min-h-screen py-8 px-4">
-  <h2 class="text-xl font-bold text-center mb-6">Upload Your Photos and Videos</h2>
-  <form action="/upload-media" method="POST" enctype="multipart/form-data" class="max-w-lg mx-auto bg-gray-100 p-6 rounded-lg shadow-md">
-    <div class="mb-4">
-      <label class="block text-gray-700 font-semibold mb-2" for="photo">Select Photo:</label>
-      <input type="file" name="photo" accept="image/*" class="w-full px-3 py-2 border rounded" required />
-    </div>
-    <div class="mb-4">
-      <label class="block text-gray-700 font-semibold mb-2" for="video">Select Video:</label>
-      <input type="file" name="video" accept="video/*" class="w-full px-3 py-2 border rounded" />
-    </div>
-    <div class="mb-4">
-      <label class="block text-gray-700 font-semibold mb-2" for="description">Description:</label>
-      <textarea name="description" rows="3" class="w-full px-3 py-2 border rounded" placeholder="Write something..."></textarea>
-    </div>
-    <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">Upload</button>
-  </form>
-</section>
-        <div id="media" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-4 text-gray-700">Media Uploads</h2>
-            <!-- Filter Dropdowns -->
-            <div class="flex flex-col sm:flex-row sm:space-x-4 mb-4">
-                <div>
-                    <label for="uploaderFilter" class="text-gray-600 font-semibold mr-2">Filter by Uploader:</label>
-                    <select id="uploaderFilter" class="border rounded py-1 px-2 text-gray-700">
-                        <option value="All">All</option>
-                        <option value="Trainer">Trainer</option>
-                        <option value="Student">Student</option>
-                        <option value="School">School</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="seenFilter" class="text-gray-600 font-semibold mr-2">Filter by Status:</label>
-                    <select id="seenFilter" class="border rounded py-1 px-2 text-gray-700">
-                        <option value="All">All</option>
-                        <option value="Seen">Seen</option>
-                        <option value="Unseen">Unseen</option>
-                    </select>
-                </div>
-            </div>
 
-            <% if (typeof mediaUploads !== 'undefined' && mediaUploads.length > 0) { %>
-                <div id="mediaSection" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-                    <% mediaUploads.forEach(upload => { %>
-                        <div class="media-card bg-white p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 cursor-pointer" 
-                             data-uploader-type="<%= upload.uploaderType || 'Unknown' %>" 
-                             data-seen="<%= upload.seen ? 'true' : 'false' %>"
-                             onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', '<%= upload.type %>')">
-                            <div class="media-card-content">
-                                <div class="flex items-center mb-2">
-                                    <input type="checkbox" class="mark-seen-checkbox mr-2 h-5 w-5" 
-                                           data-media-id="<%= upload.id %>" <%= upload.seen ? 'checked' : '' %>>
-                                    <label class="text-gray-600 text-sm">Mark as Seen</label>
-                                </div>
-                                <h3 class="text-lg font-semibold text-gray-600 mb-2">
-                                    <%= upload.type ? upload.type.charAt(0).toUpperCase() + upload.type.slice(1) : 'Media' %>
+       <div id="media" class="tab-content hidden">
+    <h2 class="text-2xl font-bold mb-4 text-gray-700">Media Uploads</h2>
+
+    <!-- Filter Dropdowns -->
+    <div class="flex flex-col sm:flex-row sm:space-x-4 mb-4">
+        <div>
+            <label for="uploaderFilter" class="text-gray-600 font-semibold mr-2">Filter by Uploader:</label>
+            <select id="uploaderFilter" class="border rounded py-1 px-2 text-gray-700">
+                <option value="All">All</option>
+                <option value="Trainer">Trainer</option>
+                <option value="Student">Student</option>
+                <option value="School">School</option>
+            </select>
+        </div>
+        <div>
+            <label for="seenFilter" class="text-gray-600 font-semibold mr-2">Filter by Status:</label>
+            <select id="seenFilter" class="border rounded py-1 px-2 text-gray-700">
+                <option value="All">All</option>
+                <option value="Seen">Seen</option>
+                <option value="Unseen">Unseen</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Media Grid -->
+    <% if (typeof mediaUploads !== 'undefined' && mediaUploads.length > 0) { %>
+        <div id="mediaSection" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+            <% mediaUploads.forEach(upload => { %>
+                <div class="media-card bg-white p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
+                     data-uploader-type="<%= upload.uploaderType || 'Unknown' %>"
+                     data-seen="<%= upload.seen ? 'true' : 'false' %>"
+                     onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', '<%= upload.type %>')">
+
+                    <div class="media-card-content">
+                        <div class="flex items-center mb-2">
+            <input type="checkbox" class="mark-seen-checkbox mr-2 h-5 w-5"
+                   data-media-id="<%= upload.id %>" <%= upload.seen ? 'checked' : '' %>>
+            <label class="text-gray-600 text-sm">Mark as Seen</label>
+          </div>
+
+          <h3 class="text-lg font-semibold text-gray-600 mb-2">
+            <%= upload.type ? upload.type.charAt(0).toUpperCase() + upload.type.slice(1) : 'Media' %>
+          </h3>
+
+          <h3 class="text-lg font-semibold text-gray-600 mb-2">
+            <%= upload.type ? upload.type.charAt(0).toUpperCase() + upload.type.slice(1) : 'Media' %>
                                 </h3>
                                 <% if (upload.type === 'image') { %>
                                     <img src="<%= upload.url %>" alt="Media" class="w-full h-48 object-cover rounded mb-2 shadow">
@@ -1069,28 +1259,106 @@
                                     </video>
                                 <% } else { %>
                                     <p class="text-red-500 text-sm">Unknown media type</p>
-                                <% } %>
-                                <p class="text-gray-700 text-sm mb-1"><strong>Description:</strong> <%= upload.description || 'No description provided' %></p>
-                                <% if (upload.link) { %>
-                                    <p class="text-gray-700 text-sm mb-1">
-                                        <strong>Link:</strong> <a href="<%= upload.link %>" target="_blank" class="text-blue-500 hover:underline"><%= upload.link %></a>
-                                    </p>
-                                <% } %>
-                                <p class="text-gray-700 text-sm mb-1"><strong>Uploaded At:</strong> 
-                                    <%= upload.uploadedAt 
-                                        ? upload.uploadedAt.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) 
-                                        : 'N/A' %>
-                                </p>
-                                <p class="text-gray-700 text-sm"><strong>Uploaded By:</strong> <%= upload.uploadedBy || 'Unknown' %></p>
-                            </div>
-                        </div>
-                    <% }) %>
-                </div>
-            <% } else { %>
-                <p class="text-gray-500">No media uploads available.</p>
-            <% } %>
-        </div>
+                                <% } %>                     
 
+
+                        <!-- Description -->
+                        <div class="text-gray-700 text-sm mb-1">
+  <strong>Description:</strong>
+  <span class="description-text"><%= upload.description || 'No description provided' %></span>
+  <input 
+      type="text" 
+      class="edit-description-input hidden border border-gray-300 rounded px-2 py-1 text-sm w-full mt-1" 
+      value="<%= upload.description || '' %>" 
+      data-media-id="<%= upload.id %>" 
+  />
+  <button 
+      class="edit-description-btn text-blue-500 hover:underline text-sm ml-2"
+      onclick="event.stopPropagation(); toggleDescriptionEdit(this)">
+      Edit
+  </button>
+  <button 
+      class="save-description-btn text-green-600 hover:underline text-sm ml-2 hidden"
+      onclick="event.stopPropagation(); saveDescription(this)">
+      Save
+  </button>
+</div>
+
+
+                        <!-- Optional Link -->
+                        <% if (upload.link) { %>
+                            <p class="text-gray-700 text-sm mb-1">
+                                <strong>Link:</strong> 
+                                <a href="<%= upload.link %>" target="_blank" class="text-blue-500 hover:underline"><%= upload.link %></a>
+                            </p>
+                        <% } %>
+
+                        <!-- Meta Info -->
+                        <p class="text-gray-700 text-sm mb-1">
+                            <strong>Uploaded At:</strong> 
+                            <%= upload.uploadedAt 
+                                ? upload.uploadedAt.toLocaleString('en-US', {
+                                    timeZone: 'Asia/Kolkata',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                  }) 
+                                : 'N/A' %>
+                        </p>
+                        <p class="text-gray-700 text-sm">
+                            <strong>Uploaded By:</strong> <%= upload.uploadedBy || 'Unknown' %>
+                        </p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex justify-between mt-4 space-x-2">
+                        <!-- Post Button -->
+                     <button 
+    type="button"
+    class="post-to-fb-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+    data-id="<%= upload.id %>"
+    data-url="<%= upload.url %>"
+    data-type="<%= upload.type %>"
+    data-caption="<%= upload.description || '' %>"
+    onclick="event.stopPropagation(); postToSocials(this)">
+    <span class="post-text">Post</span>
+    <span class="posting-text hidden">Posting...</span>
+  </button>
+
+                        <!-- Download Button -->
+                        <button 
+                            type="button"
+                            onclick="event.stopPropagation(); downloadMedia('<%= upload.url %>', '<%= upload.type %>', '<%= upload.id %>')"
+                            class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+                            Download
+                        </button>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    <% } else { %>
+        <p class="text-gray-500">No media uploads available.</p>
+    <% } %>
+</div>
+<div id="upload-photo" class="tab-content hidden">
+    <h2 class="text-2xl font-bold mb-6 text-gray-800">Upload Photo/Video</h2>
+    <form action="/upload-image" method="post" enctype="multipart/form-data" class="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
+        <div class="mb-4">
+            <label for="images" class="block text-sm font-medium text-gray-700 mb-2">Select Files</label>
+            <input type="file" name="images" id="images" multiple 
+                   class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md 
+                          file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 
+                          hover:file:bg-blue-100 cursor-pointer"/>
+        </div>
+        <button type="submit" 
+                class="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md 
+                       hover:bg-blue-700 transition duration-200">
+            Upload
+        </button>
+    </form>
+</div>
         <!-- Media Modal -->
         <div id="mediaModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
             <div class="bg-white p-6 rounded-lg shadow-lg max-w-3xl w-full">

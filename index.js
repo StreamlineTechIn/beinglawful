@@ -28,10 +28,12 @@ const storage = multer.memoryStorage();const upload = multer({
     { name: 'pdfs', maxCount: 5 } 
     
 ]);
-
+const uploadImages = multer({
+  limits: { fileSize: 5 * 1024 * 1024 },
+  storage: multer.memoryStorage()
+}).array('images', 10);
 const app = express();
 
-// app.use('/zipfiles', express.static(path.join(__dirname, 'uploads', 'zipfiles')));
 
 // Set view engine to EJS and specify the views directory
 app.set('view engine', 'ejs');
@@ -101,7 +103,7 @@ try {
 
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: `${process.env.FIREBASE_PROJECT_ID}.beinglawful-ee5a4.firebasestorage.app`
+        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'beinglawful-ee5a4.appspot.com'
     });
     db = admin.firestore();
     bucket = admin.storage().bucket(); // Moved inside try block after initialization
@@ -124,16 +126,18 @@ const ADMIN_PASSWORD = 'admin123';
 const transporter = nodemailer.createTransport({
     host: 'smtp-mail.outlook.com',
     port: 587,
-    secure: false,
+    secure: false, // Use STARTTLS
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
     },
     tls: {
-        ciphers: 'SSLv3',
-        rejectUnauthorized: false
+        // Remove ciphers: 'SSLv3'
+        // Optionally specify modern TLS versions if needed
+        minVersion: 'TLSv1.2' // Ensure TLS 1.2 or higher
     }
 });
+
 transporter.verify(function (error, success) {
     if (error) {
         console.log('SMTP Verify Error:', error);
@@ -1223,6 +1227,78 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
             res.status(500).send('Error assigning event date.');
         }
     });
+// Upload multiple images one by one to the specified path
+app.post('/upload-image', requireAdmin, uploadImages, async (req, res) => {
+  try {
+    console.log('🟢 Upload started', req.files);
+
+    const files = req.files;
+    if (!files || files.length === 0) {
+      console.log('❌ No image files provided');
+      return res.status(400).json({ error: 'No image files provided' });
+    }
+
+    const uploadedFiles = [];
+    for (const file of files) {
+      const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
+      const timestamp = Date.now();
+      const storagePath = `media/admin upload photo/${timestamp}_${sanitizedFileName}`;
+      const storageFile = bucket.file(storagePath);
+
+      await new Promise((resolve, reject) => {
+        const stream = storageFile.createWriteStream({
+          metadata: { contentType: file.mimetype },
+        });
+
+        stream.on('error', (error) => {
+          console.error(`❌ Upload error for ${sanitizedFileName}:`, error);
+          reject(error);
+        });
+
+        stream.on('finish', async () => {
+          const [url] = await storageFile.getSignedUrl({
+            action: 'read',
+            expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          });
+
+          const mediaRef = await db.collection('gallery').add({
+            storagePath,
+            url,
+            uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+        //   console.log('\n✅ Image Uploaded');
+        //   console.log('📂 Firebase Storage Path:', `gs://beinglawful-ee5a4.appspot.com/${storagePath}`);
+        //   console.log('🌐 Public URL:', url);
+
+          uploadedFiles.push({ storagePath, downloadUrl: url, mediaId: mediaRef.id });
+          resolve();
+        });
+
+        stream.end(file.buffer);
+      });
+    }
+
+    res.status(200).json({
+      message: 'Images uploaded successfully',
+      files: uploadedFiles,
+    });
+  } catch (error) {
+    console.error('❌ Server error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+// Fetch gallery media route
+app.get('/gallery', async (req, res) => {
+  try {
+    const snapshot = await db.collection('gallery').get();
+    const images = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    res.status(200).json(images);
+  } catch (error) {
+    console.error('❌ Error fetching gallery:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 
 // School dashboard (renders schoolDashboard.ejs)
 
@@ -3837,6 +3913,164 @@ app.get("/admin-dashboard/logistics", async (req, res) => {
     res.status(500).send("Error loading logistics dashboard");
   }
 });
+
+
+//formdata & facebook routes
+
+const FormData = require('form-data');
+const fetch = require('node-fetch');
+
+const PAGE_ACCESS_TOKEN = process.env.FB_PAGE_ACCESS_TOKEN;
+const PAGE_ID = process.env.FB_PAGE_ID;
+
+async function postPhotoToFacebook(buffer, filename, caption = '') {
+  const form = new FormData();
+  form.append('source', buffer, {
+    filename: filename,
+    contentType: 'image/jpeg'
+  });
+  form.append('caption', caption); // <-- Add caption here
+  form.append('access_token', PAGE_ACCESS_TOKEN);
+
+  const res = await fetch(`https://graph.facebook.com/${PAGE_ID}/photos`, {
+    method: 'POST',
+    body: form
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Facebook photo upload failed');
+}
+
+async function postVideoToFacebook(buffer, filename, caption = '') {
+  const form = new FormData();
+  form.append('source', buffer, {
+    filename: filename,
+    contentType: 'video/mp4'
+  });
+  form.append('description', caption); // <-- Corrected and placed outside the buffer object
+  form.append('access_token', PAGE_ACCESS_TOKEN);
+
+  const res = await fetch(`https://graph.facebook.com/${PAGE_ID}/videos`, {
+    method: 'POST',
+    body: form
+  });
+
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'Facebook video upload failed');
+}
+
+module.exports = {
+  postPhotoToFacebook,
+  postVideoToFacebook
+};
+
+
+
+//instagram routes
+
+const instagramBusinessId = process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+const accessToken = process.env.INSTAGRAM_LONG_LIVED_ACCESS_TOKEN;
+
+async function postToInstagram(mediaUrl, caption) {
+  try {
+    const mediaRes = await fetch(
+      `https://graph.facebook.com/v19.0/${instagramBusinessId}/media`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          image_url: mediaUrl,
+          caption,
+          access_token: accessToken,
+        }),
+      }
+    );
+
+    const mediaData = await mediaRes.json();
+    if (!mediaData.id) {
+      throw new Error(`Media creation failed: ${JSON.stringify(mediaData)}`);
+    }
+
+    const publishRes = await fetch(
+      `https://graph.facebook.com/v19.0/${instagramBusinessId}/media_publish`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          creation_id: mediaData.id,
+          access_token: accessToken,
+        }),
+      }
+    );
+
+    const publishData = await publishRes.json();
+    if (!publishData.id) {
+      throw new Error(`Publish failed: ${JSON.stringify(publishData)}`);
+    }
+
+    console.log("✅ Instagram post published with ID:", publishData.id);
+    return publishData;
+  } catch (err) {
+    console.error("❌ Failed to post to Instagram:", err.message);
+    throw err;
+  }
+}
+
+module.exports = { postToInstagram };
+
+
+
+// facebook & instagram post api 
+
+app.post('/post-to-socials', async (req, res) => {
+  try {
+    const { id, url, type, caption } = req.body;
+
+    // Fetch media from URL
+    const response = await fetch(url);
+    const buffer = await response.buffer();
+
+    // Post to Facebook
+    if (type === 'image') {
+      await postPhotoToFacebook(buffer, `${id}.jpg`, caption);
+    } else if (type === 'video') {
+      await postVideoToFacebook(buffer, `${id}.mp4`, caption);
+    } else {
+      return res.status(400).json({ message: 'Unsupported media type' });
+    }
+
+    // Post to Instagram if image
+    if (type === 'image') {
+      await postToInstagram(url, caption || '');
+    }
+
+    res.status(200).json({ message: 'Posted to Facebook and Instagram successfully' });
+  } catch (error) {
+    // console.error('❌ Failed to post to social platforms:', error);
+    res.status(500).json({ message: 'Error posting to social platforms', error: error.message });
+  }
+});
+
+// Update description
+app.put('/update-description/:id', async (req, res) => {
+  const { id } = req.params;
+  const { description } = req.body;
+
+  try {
+    const mediaRef = db.collection('mediaUploads').doc(id);
+    await mediaRef.update({ description });
+
+    res.status(200).json({ message: 'Description updated successfully' });
+  } catch (err) {
+    console.error('Error updating description:', err);
+    res.status(500).json({ message: 'Internal Server Error' });
+  }
+});
+
 
     // Start the server
     const PORT = process.env.PORT || 3000;

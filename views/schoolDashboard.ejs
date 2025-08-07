@@ -542,67 +542,54 @@
         <!-- Roadmap Section -->
         <div class="roadmap-container">
             <div class="roadmap">
-                <!-- 1. School Register -->
                 <div class="roadmap-step completed">
                     <div class="icon">📝</div>
                     <div class="label">School Register</div>
                 </div>
-                <!-- 2. Being Lawful Approved -->
                 <div class="roadmap-step completed">
                     <div class="icon">✔️</div>
                     <div class="label">Being Lawful Approved</div>
                 </div>
-                <!-- 3. Student Registration -->
                 <div class="roadmap-step completed">
                     <div class="icon">👥</div>
                     <div class="label">Student Registration</div>
                 </div>
-                <!-- 4. School Approved by Student -->
                 <div class="roadmap-step completed">
                     <div class="icon">🏫</div>
                     <div class="label">School Approved</div>
                 </div>
-                <!-- 5. Student Login -->
                 <div class="roadmap-step completed">
                     <div class="icon">🔐</div>
                     <div class="label">Student Login</div>
                 </div>
-                <!-- 6. Trial Test -->
                 <div class="roadmap-step completed">
                     <div class="icon">🧪</div>
                     <div class="label">Trial Test</div>
                 </div>
-                <!-- 7. MCQ Test -->
                 <div class="roadmap-step completed">
                     <div class="icon">📚</div>
                     <div class="label">MCQ Test</div>
                 </div>
-                <!-- 8. Certificate -->
                 <div class="roadmap-step completed">
                     <div class="icon">🎓</div>
                     <div class="label">Certificate</div>
                 </div>
-                <!-- 9. Workshop -->
                 <div class="roadmap-step completed">
                     <div class="icon">🛠️</div>
                     <div class="label">Workshop</div>
                 </div>
-                <!-- 10. Civic Activities -->
                 <div class="roadmap-step completed">
                     <div class="icon">🌟</div>
                     <div class="label">Civic Activities</div>
                 </div>
-                <!-- 11. Photo Upload -->
                 <div class="roadmap-step completed">
                     <div class="icon">📸</div>
                     <div class="label">Photo Upload</div>
                 </div>
-                <!-- 12. Judiciary Select -->
                 <div class="roadmap-step">
                     <div class="icon">⚖️</div>
                     <div class="label">Judiciary Select</div>
                 </div>
-                <!-- 13. State Felicitation -->
                 <div class="roadmap-step">
                     <div class="icon">🏆</div>
                     <div class="label">State Felicitation</div>
@@ -763,31 +750,45 @@
                                     <tr>
                                         <td data-column="studentName"><%= student.studentName || 'N/A' %></td>
                                         <td data-column="studentClass"><%= student.studentClass || 'N/A' %></td>
-                                        <td data-column="trial1Percentage"><%= student.trial1Percentage !== undefined ? student.trial1Percentage : 'N/A' %></td>
-                                        <td data-column="trial2Percentage"><%= student.trial2Percentage !== undefined ? student.trial2Percentage : 'N/A' %></td>
+                                        <td data-column="trial1Percentage">
+                                            <%= student.trial1Percentage != null ? student.trial1Percentage : 'N/A' %>
+                                        </td>
+                                        <td data-column="trial2Percentage">
+                                            <%= student.trial2Percentage != null ? student.trial2Percentage : 'N/A' %>
+                                        </td>
                                         <td data-column="hasCompletedMCQ"><%= student.hasCompletedMCQ ? 'Yes' : 'No' %></td>
-                                        <td data-column="score"><%= student.score !== undefined && student.totalQuestions !== undefined ? `${student.score} / ${student.totalQuestions}` : 'N/A' %></td>
-                                        <td data-column="percentage"><%= student.percentage !== undefined ? `${student.percentage}%` : 'N/A' %></td>
+                                        <td data-column="score">
+                                            <% if (student.score != null && student.totalQuestions != null) { %>
+                                                <%= student.score %> / <%= student.totalQuestions %>
+                                            <% } else if (student.score != null) { %>
+                                                <%= student.score %> / ?
+                                            <% } else if (student.totalQuestions != null) { %>
+                                                ? / <%= student.totalQuestions %>
+                                            <% } else { %>
+                                                N/A
+                                            <% } %>
+                                        </td>
+                                        <td data-column="percentage">
+                                            <%= student.percentage != null ? `${student.percentage}%` : 'N/A' %>
+                                        </td>
                                         <td data-column="completedAt"><%= student.completedAt || 'N/A' %></td>
                                         <td>
                                             <form action="/school-dashboard/approve-student/<%= student.id %>?username=<%= encodeURIComponent(schoolEmail) %>" method="POST" style="display:inline;">
-                                                <input type="hidden" name="action" value="<%= student.isApproved === true ? 'unapprove' : 'approve' %>">
-                                                <button type="submit" class="approve-btn <%= student.isApproved === true ? 'unapprove' : '' %>" onclick="console.log('Approve button clicked for student <%= student.id %>, isApproved: <%= student.isApproved %>')">
-                                                    <%= student.isApproved === true ? 'Unapprove' : 'Approve' %>
+                                                <input type="hidden" name="action" value="<%= student.isApproved ? 'unapprove' : 'approve' %>">
+                                                <button type="submit" class="approve-btn <%= student.isApproved ? 'unapprove' : '' %>">
+                                                    <%= student.isApproved ? 'Unapprove' : 'Approve' %>
                                                 </button>
                                             </form>
-                                            <script>console.log('Student <%= student.id %> isApproved: <%= student.isApproved %>');</script>
                                         </td>
                                         <td>
                                             <form action="/school-dashboard/mark-champ/<%= student.id %>?username=<%= encodeURIComponent(schoolEmail) %>" method="POST" style="display:inline;">
-                                                <input type="hidden" name="action" value="<%= student.isChampion === true ? 'unmark' : 'mark' %>">
-                                                <button type="submit" class="approve-btn <%= student.isChampion === true ? 'unmark-champ' : '' %>" onclick="console.log('Champion button clicked for student <%= student.id %>, isChampion: <%= student.isChampion %>')">
-                                                    <%= student.isChampion === true ? 'Remove Champ' : 'Mark Champ' %>
+                                                <input type="hidden" name="action" value="<%= student.isChampion ? 'unmark' : 'mark' %>">
+                                                <button type="submit" class="approve-btn <%= student.isChampion ? 'unmark-champ' : '' %>">
+                                                    <%= student.isChampion ? 'Remove Champ' : 'Mark Champ' %>
                                                 </button>
                                             </form>
-                                            <script>console.log('Student <%= student.id %> isChampion: <%= student.isChampion %>');</script>
                                         </td>
-                                        <td class="py-2 px-4 border-b">
+                                        <td>
                                             <form action="/school-dashboard/delete-student/<%= student.id %>" method="POST" style="display:inline;">
                                                 <input type="hidden" name="username" value="<%= schoolEmail %>">
                                                 <button type="submit" class="delete-btn">Delete</button>
@@ -798,6 +799,9 @@
                             </tbody>
                         </table>
                     </div>
+                    <script>
+                        console.log('Students data:', <%- JSON.stringify(students) %>);
+                    </script>
                 <% } else { %>
                     <p>No students found for this school.</p>
                 <% } %>
@@ -892,10 +896,11 @@
         const db = firebase.firestore();
 
         document.addEventListener('DOMContentLoaded', function () {
-    openTab('student-data');
-    populateTrainerSelects();
-    loadWorkshopTimes(); // 👈 Added this line
-});
+            console.log('DOM loaded, initializing student-data tab');
+            openTab('student-data');
+            populateTrainerSelects();
+            loadWorkshopTimes();
+        });
 
         function openTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -918,24 +923,28 @@
                 updateTrainerSelection();
             }
         }
-async function loadWorkshopTimes() {
-    try {
-      const schoolRef = doc(db, "schools", schoolEmail);
-      const schoolDoc = await getDoc(schoolRef);
 
-      if (schoolDoc.exists()) {
-        const data = schoolDoc.data();
-        if (data.workshopStartTime) {
-          document.getElementById('workshopStartTimeDisplay').textContent = data.workshopStartTime;
+        async function loadWorkshopTimes() {
+            try {
+                const schoolRef = db.collection('schools').doc('<%= schoolEmail %>');
+                const schoolDoc = await schoolRef.get();
+
+                if (schoolDoc.exists) {
+                    const data = schoolDoc.data();
+                    if (data.workshopStartTime) {
+                        document.getElementById('workshopStartTime').value = data.workshopStartTime;
+                    }
+                    if (data.workshopEndTime) {
+                        document.getElementById('workshopEndTimeDisplay').textContent = data.workshopEndTime;
+                        document.getElementById('workshopEndTime').value = data.workshopEndTime;
+                        document.getElementById('durationMessage').style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading workshop times:', error);
+            }
         }
-        if (data.workshopEndTime) {
-          document.getElementById('workshopEndTimeDisplay').textContent = data.workshopEndTime;
-        }
-      }
-    } catch (error) {
-      console.error("Error loading workshop times:", error);
-    }
-  }
+
         function initializeFilters(tableId) {
             const table = document.getElementById(tableId);
             if (!table) return;
@@ -948,29 +957,34 @@ async function loadWorkshopTimes() {
                 const select = header.querySelector('.filter-select');
                 if (!select) return;
 
-                const values = new Set(['All']);
-                rows.forEach(row => {
-                    const cell = row.querySelector(`td[data-column="${column}"]`);
-                    if (cell) {
-                        let cellText = cell.textContent.trim();
-                        if (cellText && !values.has(cellText)) {
-                            values.add(cellText);
+                const numericalColumns = ['trial1Percentage', 'trial2Percentage', 'score', 'percentage'];
+                if (numericalColumns.includes(column)) {
+                    const ranges = ['All', '0-25', '26-50', '51-75', '76-100', 'N/A'];
+                    ranges.forEach(range => {
+                        const option = document.createElement('option');
+                        option.value = range;
+                        option.textContent = range;
+                        select.appendChild(option);
+                    });
+                } else {
+                    const values = new Set(['All']);
+                    rows.forEach(row => {
+                        const cell = row.querySelector(`td[data-column="${column}"]`);
+                        if (cell) {
+                            let cellText = cell.textContent.trim();
+                            if (cellText && !values.has(cellText)) {
+                                values.add(cellText);
+                            }
                         }
-                    }
-                });
+                    });
 
-                select.innerHTML = '';
-                let isAllSet = false;
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    if (value === 'All' && !isAllSet) {
-                        option.selected = true;
-                        isAllSet = true;
-                    }
-                    select.appendChild(option);
-                });
+                    [...values].sort().forEach(value => {
+                        const option = document.createElement('option');
+                        option.value = value;
+                        option.textContent = value;
+                        select.appendChild(option);
+                    });
+                }
 
                 select.addEventListener('change', () => applyFilters(tableId));
             });
@@ -993,12 +1007,34 @@ async function loadWorkshopTimes() {
                         const cell = row.querySelector(`td[data-column="${column}"]`);
                         if (cell) {
                             let cellText = cell.textContent.trim();
-                            if (cellText !== value) {
+                            const numericalColumns = ['trial1Percentage', 'trial2Percentage', 'score', 'percentage'];
+
+                            if (numericalColumns.includes(column)) {
+                                if (value === 'N/A') {
+                                    show = cellText === 'N/A';
+                                } else if (cellText !== 'N/A') {
+                                    let cellValue;
+                                    if (column === 'score') {
+                                        cellValue = parseFloat(cellText.split('/')[0].trim());
+                                    } else {
+                                        cellValue = parseFloat(cellText.replace('%', ''));
+                                    }
+
+                                    const [min, max] = value.split('-').map(Number);
+                                    if (isNaN(cellValue) || cellValue < min || (max && cellValue > max)) {
+                                        show = false;
+                                    }
+                                } else {
+                                    show = false;
+                                }
+                            } else if (cellText !== value) {
                                 show = false;
-                                break;
                             }
+                        } else {
+                            show = false;
                         }
                     }
+                    if (!show) break;
                 }
                 row.style.display = show ? '' : 'none';
             });
@@ -1106,7 +1142,7 @@ async function loadWorkshopTimes() {
             const endTimeInput = document.getElementById('workshopEndTime');
             const endTimeDisplay = document.getElementById('workshopEndTimeDisplay');
             const durationMessage = document.getElementById('durationMessage');
-            const schoolEmail = "<%= schoolEmail %>"; // Get schoolEmail from EJS variable
+            const schoolEmail = "<%= schoolEmail %>";
 
             if (!startTimeInput || !endTimeInput || !endTimeDisplay || !durationMessage) return;
 
@@ -1120,7 +1156,6 @@ async function loadWorkshopTimes() {
                 endTimeDisplay.textContent = endTime;
                 durationMessage.style.display = 'block';
 
-                // Save to Firebase
                 try {
                     const schoolRef = db.collection('schools').doc(schoolEmail);
                     await schoolRef.update({
@@ -1140,4 +1175,4 @@ async function loadWorkshopTimes() {
         }
     </script>
 </body>
-</html> 
+</html>

@@ -101,9 +101,12 @@ try {
         universe_domain: "googleapis.com"
     };
 
+   const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'beinglawful-ee5a4.appspot.com';
+    console.log('Attempting to initialize Firebase with bucket:', bucketName);
+
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'beinglawful-ee5a4.appspot.com'
+        storageBucket: bucketName
     });
     db = admin.firestore();
     bucket = admin.storage().bucket(); // Moved inside try block after initialization
@@ -556,9 +559,6 @@ app.post('/student-login', async (req, res) => {
     }
 });
 
-
-
-
     // Dashboard (renders dashboard.ejs)
  app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
@@ -638,8 +638,6 @@ app.post('/student-login', async (req, res) => {
         res.redirect('/login?error=Dashboard%20load%20failed');
     }
 });
-
-
 
 
     // MCQ test (renders mcq.ejs)
@@ -901,7 +899,7 @@ app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (r
     }
 });
     //student dashboard upload media
-   app.post('/student-dashboard/upload-media', upload, async (req, res) => {
+ app.post('/student-dashboard/upload-media', upload, async (req, res) => {
     try {
         const { parentMobile1, mediaDescription, mediaLink } = req.body;
         const photos = req.files['photos'] || [];
@@ -926,12 +924,11 @@ app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (r
             return res.status(400).send('Media description cannot exceed 1000 words.');
         }
 
-        const bucket = admin.storage().bucket('beinglawful-ee5a4.appspot.com');
         const mediaUploads = [];
 
         for (const file of photos) {
             const fileName = `studentMedia/${participantId}/photos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
+            const fileUpload = bucket.file(fileName); // Use global bucket
 
             await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
             const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
@@ -948,7 +945,7 @@ app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (r
 
         for (const file of videos) {
             const fileName = `studentMedia/${participantId}/videos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
+            const fileUpload = bucket.file(fileName); // Use global bucket
 
             await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
             const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
@@ -1000,11 +997,14 @@ app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (r
         });
 
     } catch (error) {
-        console.error('Error uploading media:', error);
+        console.error('Error uploading media:', {
+            message: error.message,
+            code: error.code,
+            stack: error.stack
+        });
         res.status(500).send(`Error uploading media: ${error.message}`);
     }
 });
-
 app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, async (req, res) => {
     try {
         const { parentMobile1 } = req.params;
@@ -1057,7 +1057,6 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
         res.redirect('/dashboard/' + req.params.parentMobile1);
     }
 });
-
 
 // Certificate (renders certificate.ejs)
     app.get('/certificate/:parentMobile1', requireStudentAuth, async (req, res) => {
@@ -1292,21 +1291,64 @@ app.post('/upload-image', requireAdmin, uploadImages, async (req, res) => {
 app.get('/gallery', async (req, res) => {
   try {
     const snapshot = await db.collection('gallery').get();
+    if (snapshot.empty) {
+      return res.status(200).json({ message: 'Images fetched successfully', images: [] });
+    }
     const images = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.status(200).json(images);
+    res.status(200).json({ message: 'Images fetched successfully', images });
   } catch (error) {
     console.error('❌ Error fetching gallery:', error);
-    res.status(500).json({ error: 'Server error' });
+    res.status(500).json({ error: 'Server error', details: error.message });
   }
 });
 
 // School dashboard (renders schoolDashboard.ejs)
 
 // GET route for school dashboard
-   app.get('/school-dashboard', async (req, res) => {
+app.get('/school-dashboard', async (req, res) => {
     try {
         const schoolEmail = req.query.username;
         console.log('Request query:', req.query); // Debug log
+
+        // ✅ Define formatTime to handle HH:mm strings and Firestore Timestamps
+        const formatTime = (timeInput) => {
+            if (!timeInput) return null;
+
+            // Handle Firestore Timestamp
+            if (timeInput.toDate) {
+                const dateObj = timeInput.toDate();
+                return dateObj.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                });
+            }
+
+            // Handle HH:mm string format
+            const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            if (typeof timeInput === 'string' && timeRegex.test(timeInput)) {
+                const [hours, minutes] = timeInput.split(':').map(Number);
+                const date = new Date();
+                date.setHours(hours, minutes);
+                return date.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                });
+            }
+
+            // Handle full date strings or other formats
+            const dateObj = new Date(timeInput);
+            if (!isNaN(dateObj.getTime())) {
+                return dateObj.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                });
+            }
+
+            return null; // Return null for invalid inputs
+        };
 
         if (!schoolEmail) {
             return res.render('schoolDashboard', {
@@ -1326,10 +1368,12 @@ app.get('/gallery', async (req, res) => {
                 resourcesConfirmed: false,
                 selectedResources: [],
                 selectedTrainers: [],
+                workshopStartTime: null,
+                workshopEndTime: null,
                 error: 'Please login first',
-                trialTests,
+                trialTests: [], // Assuming trialTests is defined elsewhere
                 trainers: [],
-                mediaUploads: []
+                mediaUploads: [],
             });
         }
 
@@ -1355,10 +1399,12 @@ app.get('/gallery', async (req, res) => {
                 resourcesConfirmed: false,
                 selectedResources: [],
                 selectedTrainers: [],
+                workshopStartTime: null,
+                workshopEndTime: null,
                 error: 'School not found',
-                trialTests,
+                trialTests: [],
                 trainers: [],
-                mediaUploads: []
+                mediaUploads: [],
             });
         }
 
@@ -1372,10 +1418,24 @@ app.get('/gallery', async (req, res) => {
             eventDate = schoolData.eventDate.toDate().toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
-                day: 'numeric'
+                day: 'numeric',
             });
             eventDateMissing = false;
+        } else if (schoolData.eventDate) {
+            const parsedDate = new Date(schoolData.eventDate);
+            if (!isNaN(parsedDate.getTime())) {
+                eventDate = parsedDate.toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                });
+                eventDateMissing = false;
+            }
         }
+
+        // Format workshop times
+        const workshopStartTime = formatTime(schoolData.workshopStartTime);
+        const workshopEndTime = formatTime(schoolData.workshopEndTime);
 
         // Fetch students
         const studentsSnapshot = await db.collection('participants')
@@ -1394,15 +1454,14 @@ app.get('/gallery', async (req, res) => {
                 score: data.score || 0,
                 totalQuestions: data.totalQuestions || 0,
                 percentage: data.percentage || 0,
-                completedAt: data.completedAt ? data.completedAt.toDate().toLocaleDateString() : 'N/A',
+                completedAt: data.completedAt ? (data.completedAt.toDate ? data.completedAt.toDate().toLocaleDateString() : new Date(data.completedAt).toLocaleDateString()) : 'N/A',
                 isApproved: data.isApproved || false,
-                 isChampion: data.isChampion || false,
-               message: data.message || null, // ✅ NEW: Student-specific message support
-
+                isChampion: data.isChampion || false,
+                message: data.message || null,
             };
         });
 
-        // Fetch trainers with transformed availableDates
+        // Fetch trainers
         const trainersSnapshot = await db.collection('trainers').get();
         const trainers = trainersSnapshot.docs.map(doc => {
             const data = doc.data();
@@ -1412,25 +1471,36 @@ app.get('/gallery', async (req, res) => {
                 district: data.district || 'Not Specified',
                 availableDates: Array.isArray(data.availableDates)
                     ? data.availableDates.map(dateObj =>
-                        dateObj.date || dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : 'N/A'
-                    )
-                    : []
+                          dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : (dateObj.date || dateObj)
+                      )
+                    : [],
             };
         });
 
-        const mediaUploads = []; // Replace with actual fetch logic if needed
+        // Fetch media uploads
+        const mediaSnapshot = await db.collection('schools')
+            .doc(schoolSnapshot.docs[0].id)
+            .collection('mediaUploads')
+            .get();
+        const mediaUploads = mediaSnapshot.docs.map(doc => ({
+            ...doc.data(),
+            id: doc.id,
+            uploadedAt: doc.data().uploadedAt?.toDate() || null,
+            uploadedBy: schoolName,
+            uploaderType: 'School',
+        }));
 
+        // Map selected trainers
         const selectedTrainers = [
-            schoolData.selectedTrainer1 || '',
-            schoolData.selectedTrainer2 || ''
+            schoolData.trainerId1 || '',
+            schoolData.trainerId2 || '',
         ].map(trainerId => {
             const trainer = trainers.find(t => t.id === trainerId);
-            return trainer ? { ...trainer, isOtherDistrict: trainer.district !== schoolData.district } : '';
-        });
+            return trainer ? { ...trainer, isOtherDistrict: trainer.district !== schoolData.district } : null;
+        }).filter(trainer => trainer !== null);
 
         res.render('schoolDashboard', {
             schoolName,
-            mediaUploads,
             schoolEmail: schoolData.schoolEmail || '',
             city: schoolData.city || '',
             district: schoolData.district || '',
@@ -1446,11 +1516,12 @@ app.get('/gallery', async (req, res) => {
             resourcesConfirmed: schoolData.resourcesConfirmed || false,
             selectedResources: schoolData.selectedResources || [],
             selectedTrainers,
+            workshopStartTime,
+            workshopEndTime,
             error: null,
-            trialTests,
+            trialTests: [], // Replace with actual trialTests data if available
             trainers,
-            workshopStartTime: schoolData.workshopStartTime || null,
-            workshopEndTime: schoolData.workshopEndTime || null
+            mediaUploads,
         });
 
     } catch (error) {
@@ -1472,10 +1543,12 @@ app.get('/gallery', async (req, res) => {
             resourcesConfirmed: false,
             selectedResources: [],
             selectedTrainers: [],
+            workshopStartTime: null,
+            workshopEndTime: null,
             error: 'Error loading school data.',
-            trialTests,
+            trialTests: [],
             trainers: [],
-            mediaUploads: []
+            mediaUploads: [],
         });
     }
 });
@@ -2098,8 +2171,6 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
 });
 
 
-
-
 // Participation form (renders participation.ejs)
     app.get('/participation', async (req, res) => {
         try {
@@ -2458,203 +2529,246 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         });
 
         // Admin dashboard (renders adminDashboard.ejs)
-    app.get('/admin-dashboard', requireAdmin, async (req, res) => {
-        try {
-            console.log('---- Admin Dashboard Route Triggered ----');
+ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
+    try {
+        console.log('---- Admin Dashboard Route Triggered ----');
 
-            // ✅ Define formatTime ONCE at top
-        const formatTime = (timestamp) => {
-        if (!timestamp) return null;
-        const dateObj = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-        return dateObj.toLocaleTimeString('en-IN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-    };
+        // ✅ Updated formatTime to handle HH:mm strings
+        const formatTime = (timeInput) => {
+            if (!timeInput) return null;
 
-            // 1️⃣ Parse Filters
-            const filters = {
-                schoolApproved: req.query.schoolApproved || '',
-                schoolCity: req.query.schoolCity || '',
-                trainerApproved: req.query.trainerApproved || '',
-                trainerCity: req.query.trainerCity || '',
-                studentCompleted: req.query.studentCompleted || '',
-                studentCity: req.query.studentCity || '',
-                workshopCompleted: req.query.workshopCompleted || ''
-            };
-
-            // 2️⃣ Fetch Schools + School Media
-            let schoolsQuery = db.collection('schools');
-            if (filters.schoolApproved) schoolsQuery = schoolsQuery.where('isApproved', '==', filters.schoolApproved === 'true');
-            if (filters.schoolCity) schoolsQuery = schoolsQuery.where('city', '==', filters.schoolCity);
-            if (filters.workshopCompleted) schoolsQuery = schoolsQuery.where('workshopCompleted', '==', filters.workshopCompleted === 'true');
-
-            const schoolsSnapshot = await schoolsQuery.get();
-            const schools = [];
-            const schoolMediaPromises = [];
-
-            for (const doc of schoolsSnapshot.docs) {
-                const schoolData = doc.data();
-                const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
-
-                // ✅ Apply formatting to times here
-                    const workshopStartTime = formatTime(schoolData.workshopStartTime);
-                    const workshopEndTime = formatTime(schoolData.workshopEndTime);
-
-                schoolMediaPromises.push(
-                    db.collection('schools').doc(doc.id).collection('mediaUploads').get()
-                        .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
-                            ...mediaDoc.data(),
-                            uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                            uploadedBy: schoolData.schoolName || 'Unknown School'
-                        })))
-                );
-
-                let trainer1 = null, trainer2 = null;
-                if (schoolData.trainerId1) {
-                    const t1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
-                    if (t1Doc.exists) trainer1 = { id: t1Doc.id, ...t1Doc.data() };
-                }
-                if (schoolData.trainerId2) {
-                    const t2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
-                    if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
-                }
-
-                schools.push({
-                    id: doc.id,
-                    ...schoolData,
-                    eventDate,
-                    workshopStartTime,  // ⏰ formatted time
-            workshopEndTime,    // ⏰ formatted
-                    trainer1,
-                    trainer2
+            // Handle Firestore Timestamp
+            if (timeInput.toDate) {
+                const dateObj = timeInput.toDate();
+                return dateObj.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
                 });
             }
 
-            // ✅ All remaining code unchanged...
-
-            let trainersQuery = db.collection('trainers');
-            if (filters.trainerApproved) trainersQuery = trainersQuery.where('isApproved', '==', filters.trainerApproved === 'true');
-            if (filters.trainerCity) trainersQuery = trainersQuery.where('city', '==', filters.trainerCity);
-
-            const trainersSnapshot = await trainersQuery.get();
-            const trainers = [];
-            const trainerMediaPromises = [];
-
-            for (const doc of trainersSnapshot.docs) {
-                const data = doc.data();
-                trainerMediaPromises.push(
-                    db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
-                        .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
-                            ...mediaDoc.data(),
-                            uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                            uploadedBy: data.trainerName || 'Unknown Trainer'
-                        })))
-                );
-
-                trainers.push({
-                    id: doc.id,
-                    ...data,
-                    registeredAt: data.registeredAt?.toDate ? data.registeredAt.toDate() : (data.registeredAt ? new Date(data.registeredAt) : null),
-                    isApproved: typeof data.isApproved === 'boolean' ? data.isApproved : false
+            // Handle HH:mm string format
+            const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            if (typeof timeInput === 'string' && timeRegex.test(timeInput)) {
+                const [hours, minutes] = timeInput.split(':').map(Number);
+                const date = new Date();
+                date.setHours(hours, minutes);
+                return date.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
                 });
             }
 
-            let participantsQuery = db.collection('participants');
-            if (filters.studentCompleted) participantsQuery = participantsQuery.where('hasCompletedMCQ', '==', filters.studentCompleted === 'true');
-            if (filters.studentCity) participantsQuery = participantsQuery.where('city', '==', filters.studentCity);
-
-            const participantsSnapshot = await participantsQuery.get();
-            const participants = participantsSnapshot.docs.map(doc => {
-                const data = doc.data();
-                const score = Number(data.score) || null;
-                const totalQuestions = Number(data.totalQuestions) || null;
-                const trial1Score = Number(data.trial1Score) || null;
-                const trial1TotalQuestions = Number(data.trial1TotalQuestions) || null;
-                const trial2Score = Number(data.trial2Score) || null;
-                const trial2TotalQuestions = Number(data.trial2TotalQuestions) || null;
-
-                return {
-                    id: doc.id,
-                    ...data,
-                    birthdate: data.birthdate?.toDate ? data.birthdate.toDate() : (data.birthdate ? new Date(data.birthdate) : null),
-                    completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : (data.completedAt ? new Date(data.completedAt) : null),
-                    score,
-                    totalQuestions,
-                    percentage: score && totalQuestions ? ((score / totalQuestions) * 100).toFixed(2) : null,
-                    trial1Score,
-                    trial1TotalQuestions,
-                    trial1Percentage: trial1Score && trial1TotalQuestions ? ((trial1Score / trial1TotalQuestions) * 100).toFixed(2) : null,
-                    trial2Score,
-                    trial2TotalQuestions,
-                    trial2Percentage: trial2Score && trial2TotalQuestions ? ((trial2Score / trial2TotalQuestions) * 100).toFixed(2) : null,
-                    trial1CorrectAnswers: Number(data.trial1CorrectAnswers) || null,
-                    trial1WrongAnswers: Number(data.trial1WrongAnswers) || null,
-                    trial2CorrectAnswers: Number(data.trial2CorrectAnswers) || null,
-                    trial2WrongAnswers: Number(data.trial2WrongAnswers) || null
-                };
-            });
-
-            const schoolMedia = (await Promise.all(schoolMediaPromises)).flat();
-            const trainerMedia = (await Promise.all(trainerMediaPromises)).flat();
-            const mediaUploads = [...schoolMedia, ...trainerMedia].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
-
-            const today = new Date(); today.setHours(0, 0, 0, 0);
-            const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
-            let studentsTodayCount = 0;
-            let averageScore = 0;
-
-            try {
-                const studentsTodaySnapshot = await db.collection('participants')
-                    .where('hasCompletedMCQ', '==', true)
-                    .where('completedAt', '>=', today)
-                    .where('completedAt', '<', tomorrow)
-                    .get();
-
-                studentsTodayCount = studentsTodaySnapshot.size;
-                const totalScore = studentsTodaySnapshot.docs.reduce((sum, doc) => sum + (Number(doc.data().score) || 0), 0);
-                averageScore = studentsTodayCount > 0 ? (totalScore / studentsTodayCount).toFixed(2) : 0;
-            } catch (indexErr) {
-                console.error('🔥 Firestore Index Error:', indexErr.message);
+            // Handle full date strings or other formats
+            const dateObj = new Date(timeInput);
+            if (!isNaN(dateObj.getTime())) {
+                return dateObj.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                });
             }
 
-            const zipSnapshot = await db.collection('trainerZips').get();
-            const zips = zipSnapshot.docs.map(doc => ({
+            return null; // Return null for invalid inputs
+        };
+
+        // 1️⃣ Parse Filters
+        const filters = {
+            schoolApproved: req.query.schoolApproved || '',
+            schoolCity: req.query.schoolCity || '',
+            trainerApproved: req.query.trainerApproved || '',
+            trainerCity: req.query.trainerCity || '',
+            studentCompleted: req.query.studentCompleted || '',
+            studentCity: req.query.studentCity || '',
+            workshopCompleted: req.query.workshopCompleted || '',
+        };
+
+        // 2️⃣ Fetch Schools + School Media
+        let schoolsQuery = db.collection('schools');
+        if (filters.schoolApproved) schoolsQuery = schoolsQuery.where('isApproved', '==', filters.schoolApproved === 'true');
+        if (filters.schoolCity) schoolsQuery = schoolsQuery.where('city', '==', filters.schoolCity);
+        if (filters.workshopCompleted) schoolsQuery = schoolsQuery.where('isCompleted', '==', filters.workshopCompleted === 'true');
+
+        const schoolsSnapshot = await schoolsQuery.get();
+        const schools = [];
+        const schoolMediaPromises = [];
+
+        for (const doc of schoolsSnapshot.docs) {
+            const schoolData = doc.data();
+            const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
+
+            // ✅ Apply formatting to times
+            const workshopStartTime = formatTime(schoolData.workshopStartTime);
+            const workshopEndTime = formatTime(schoolData.workshopEndTime);
+
+            schoolMediaPromises.push(
+                db.collection('schools').doc(doc.id).collection('mediaUploads').get()
+                    .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                        ...mediaDoc.data(),
+                        id: mediaDoc.id,
+                        uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                        uploadedBy: schoolData.schoolName || 'Unknown School',
+                        uploaderType: 'School',
+                    }))
+                )
+            );
+
+            let trainer1 = null, trainer2 = null;
+            if (schoolData.trainerId1) {
+                const t1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
+                if (t1Doc.exists) trainer1 = { id: t1Doc.id, ...t1Doc.data() };
+            }
+            if (schoolData.trainerId2) {
+                const t2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
+                if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
+            }
+
+            schools.push({
                 id: doc.id,
-                ...doc.data(),
-                uploadedAt: doc.data().uploadedAt?.toDate() || null
-            }));
-
-            res.render('adminDashboard', {
-                schools,
-                trainers,
-                participants,
-                filters,
-                studentsTodayCount,
-                averageScore,
-                zips,
-                mediaUploads,
-                error: null,
-                success: req.query.success || null
-            });
-
-        } catch (err) {
-            console.error('❌ Error in /admin-dashboard:', err.message);
-            res.render('adminDashboard', {
-                schools: [],
-                trainers: [],
-                participants: [],
-                filters: {},
-                studentsTodayCount: 0,
-                averageScore: 0,
-                zips: [],
-                mediaUploads: [],
-                error: 'Failed to load dashboard data.',
-                success: null
+                ...schoolData,
+                eventDate,
+                workshopStartTime, // ⏰ Formatted time
+                workshopEndTime,   // ⏰ Formatted time
+                trainer1,
+                trainer2,
+                eventDates: schoolData.eventDates || [],
+                selectedResources: schoolData.resources || [],
             });
         }
-    });
+
+        // 3️⃣ Fetch Trainers + Trainer Media
+        let trainersQuery = db.collection('trainers');
+        if (filters.trainerApproved) trainersQuery = trainersQuery.where('isApproved', '==', filters.trainerApproved === 'true');
+        if (filters.trainerCity) trainersQuery = trainersQuery.where('city', '==', filters.trainerCity);
+
+        const trainersSnapshot = await trainersQuery.get();
+        const trainers = [];
+        const trainerMediaPromises = [];
+
+        for (const doc of trainersSnapshot.docs) {
+            const data = doc.data();
+            trainerMediaPromises.push(
+                db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
+                    .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                        ...mediaDoc.data(),
+                        id: mediaDoc.id,
+                        uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                        uploadedBy: data.trainerName || 'Unknown Trainer',
+                        uploaderType: 'Trainer',
+                    }))
+                )
+            );
+
+            trainers.push({
+                id: doc.id,
+                ...data,
+                registeredAt: data.registeredAt?.toDate ? data.registeredAt.toDate() : (data.registeredAt ? new Date(data.registeredAt) : null),
+                isApproved: typeof data.isApproved === 'boolean' ? data.isApproved : false,
+            });
+        }
+
+        // 4️⃣ Fetch Participants
+        let participantsQuery = db.collection('participants');
+        if (filters.studentCompleted) participantsQuery = participantsQuery.where('hasCompletedMCQ', '==', filters.studentCompleted === 'true');
+        if (filters.studentCity) participantsQuery = participantsQuery.where('city', '==', filters.studentCity);
+
+        const participantsSnapshot = await participantsQuery.get();
+        const participants = participantsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const score = Number(data.score) || null;
+            const totalQuestions = Number(data.totalQuestions) || null;
+            const trial1Score = Number(data.trial1Score) || null;
+            const trial1TotalQuestions = Number(data.trial1TotalQuestions) || null;
+            const trial2Score = Number(data.trial2Score) || null;
+            const trial2TotalQuestions = Number(data.trial2TotalQuestions) || null;
+
+            return {
+                id: doc.id,
+                ...data,
+                birthdate: data.birthdate?.toDate ? data.birthdate.toDate() : (data.birthdate ? new Date(data.birthdate) : null),
+                completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : (data.completedAt ? new Date(data.completedAt) : null),
+                score,
+                totalQuestions,
+                percentage: score && totalQuestions ? ((score / totalQuestions) * 100).toFixed(2) : null,
+                trial1Score,
+                trial1TotalQuestions,
+                trial1Percentage: trial1Score && trial1TotalQuestions ? ((trial1Score / trial1TotalQuestions) * 100).toFixed(2) : null,
+                trial2Score,
+                trial2TotalQuestions,
+                trial2Percentage: trial2Score && trial2TotalQuestions ? ((trial2Score / trial2TotalQuestions) * 100).toFixed(2) : null,
+                trial1CorrectAnswers: Number(data.trial1CorrectAnswers) || null,
+                trial1WrongAnswers: Number(data.trial1WrongAnswers) || null,
+                trial2CorrectAnswers: Number(data.trial2CorrectAnswers) || null,
+                trial2WrongAnswers: Number(data.trial2WrongAnswers) || null,
+            };
+        });
+
+        // 5️⃣ Combine Media Uploads
+        const schoolMedia = (await Promise.all(schoolMediaPromises)).flat();
+        const trainerMedia = (await Promise.all(trainerMediaPromises)).flat();
+        const mediaUploads = [...schoolMedia, ...trainerMedia].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+
+        // 6️⃣ Calculate Metrics for Today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        let studentsTodayCount = 0;
+        let averageScore = 0;
+
+        try {
+            const studentsTodaySnapshot = await db.collection('participants')
+                .where('hasCompletedMCQ', '==', true)
+                .where('completedAt', '>=', today)
+                .where('completedAt', '<', tomorrow)
+                .get();
+
+            studentsTodayCount = studentsTodaySnapshot.size;
+            const totalScore = studentsTodaySnapshot.docs.reduce((sum, doc) => sum + (Number(doc.data().score) || 0), 0);
+            averageScore = studentsTodayCount > 0 ? (totalScore / studentsTodayCount).toFixed(2) : 0;
+        } catch (indexErr) {
+            console.error('🔥 Firestore Index Error:', indexErr.message);
+        }
+
+        // 7️⃣ Fetch Trainer Zips
+        const zipSnapshot = await db.collection('trainerZips').get();
+        const zips = zipSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            uploadedAt: doc.data().uploadedAt?.toDate() || null,
+        }));
+
+        // 8️⃣ Render Dashboard
+        res.render('adminDashboard', {
+            schools,
+            trainers,
+            participants,
+            filters,
+            studentsTodayCount,
+            averageScore,
+            zips,
+            mediaUploads,
+            error: null,
+            success: req.query.success || null,
+        });
+
+    } catch (err) {
+        console.error('❌ Error in /admin-dashboard:', err.message);
+        res.render('adminDashboard', {
+            schools: [],
+            trainers: [],
+            participants: [],
+            filters: {},
+            studentsTodayCount: 0,
+            averageScore: 0,
+            zips: [],
+            mediaUploads: [],
+            error: 'Failed to load dashboard data.',
+            success: null,
+        });
+    }
+});
 
     // Delete a participant by ID
     app.post('/admin-dashboard/delete-student/:id', requireAdmin, async (req, res) => {

@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"/>
+  <link rel="icon" type="image/png" href="./Assets/logo.png">
+  <title>Being Lawful: Gallery</title>
+  <meta name="description" content="Explore the gallery of Being Lawful's workshops and activities celebrating 75 years of India's Constitution with CBSE school programs.">
+  <meta name="keywords" content="samvidhan, constitution, beinglawful, being lawful, civics, CBSE, india, constitution75, workshops, gallery">
+  <meta name="robots" content="index, follow">
+  <meta name="author" content="Being Lawful Team">
+  <meta property="og:title" content="Being Lawful: Gallery">
+  <meta property="og:description" content="Explore the gallery of Being Lawful's workshops and activities celebrating 75 years of India's Constitution with CBSE school programs.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://beinglawful.in/gallery.html">
+  <meta property="og:image" content="https://beinglawful.in/Assets/being_lawful.jpg">
+  <meta property="og:site_name" content="Being Lawful">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Being Lawful: Gallery">
+  <meta name="twitter:description" content="Explore the gallery of Being Lawful's workshops and activities celebrating 75 years of India's Constitution with CBSE school programs.">
+  <meta name="twitter:image" content="https://beinglawful.in/Assets/being_lawful.jpg">
+  <meta name="twitter:site" content="@beinglawful">
+  <meta name="twitter:creator" content="@beinglawful">
+  <link rel="canonical" href="https://beinglawful.in/gallery.html">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" as="style">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" as="style">
+  <link rel="preload" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" as="style">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet"/>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      scroll-behavior: smooth;
+      overflow-x: hidden;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+    .navbar {
+      background-color: rgba(255, 255, 255, 0.95);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+    }
+    .navbar.scrolled {
+      background-color: rgba(255, 255, 255, 0.98) !important;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    .navbar-brand {
+      font-family: 'Comic Sans MS', cursive;
+      color: #f59e0b !important;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+    .nav-link {
+      color: #4b5563 !important;
+      font-weight: 500;
+      margin: 0 0.5rem;
+      position: relative;
+    }
+    .nav-link:hover {
+      color: #1e40af !important;
+    }
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: 0;
+      left: 0;
+      background-color: #1e40af;
+      transition: width 0.3s ease;
+    }
+    .nav-link:hover::after {
+      width: 100%;
+    }
+    .gallery-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 0.5rem;
+      max-width: 100%;
+      margin: 0 auto;
+      padding: 0.5rem;
+    }
+    .gallery-item {
+      position: relative;
+      overflow: hidden;
+      border-radius: 8px;
+      aspect-ratio: 16 / 9;
+    }
+    .gallery-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+      cursor: pointer;
+    }
+    .gallery-item:hover img {
+      transform: scale(1.1);
+    }
+    .gallery-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    .gallery-item:hover .gallery-overlay {
+      opacity: 1;
+    }
+    .gallery-title {
+      font-size: 1rem;
+      font-weight: bold;
+      text-align: center;
+    }
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal.active {
+      display: flex;
+    }
+    .modal-content {
+      max-width: 90%;
+      max-height: 90vh;
+    }
+    .modal-content img {
+      width: 100%;
+      height: auto;
+      max-height: 90vh;
+      object-fit: contain;
+    }
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+    }
+    .error-message {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      background-color: #fee2e2;
+      color: #b91c1c;
+      border-radius: 0.5rem;
+      text-align: center;
+    }
+    .loading {
+      display: none;
+      margin-top: 1rem;
+      padding: 1rem;
+      background-color: #e5e7eb;
+      color: #374151;
+      border-radius: 0.5rem;
+      text-align: center;
+    }
+    @media (min-width: 320px) {
+      .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      }
+      .navbar-brand {
+        font-size: 0.875rem;
+      }
+    }
+    @media (min-width: 400px) {
+      .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      }
+      .navbar-brand {
+        font-size: 1rem;
+      }
+    }
+    @media (min-width: 640px) {
+      .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      }
+      .navbar-brand {
+        font-size: 1.125rem;
+      }
+    }
+    @media (min-width: 768px) {
+      .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      }
+      .navbar-brand {
+        font-size: 1.25rem;
+      }
+    }
+    @media (min-width: 1024px) {
+      .gallery-grid {
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      }
+      .navbar-brand {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body class="font-sans text-gray-800">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg fixed-top">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Being Lawful</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent" 
+        aria-controls="navbarContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarContent">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html#Home">Home</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="index.html#vision">About</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="index.html#book">Book</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="#activities">Gallery</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="/login">Login</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Upload Photo Section -->
+  <section id="upload-photo" class="bg-white py-8 px-4 hidden" data-aos="fade-up">
+    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Upload Photo</h2>
+    <form id="upload-form" enctype="multipart/form-data" class="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
+      <div class="mb-4">
+        <label for="images" class="block text-sm font-medium text-gray-700 mb-2">Select Images</label>
+        <input type="file" name="images" id="images" multiple accept="image/*"
+               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md 
+                      file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 
+                      hover:file:bg-blue-100 cursor-pointer"/>
+      </div>
+      <button type="submit" 
+              class="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md 
+                     hover:bg-blue-700 transition duration-200">
+        Upload
+      </button>
+    </form>
+    <div id="success-message" class="hidden mt-4 p-4 bg-green-100 text-green-700 rounded-md text-center"></div>
+    <div id="error-message" class="error-message">Failed to upload images. Please try again.</div>
+  </section>
+
+  <!-- Gallery Section -->
+  <section class="bg-white min-h-screen flex flex-col items-center justify-center py-8 px-4" id="activities" data-aos="fade-up">
+    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Gallery</h2>
+    <div id="gallery-loading" class="loading max-w-md mx-auto">Loading...</div>
+    <div id="error-gallery" class="error-message max-w-md mx-auto">Failed to load gallery images. Please try again later.</div>
+    <div class="gallery-grid" id="gallery-grid">
+      <!-- Static Images -->
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="300">
+        <img src="./Assets/Activities/Activity1.jpg" alt="Being Lawful's First Workshop" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Being Lawful's First Workshop</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="350">
+        <img src="./Assets/Activities/Activity2.jpg" alt="Students Writing About Local Issues" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Students Writing About Local Issues</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="400">
+        <img src="./Assets/Activities/Activity3.jpg" alt="Being Lawful Workshop Activity" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Being Lawful Workshop Activity</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="450">
+        <img src="./Assets/Activities/Activity4.jpg" alt="Workshop Conducted by the Author" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Workshop Conducted by the Author</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="500">
+        <img src="./Assets/Activities/Activity5.jpg" alt="Workshop Group Activity" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Workshop Group Activity</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="550">
+        <img src="./Assets/Activities/Activity6.jpg" alt="Workshop Setup and Arrangements" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Workshop Setup and Arrangements</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="600">
+        <img src="./Assets/Activities/Activity7.jpg" alt="Being Lawful Book Display" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Being Lawful Book Display</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="650">
+        <img src="./Assets/Activities/Activity8.jpg" alt="Workshop Kit Arrangement" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Workshop Kit Arrangement</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="700">
+        <img src="./Assets/Activities/Activity9.jpg" alt="Student Gift Crafting Activity" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Student Gift Crafting Activity</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="750">
+        <img src="./Assets/Activities/Activity10.jpg" alt="Gifts for Being Lawful Champions" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Gifts for Being Lawful Champions</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="800">
+        <img src="./Assets/Activities/Activity11.jpg" alt="Author with Principal of Lord Ganesha School" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Author with Principal of Lord Ganesha School</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="850">
+        <img src="./Assets/Activities/Activity12.jpg" alt="Being Lawful Group Activity" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Being Lawful Group Activity</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="900">
+        <img src="./Assets/Activities/Activity13.jpg" alt="Students Participating in Being Lawful" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Students Participating in Being Lawful</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="950">
+        <img src="./Assets/Activities/Activity14.jpg" alt="Online Trainer Orientation Session" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Online Trainer Orientation Session</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+        <img src="./Assets/Activities/Activity16.JPG" alt="Train the trainer workshop pune" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Train the trainer workshop pune</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1050">
+        <img src="./Assets/Activities/Activity17.JPG" alt="Train the trainer workshop pune" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Train the trainer workshop pune</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1100">
+        <img src="./Assets/Activities/Activity18.JPG" alt="Train the trainer workshop pune" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Train the trainer workshop pune</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1150">
+        <img src="./Assets/Activities/Activity19.JPG" alt="Train the trainer workshop pune" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Train the trainer workshop pune</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1200">
+        <img src="./Assets/Activities/Activity20.jpg" alt="Train the trainer workshop pune" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Train the trainer workshop pune</span>
+        </div>
+      </div>
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1250">
+        <img src="./Assets/Activities/Activity21.JPG" alt="Adv. S.K Jain addressed the trainers" loading="lazy">
+        <div class="gallery-overlay">
+          <span class="gallery-title">Adv. S.K Jain addressed the trainers</span>
+        </div>
+      </div>
+      <!-- Dynamic images will be appended here -->
+    </div>
+  </section>
+
+  <!-- Image Modal -->
+  <div id="imageModal" class="modal">
+    <span class="close-modal" aria-label="Close Image Modal">×</span>
+    <div class="modal-content">
+      <img id="modalImage" src="" alt="Modal Image">
+    </div>
+  </div>
+
+  <!-- Footer Section -->
+  <footer class="bg-gray-800 text-white py-6 px-4" id="footer" data-aos="fade-up">
+    <div class="flex flex-col md:flex-row gap-4 justify-center max-w-3xl mx-auto mb-4">
+      <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="200">
+        <h5 class="font-semibold text-sm sm:text-base mb-3">Quick Links</h5>
+        <ul class="space-y-2">
+          <li><a href="index.html#Home" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Home</a></li>
+          <li><a href="index.html#vision" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">About</a></li>
+          <li><a href="index.html#book" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Book</a></li>
+          <li><a href="#activities" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Gallery</a></li>
+        </ul>
+      </div>
+      <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="300">
+        <h5 class="font-semibold text-sm sm:text-base mb-3">Contact Us</h5>
+        <ul class="space-y-2">
+          <li class="text-xs sm:text-sm">Email: info@beinglawful.in</li>
+          <li class="text-xs sm:text-sm">Phone: +91 75884 21375</li>
+        </ul>
+      </div>
+      <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="400">
+        <h5 class="font-semibold text-sm sm:text-base mb-3">Follow Us</h5>
+        <ul class="space-y-2">
+          <li><a href="https://www.facebook.com/profile.php?id=61576685499937" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Facebook</a></li>
+          <li><a href="https://x.com/beinglawful" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Twitter</a></li>
+          <li><a href="https://www.instagram.com/being_lawful/" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Instagram</a></li>
+          <li><a href="https://www.linkedin.com/company/being-lawful/" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">LinkedIn</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="text-center text-gray-400 text-xs sm:text-sm" data-aos="fade-up" data-aos-delay="500">
+      <p>© 2025 Being Lawful. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <!-- Firebase SDK (Compatibility Layer) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+  <script>
+    // Firebase Configuration
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "beinglawful-ee5a4.firebaseapp.com",
+      projectId: "beinglawful-ee5a4",
+      storageBucket: "beinglawful-ee5a4.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+    // TODO: Replace with your Firebase project credentials from Firebase Console > Project Settings > General > Your apps > Web app
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    // AOS Initialization
+    AOS.init({
+      duration: 600,
+      easing: 'ease-in-out',
+      once: true,
+      mirror: false,
+      disable: window.innerWidth < 320
+    });
+
+    // Navbar Scroll Effect
+    let lastScroll = 0;
+    window.addEventListener('scroll', throttle(function() {
+      const navbar = document.querySelector('.navbar');
+      if (window.scrollY > 50) {
+        navbar.classList.add('scrolled');
+      } else {
+        navbar.classList.remove('scrolled');
+      }
+    }, 100));
+
+    function throttle(func, limit) {
+      let inThrottle;
+      return function() {
+        if (!inThrottle) {
+          func.apply(this, arguments);
+          inThrottle = true;
+          setTimeout(() => inThrottle = false, limit);
+        }
+      };
+    }
+
+    // Modal Functions
+    function openModal(imgElement) {
+      const modal = document.getElementById('imageModal');
+      const modalImg = document.getElementById('modalImage');
+      modalImg.src = imgElement.src;
+      modalImg.alt = imgElement.alt || 'Uploaded Image';
+      modal.classList.add('active');
+      modalImg.onerror = function() {
+        console.error('Failed to load image:', modalImg.src);
+        modal.classList.remove('active');
+      };
+    }
+
+    function closeModal(event) {
+      const modal = document.getElementById('imageModal');
+      if (event.target.classList.contains('modal') || event.target.classList.contains('close-modal')) {
+        modal.classList.remove('active');
+      }
+    }
+
+    // Keyboard Support for Modal
+    document.addEventListener('keydown', function(event) {
+      const modal = document.getElementById('imageModal');
+      if (event.key === 'Escape' && modal.classList.contains('active')) {
+        modal.classList.remove('active');
+      }
+    });
+
+    // Event Delegation for Gallery Images
+    document.getElementById('gallery-grid').addEventListener('click', function(event) {
+      if (event.target.tagName === 'IMG') {
+        openModal(event.target);
+      }
+    });
+
+    // Fetch Gallery Images
+    async function fetchGalleryImages() {
+      const errorGallery = document.getElementById('error-gallery');
+      const loading = document.getElementById('gallery-loading');
+      const galleryGrid = document.getElementById('gallery-grid');
+
+      loading.classList.remove('hidden');
+      errorGallery.style.display = 'none';
+
+      try {
+        const user = firebase.auth().currentUser;
+        let headers = {};
+        if (user) {
+          const idToken = await user.getIdToken();
+          headers = { 'Authorization': `Bearer ${idToken}` };
+        }
+
+        const response = await fetch('http://localhost:3000/gallery', {
+          method: 'GET',
+          headers
+        });
+        const data = await response.json();
+
+        if (data.message === 'Images fetched successfully') {
+          let delay = 1300; // Start after 20 static images
+          data.images.forEach(image => {
+            const galleryItem = document.createElement('div');
+            galleryItem.className = 'gallery-item';
+            galleryItem.setAttribute('data-aos', 'fade-up');
+            galleryItem.setAttribute('data-aos-delay', delay);
+            const fileName = image.storagePath.split('/').pop().replace(/^\d+_/, '');
+            const title = fileName.replace(/\.[^/.]+$/, '') || 'Uploaded Image';
+            galleryItem.innerHTML = `
+              <img src="${image.url}" alt="${title}" loading="lazy">
+              <div class="gallery-overlay">
+                <span class="gallery-title">${title}</span>
+              </div>
+            `;
+            galleryGrid.appendChild(galleryItem);
+            delay += 50;
+          });
+
+          AOS.refresh();
+          loading.classList.add('hidden');
+          errorGallery.style.display = 'none';
+        } else {
+          throw new Error(data.error || response.statusText || 'Failed to fetch gallery images');
+        }
+      } catch (error) {
+        console.error('Error fetching gallery images:', error);
+        loading.classList.add('hidden');
+        errorGallery.textContent = 'Failed to load gallery images: ' + error.message;
+        errorGallery.style.display = 'block';
+        setTimeout(() => { errorGallery.style.display = 'none'; }, 5000);
+      }
+    }
+
+    // Check Admin Status and Toggle Upload Form
+    firebase.auth().onAuthStateChanged(async (user) => {
+      const uploadSection = document.getElementById('upload-photo');
+      const errorMessage = document.getElementById('error-message');
+      if (user) {
+        try {
+          const idTokenResult = await user.getIdTokenResult();
+          if (idTokenResult.claims.isAdmin) {
+            uploadSection.classList.remove('hidden');
+          } else {
+            uploadSection.classList.add('hidden');
+          }
+        } catch (error) {
+          console.error('Error checking admin status:', error);
+          uploadSection.classList.add('hidden');
+          errorMessage.textContent = 'Error checking admin status: ' + error.message;
+          errorMessage.style.display = 'block';
+          setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
+        }
+      } else {
+        uploadSection.classList.add('hidden');
+      }
+    });
+
+    // Handle Upload Form Submission
+    async function uploadImages(event) {
+      event.preventDefault();
+      const form = event.target;
+      const successMessageDiv = document.getElementById('success-message');
+      const errorMessageDiv = document.getElementById('error-message');
+      try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+          errorMessageDiv.textContent = 'Please log in to upload files.';
+          errorMessageDiv.style.display = 'block';
+          setTimeout(() => { errorMessageDiv.style.display = 'none'; }, 5000);
+          return;
+        }
+        const files = form.querySelector('#images').files;
+        for (const file of files) {
+          if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            errorMessageDiv.textContent = `File ${file.name} exceeds 5MB limit.`;
+            errorMessageDiv.style.display = 'block';
+            setTimeout(() => { errorMessageDiv.style.display = 'none'; }, 5000);
+            return;
+          }
+        }
+        const formData = new FormData(form);
+        const idToken = await user.getIdToken();
+        const response = await fetch('http://localhost:3000/upload-image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: formData
+        });
+        const result = await response.json();
+        if (response.ok) {
+          successMessageDiv.textContent = result.message;
+          successMessageDiv.classList.remove('hidden');
+          form.reset();
+          setTimeout(() => {
+            successMessageDiv.classList.add('hidden');
+            fetchGalleryImages();
+          }, 5000);
+        } else {
+          throw new Error(result.error || 'Failed to upload images');
+        }
+      } catch (error) {
+        console.error('Error uploading files:', error);
+        errorMessageDiv.textContent = 'Error uploading files: ' + error.message;
+        errorMessageDiv.style.display = 'block';
+        setTimeout(() => { errorMessageDiv.style.display = 'none'; }, 5000);
+      }
+    }
+
+    // Attach Upload Handler
+    document.getElementById('upload-form').addEventListener('submit', uploadImages);
+
+    // Initialize on Page Load
+    document.addEventListener('DOMContentLoaded', function() {
+      fetchGalleryImages();
+    });
+  </script>
+</body>
+</html>

@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>School Dashboard - Being Lawful</title>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js"></script>
+    <!-- Firebase Compatibility SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore-compat.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -123,6 +123,8 @@
         #studentTable td:nth-child(9) { width: 100px; }
         #studentTable th:nth-child(10),
         #studentTable td:nth-child(10) { width: 100px; }
+        #studentTable th:nth-child(11),
+        #studentTable td:nth-child(11) { width: 100px; }
         .filter-select {
             padding: 5px;
             border: 1px solid #ddd;
@@ -895,6 +897,10 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+        // Define allTrainers before usage
+        const allTrainers = <%- JSON.stringify(trainers) %>;
+        const schoolDistrict = "<%= district %>".trim();
+
         document.addEventListener('DOMContentLoaded', function () {
             console.log('DOM loaded, initializing student-data tab');
             openTab('student-data');
@@ -1039,9 +1045,6 @@
                 row.style.display = show ? '' : 'none';
             });
         }
-
-        const allTrainers = <%- JSON.stringify(trainers) %>;
-        const schoolDistrict = "<%= district %>".trim();
 
         function populateTrainerSelects() {
             updateTrainerSelection();

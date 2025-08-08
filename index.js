@@ -101,7 +101,7 @@ try {
         universe_domain: "googleapis.com"
     };
 
-   const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'beinglawful-ee5a4.appspot.com';
+   const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'beinglawful-ee5a4.firebasestorage.app';
     console.log('Attempting to initialize Firebase with bucket:', bucketName);
 
     admin.initializeApp({
@@ -899,163 +899,247 @@ app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (r
     }
 });
     //student dashboard upload media
- app.post('/student-dashboard/upload-media', upload, async (req, res) => {
-    try {
-        const { parentMobile1, mediaDescription, mediaLink } = req.body;
-        const photos = req.files['photos'] || [];
-        const videos = req.files['videos'] || [];
 
-        if (!parentMobile1) {
-            return res.status(400).send('Parent Mobile Number is required.');
-        }
+//POST Route: Handle media uploads with console logging
+app.post('/student-dashboard/upload-media', upload, async (req, res) => {
+  const parentMobile1 = req.body.parentMobile1 || '';
 
-        const participantSnapshot = await db.collection('participants')
-            .where('parentMobile1', '==', parentMobile1)
-            .get();
+  try {
+    const { mediaDescription, mediaLink } = req.body;
+    const photos = req.files['photos'] || [];
+    const videos = req.files['videos'] || [];
 
-        if (participantSnapshot.empty) {
-            return res.status(404).send('Student not found.');
-        }
+    // Log received files
+    console.log('Received files:', { photos: photos.length, videos: videos.length });
 
-        const participantId = participantSnapshot.docs[0].id;
-        const participantData = participantSnapshot.docs[0].data();
-
-        if (mediaDescription && mediaDescription.length > 1000) {
-            return res.status(400).send('Media description cannot exceed 1000 words.');
-        }
-
-        const mediaUploads = [];
-
-        for (const file of photos) {
-            const fileName = `studentMedia/${participantId}/photos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName); // Use global bucket
-
-            await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
-            const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-
-            mediaUploads.push({
-                url,
-                type: 'image',
-                path: fileName,
-                description: mediaDescription || '',
-                link: mediaLink || '',
-                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-        }
-
-        for (const file of videos) {
-            const fileName = `studentMedia/${participantId}/videos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName); // Use global bucket
-
-            await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
-            const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-
-            mediaUploads.push({
-                url,
-                type: 'video',
-                path: fileName,
-                description: mediaDescription || '',
-                link: mediaLink || '',
-                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-        }
-
-        if (mediaUploads.length > 0) {
-            const batch = db.batch();
-            mediaUploads.forEach(upload => {
-                const mediaRef = db.collection('participants').doc(participantId).collection('mediaUploads').doc();
-                batch.set(mediaRef, upload);
-            });
-            await batch.commit();
-        }
-
-        const uploadedMediaSnapshot = await db.collection('participants').doc(participantId).collection('mediaUploads').orderBy('uploadedAt', 'desc').get();
-        const allUploadedMedia = uploadedMediaSnapshot.docs.map(doc => doc.data());
-
-        const updatedUser = (await db.collection('participants').doc(participantId).get()).data();
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
-
-        res.render('dashboard', {
-            studentName: updatedUser.studentName || 'Unknown Student',
-            parentMobile1,
-            hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
-            hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
-            hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
-            mcqs: updatedUser.currentMcqs || [],
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate,
-            isOnOrAfterEventDate,
-            eventDateMissing,
-            eventDate,
-            showResults: updatedUser.hasCompletedMCQ || false,
-            score: updatedUser.score || 0,
-            totalQuestions: updatedUser.totalQuestions || 30,
-            percentage: updatedUser.percentage || 0,
-            mediaUploads: allUploadedMedia,
-            error: null
-        });
-
-    } catch (error) {
-        console.error('Error uploading media:', {
-            message: error.message,
-            code: error.code,
-            stack: error.stack
-        });
-        res.status(500).send(`Error uploading media: ${error.message}`);
+    // Validate parentMobile1
+    if (!parentMobile1) {
+      return res.status(400).send('Parent Mobile Number is required.');
     }
+
+    // Query participant
+    const participantSnapshot = await db.collection('participants')
+      .where('parentMobile1', '==', parentMobile1)
+      .get();
+
+    if (participantSnapshot.empty) {
+      return res.status(404).send('Student not found.');
+    }
+
+    const participantId = participantSnapshot.docs[0].id;
+    const participantData = participantSnapshot.docs[0].data();
+
+    // Validate media description
+    if (mediaDescription && mediaDescription.length > 1000) {
+      return res.status(400).send('Media description cannot exceed 1000 characters.');
+    }
+
+    const mediaUploads = [];
+
+    // Upload photos with console logging
+    for (const file of photos) {
+      const fileName = `studentMedia/${participantId}/photos/${Date.now()}_${file.originalname}`;
+      const fileUpload = bucket.file(fileName);
+
+      await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
+      const [url] = await fileUpload.getSignedUrl({
+        action: 'read',
+        expires: new Date('2026-03-09')
+      });
+
+      // Log image upload details
+      console.log('Image uploaded successfully:', {
+        fileName: file.originalname,
+        size: file.buffer.length,
+        mimeType: file.mimetype,
+        url,
+        uploadedAt: new Date().toISOString()
+      });
+
+      mediaUploads.push({
+        url,
+        type: 'image',
+        path: fileName,
+        description: mediaDescription || '',
+        link: mediaLink || '',
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    // Upload videos
+    for (const file of videos) {
+      const fileName = `studentMedia/${participantId}/videos/${Date.now()}_${file.originalname}`;
+      const fileUpload = bucket.file(fileName);
+
+      await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
+      const [url] = await fileUpload.getSignedUrl({
+        action: 'read',
+        expires: new Date('2026-03-09')
+      });
+
+      console.log('Video uploaded successfully:', {
+        fileName: file.originalname,
+        size: file.buffer.length,
+        mimeType: file.mimetype,
+        url,
+        uploadedAt: new Date().toISOString()
+      });
+
+      mediaUploads.push({
+        url,
+        type: 'video',
+        path: fileName,
+        description: mediaDescription || '',
+        link: mediaLink || '',
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    // Save to Firestore
+    if (mediaUploads.length > 0) {
+      const batch = db.batch();
+      mediaUploads.forEach(upload => {
+        const mediaRef = db.collection('participants').doc(participantId).collection('mediaUploads').doc();
+        batch.set(mediaRef, upload);
+      });
+      await batch.commit();
+      console.log(`Saved ${mediaUploads.length} media items to Firestore for participant: ${participantId}`);
+
+      // Update hasUploadedMedia field
+      await db.collection('participants').doc(participantId).update({
+        hasUploadedMedia: true
+      });
+    }
+
+    // Fetch updated media
+    const uploadedMediaSnapshot = await db.collection('participants').doc(participantId).collection('mediaUploads').orderBy('uploadedAt', 'desc').get();
+    const allUploadedMedia = uploadedMediaSnapshot.docs.map(doc => doc.data());
+
+    const updatedUser = (await db.collection('participants').doc(participantId).get()).data();
+    const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+
+    res.render('dashboard', {
+      studentName: updatedUser.studentName || 'Unknown Student',
+      parentMobile1,
+      hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
+      hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
+      hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
+      mcqs: updatedUser.currentMcqs || [],
+      trial1: trialTests.trial1 || [],
+      trial2: trialTests.trial2 || [],
+      isEventDate,
+      isOnOrAfterEventDate,
+      eventDateMissing,
+      eventDate,
+      showResults: updatedUser.hasCompletedMCQ || false,
+      score: updatedUser.score || 0,
+      totalQuestions: updatedUser.totalQuestions || 30,
+      percentage: updatedUser.percentage || 0,
+      mediaUploads: allUploadedMedia,
+      showMediaSection: updatedUser.hasCompletedMCQ && (isOnOrAfterEventDate || eventDateMissing),
+      isChampion: updatedUser.isChampion || false,
+      championMessage: updatedUser.championMessage || 'Selected as champion for Being Lawful',
+      hasCompletedRegistration: updatedUser.hasCompletedRegistration || false,
+      hasCertificate: updatedUser.hasCertificate || false,
+      hasAttendedWorkshop: updatedUser.hasAttendedWorkshop || false,
+      hasUploadedMedia: updatedUser.hasUploadedMedia || false,
+      isJudiciarySelected: updatedUser.isJudiciarySelected || false,
+      isStateFelicitated: updatedUser.isStateFelicitated || false,
+      error: null
+    });
+  } catch (error) {
+    console.error('Error uploading media:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      parentMobile1
+    });
+    res.render('dashboard', {
+      studentName: 'Unknown Student',
+      parentMobile1,
+      hasCompletedMCQ: false,
+      hasCompletedTrial1: false,
+      hasCompletedTrial2: false,
+      mcqs: [],
+      trial1: [],
+      trial2: [],
+      isEventDate: false,
+      isOnOrAfterEventDate: false,
+      eventDateMissing: true,
+      eventDate: 'N/A',
+      showResults: false,
+      score: 0,
+      totalQuestions: 30,
+      percentage: 0,
+      mediaUploads: [],
+      showMediaSection: false,
+      isChampion: false,
+      championMessage: '',
+      hasCompletedRegistration: false,
+      hasCertificate: false,
+      hasAttendedWorkshop: false,
+      hasUploadedMedia: false,
+      isJudiciarySelected: false,
+      isStateFelicitated: false,
+      error: `Error uploading media: ${error.message}`
+    });
+  }
 });
+// GET Route: Display media upload page
 app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, async (req, res) => {
-    try {
-        const { parentMobile1 } = req.params;
-        const user = res.locals.user;
+  try {
+    const { parentMobile1 } = req.params;
+    const user = res.locals.user;
 
-        const participantSnapshot = await db.collection('participants')
-            .where('parentMobile1', '==', parentMobile1)
-            .get();
+    const participantSnapshot = await db.collection('participants')
+      .where('parentMobile1', '==', parentMobile1)
+      .get();
 
-        if (participantSnapshot.empty) {
-            return res.status(404).send('Student not found.');
-        }
-
-        const participantDocId = participantSnapshot.docs[0].id;
-        const participantData = participantSnapshot.docs[0].data();
-
-        const mediaSnapshot = await db.collection('participants')
-            .doc(participantDocId)
-            .collection('mediaUploads')
-            .orderBy('uploadedAt', 'desc')
-            .get();
-
-        const participantMediaUploads = mediaSnapshot.docs.map(doc => doc.data());
-
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(participantData.schoolNameDropdown || '');
-
-        res.render('dashboard', {
-            studentName: participantData.studentName || 'Unknown Student',
-            parentMobile1,
-            hasCompletedMCQ: participantData.hasCompletedMCQ || false,
-            hasCompletedTrial1: participantData.hasCompletedTrial1 || false,
-            hasCompletedTrial2: participantData.hasCompletedTrial2 || false,
-            mcqs: participantData.currentMcqs || [],
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate,
-            isOnOrAfterEventDate,
-            eventDateMissing,
-            eventDate,
-            showResults: participantData.hasCompletedMCQ || false,
-            score: participantData.score || 0,
-            totalQuestions: participantData.totalQuestions || 30,
-            percentage: participantData.percentage || 0,
-            mediaUploads: participantMediaUploads,
-            showMediaSection: true
-        });
-
-    } catch (error) {
-        console.error('Error loading media upload page:', error);
-        res.redirect('/dashboard/' + req.params.parentMobile1);
+    if (participantSnapshot.empty) {
+      return res.status(404).send('Student not found.');
     }
+
+    const participantDocId = participantSnapshot.docs[0].id;
+    const participantData = participantSnapshot.docs[0].data();
+
+    const mediaSnapshot = await db.collection('participants')
+      .doc(participantDocId)
+      .collection('mediaUploads')
+      .orderBy('uploadedAt', 'desc')
+      .get();
+
+    const participantMediaUploads = mediaSnapshot.docs.map(doc => doc.data());
+
+    const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(participantData.schoolNameDropdown || '');
+
+    res.render('dashboard', {
+      studentName: participantData.studentName || 'Unknown Student',
+      parentMobile1,
+      hasCompletedMCQ: participantData.hasCompletedMCQ || false,
+      hasCompletedTrial1: participantData.hasCompletedTrial1 || false,
+      hasCompletedTrial2: participantData.hasCompletedTrial2 || false,
+      mcqs: participantData.currentMcqs || [],
+      trial1: trialTests.trial1,
+      trial2: trialTests.trial2,
+      isEventDate,
+      isOnOrAfterEventDate,
+      eventDateMissing,
+      eventDate,
+      showResults: participantData.hasCompletedMCQ || false,
+      score: participantData.score || 0,
+      totalQuestions: participantData.totalQuestions || 30,
+      percentage: participantData.percentage || 0,
+      mediaUploads: participantMediaUploads,
+      showMediaSection: true
+    });
+  } catch (error) {
+    console.error('Error loading media upload page:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.redirect('/dashboard/' + req.params.parentMobile1);
+  }
 });
 
 // Certificate (renders certificate.ejs)

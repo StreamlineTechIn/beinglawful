@@ -14,6 +14,7 @@
         .status-register { color: #6f42c1; font-weight: 600; }
         .status-done { color: #28a745; font-weight: 600; }
         .status-notinterested { color: #dc3545; font-weight: 600; }
+        .filter-select { padding: 0.25rem; margin-top: 0.25rem; }
     </style>
 </head>
 <body class="bg-gray-100 flex min-h-screen">
@@ -23,7 +24,7 @@
             <li><a href="#dashboard" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium active">Dashboard</a></li>
             <li><a href="#visited-school" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Visited School</a></li>
             <li><a href="#complete-school" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Complete School</a></li>
-            <li><a href="#summary" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Summary</a></li>
+            <li><a href="#coordinator-summary" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Coordinator Summary</a></li>
             <li><a href="#sop" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">SOP</a></li>
             <li><a href="#workshop-summary" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Workshop Summary</a></li>
             <li><a href="#upload-media" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Upload Media</a></li>
@@ -207,6 +208,76 @@
             </div>
         </div>
 
+        <!-- Coordinator Summary Tab -->
+        <div id="coordinator-summary" class="tab-content">
+            <h3 class="text-xl font-semibold mb-4">Workshop Summary for <%= coordinator.name %></h3>
+            <div class="overflow-x-auto">
+                <table id="coordinatorSummaryTable" class="min-w-full bg-white shadow-md rounded-lg">
+                    <thead class="bg-gray-700 text-white">
+                        <tr>
+                            <th class="py-3 px-4 text-left" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                            <th class="py-3 px-4 text-left">Date</th>
+                            <th class="py-3 px-4 text-left">Day</th>
+                            <th class="py-3 px-4 text-left">Trainer Name</th>
+                            <th class="py-3 px-4 text-left">Time Slot</th>
+                            <th class="py-3 px-4 text-left">Trainer Occupied</th>
+                            <th class="py-3 px-4 text-left">School Confirmed?</th>
+                            <th class="py-3 px-4 text-left">Status</th>
+                            <th class="py-3 px-4 text-left">Materials Sent?</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% 
+                            // Combine approved and completed schools
+                            const allSchools = [
+                                ...schools.map(s => ({ ...s, source: 'approved' })),
+                                ...completedSchools.map(s => ({
+                                    id: s.id,
+                                    name: s.name,
+                                    eventDate: s.eventDate || 'Not set',
+                                    trainerId1: s.trainerId1 || null,
+                                    trainerId2: s.trainerId2 || null,
+                                    workshopStartTime: s.workshopStartTime || null,
+                                    workshopEndTime: s.workshopEndTime || null,
+                                    resourcesConfirmed: s.resourcesConfirmed || false,
+                                    coordinatorId: s.coordinatorId || coordinator.id,
+                                    status: 'completed',
+                                    source: 'completed'
+                                }))
+                            ].filter(s => s.coordinatorId === coordinator.id);
+                        %>
+                        <% if (allSchools.length > 0) { %>
+                            <% allSchools.forEach(school => { %>
+                                <tr class="border-b">
+                                    <td class="py-3 px-4" data-column="schoolName"><%= school.name %></td>
+                                    <td class="py-3 px-4"><%= school.eventDate !== 'Not set' ? school.eventDate : 'Not assigned' %></td>
+                                    <td class="py-3 px-4"><%= school.eventDate !== 'Not set' ? new Date(school.eventDate).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' }) : 'N/A' %></td>
+                                    <td class="py-3 px-4">
+                                        <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
+                                        <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
+                                        <%= trainer1 ? trainer1.name : 'Not Assigned' %><%= trainer2 ? ', ' + trainer2.name : '' %>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <% if (school.workshopStartTime && school.workshopEndTime) { %>
+                                            <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
+                                        <% } else { %>
+                                            Not Assigned
+                                        <% } %>
+                                    </td>
+                                    <td class="py-3 px-4"><%= (school.trainerId1 || school.trainerId2) ? 'Yes' : 'No' %></td>
+                                    <td class="py-3 px-4"><%= school.source === 'approved' ? 'Yes' : 'Yes (Completed)' %></td>
+                                    <td class="py-3 px-4"><%= school.status.charAt(0).toUpperCase() + school.status.slice(1) %></td>
+                                    <td class="py-3 px-4"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr><td colspan="9" class="py-3 px-4 text-center">No workshops assigned to you.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- SOP Tab -->
         <div id="sop" class="tab-content">
             <h3 class="text-xl font-semibold mb-4">Standard Operating Procedure</h3>
@@ -221,7 +292,7 @@
         <!-- Workshop Summary Tab -->
         <div id="workshop-summary" class="tab-content">
             <h3 class="text-xl font-semibold mb-4">Being Lawful Workshop Summary Form</h3>
-            <form method="POST" action="/submit-workshop-summary" class="space-y-6 bg-white p-6 rounded-lg shadow-md">
+            <form method="POST" action="/submit-workshop-summary" id="workshopSummaryForm" class="space-y-6 bg-white p-6 rounded-lg shadow-md">
                 <p class="text-sm text-gray-600 italic">To be filled by Coordinator</p>
 
                 <!-- School Details -->
@@ -337,45 +408,6 @@
                     </div>
                 </div>
 
-                <!-- Central Office Use Only -->
-                <div>
-                    <h4 class="text-lg font-medium mb-2">Central Office Use Only</h4>
-                    <div class="grid grid-cols-1 gap-4">
-                        <div>
-                            <label for="feedbackFormsReceived" class="block text-sm font-medium text-gray-700">No. of Feedback Forms Received</label>
-                            <input type="number" id="feedbackFormsReceived" name="feedbackFormsReceived" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="kitPaymentReceived" class="block text-sm font-medium text-gray-700">Kit Payment Received</label>
-                            <input type="text" id="kitPaymentReceived" name="kitPaymentReceived" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="trainerRemunerationReceived" class="block text-sm font-medium text-gray-700">Trainer Remuneration Received</label>
-                            <input type="text" id="trainerRemunerationReceived" name="trainerRemunerationReceived" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="centralPaymentMode" class="block text-sm font-medium text-gray-700">Payment Mode</label>
-                            <input type="text" id="centralPaymentMode" name="centralPaymentMode" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="receivedBy" class="block text-sm font-medium text-gray-700">Received By (Name)</label>
-                            <input type="text" id="receivedBy" name="receivedBy" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="centralSignature" class="block text-sm font-medium text-gray-700">Signature</label>
-                            <input type="text" id="centralSignature" name="centralSignature" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="centralDate" class="block text-sm font-medium text-gray-700">Date</label>
-                            <input type="date" id="centralDate" name="centralDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="centralPlace" class="block text-sm font-medium text-gray-700">Place</label>
-                            <input type="text" id="centralPlace" name="centralPlace" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                    </div>
-                </div>
-
                 <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Submit Form</button>
             </form>
         </div>
@@ -408,10 +440,198 @@
                 const targetTab = this.getAttribute('href').substring(1);
                 document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
                 document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
-                document.getElementById(targetTab).classList.add('active');
+                document.querySelector(`#${targetTab}`).classList.add('active');
                 this.classList.add('active');
             });
         });
+
+        // Initialize filters for tables
+        function initializeFilters(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) {
+                console.warn(`Table with ID ${tableId} not found`);
+                return;
+            }
+            const headers = table.querySelectorAll('th[data-filter]');
+            const rows = table.querySelectorAll('tbody tr');
+
+            headers.forEach(header => {
+                const column = header.dataset.filter;
+                const select = header.querySelector('.filter-select');
+                if (!select) {
+                    console.warn(`Filter select not found for column ${column} in table ${tableId}`);
+                    return;
+                }
+
+                const values = new Set(['All']);
+                rows.forEach(row => {
+                    const cell = row.querySelector(`td[data-column="${column}"]`);
+                    if (cell) {
+                        let cellText = cell.textContent.trim();
+                        if (cellText && !values.has(cellText)) {
+                            values.add(cellText);
+                        }
+                    }
+                });
+
+                select.innerHTML = '';
+                let isAllSet = false;
+                [...values].sort().forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    if (value === 'All' && !isAllSet) {
+                        option.selected = true;
+                        isAllSet = true;
+                    }
+                    select.appendChild(option);
+                });
+
+                select.addEventListener('change', () => applyFilters(tableId));
+            });
+        }
+
+        // Apply filters to tables
+        function applyFilters(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) {
+                console.warn(`Table with ID ${tableId} not found`);
+                return;
+            }
+            const rows = table.querySelectorAll('tbody tr');
+            const filters = {};
+
+            table.querySelectorAll('.filter-select').forEach(select => {
+                filters[select.dataset.column] = select.value.trim();
+            });
+
+            rows.forEach(row => {
+                let show = true;
+                for (const [column, value] of Object.entries(filters)) {
+                    if (value && value !== 'All' && value !== '') {
+                        const cell = row.querySelector(`td[data-column="${column}"]`);
+                        if (cell) {
+                            let cellText = cell.textContent.trim();
+                            if (cellText !== value) {
+                                show = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        // Validate Workshop Summary form
+        function validateWorkshopForm(form) {
+            const requiredFields = form.querySelectorAll('input[required], textarea[required]');
+            let isValid = true;
+            let errorMessage = '';
+
+            // Check text inputs and textareas
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    errorMessage = `Please fill in the ${field.name} field.`;
+                    field.classList.add('border-red-500');
+                } else {
+                    field.classList.remove('border-red-500');
+                }
+            });
+
+            // Check radio buttons (financialStatus)
+            const financialStatus = form.querySelector('input[name="financialStatus"]:checked');
+            if (!financialStatus) {
+                isValid = false;
+                errorMessage = 'Please select a Financial Status.';
+                form.querySelectorAll('input[name="financialStatus"]').forEach(radio => {
+                    radio.classList.add('border-red-500');
+                });
+            } else {
+                form.querySelectorAll('input[name="financialStatus"]').forEach(radio => {
+                    radio.classList.remove('border-red-500');
+                });
+            }
+
+            // Check checkbox (coordinatorDeclaration)
+            const coordinatorDeclaration = form.querySelector('#coordinatorDeclaration');
+            if (!coordinatorDeclaration.checked) {
+                isValid = false;
+                errorMessage = 'Please confirm the Coordinator Declaration.';
+                coordinatorDeclaration.classList.add('border-red-500');
+            } else {
+                coordinatorDeclaration.classList.remove('border-red-500');
+            }
+
+            if (!isValid) {
+                alert(errorMessage);
+            }
+
+            return isValid;
+        }
+
+        // Window onload for initialization
+        window.onload = function () {
+            // Open the default tab
+            document.querySelector('.tab-link[href="#dashboard"]').click();
+
+            // Initialize filters for tables
+            const tableIds = ['coordinatorSummaryTable'];
+            tableIds.forEach(tableId => {
+                const table = document.getElementById(tableId);
+                if (table) {
+                    initializeFilters(tableId);
+                } else {
+                    console.warn(`Table with ID ${tableId} not found`);
+                }
+            });
+
+            // Handle Workshop Summary form submission
+            const workshopForm = document.querySelector('#workshopSummaryForm');
+            if (workshopForm) {
+                workshopForm.addEventListener('submit', async function (e) {
+                    e.preventDefault();
+                    const form = this;
+
+                    // Validate form before submission
+                    if (!validateWorkshopForm(form)) {
+                        return;
+                    }
+
+                    const formData = new FormData(form);
+                    try {
+                        const response = await fetch('/submit-workshop-summary', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        // Check if response is JSON
+                        const contentType = response.headers.get('content-type');
+                        let result;
+                        if (contentType && contentType.includes('application/json')) {
+                            result = await response.json();
+                        } else {
+                            throw new Error('Server did not return a JSON response');
+                        }
+
+                        if (response.ok) {
+                            alert(result.message || 'Workshop Summary form submitted successfully!');
+                            form.reset();
+                            // Optionally, redirect or refresh the page
+                            window.location.href = '/coordinator-dashboard?success=' + encodeURIComponent(result.message || 'Workshop Summary submitted');
+                        } else {
+                            alert(result.error || 'Failed to submit Workshop Summary form.');
+                        }
+                    } catch (err) {
+                        console.error('Error submitting form:', err);
+                        alert(`Error submitting Workshop Summary form: ${err.message}`);
+                    }
+                });
+            } else {
+                console.warn('Workshop Summary form not found');
+            }
+        };
 
         // Status update logic
         document.querySelectorAll('.update-status-form').forEach(form => {
@@ -420,7 +640,7 @@
                 const id = this.getAttribute('data-id');
                 const status = this.querySelector('select[name="status"]').value;
                 const action = this.getAttribute('action');
-                console.log(`Submitting status update: id=${id}, status=${status}, action=${action}`); // Debugging log
+                console.log(`Submitting status update: id=${id}, status=${status}, action=${action}`);
 
                 try {
                     const response = await fetch(action, {
@@ -497,29 +717,6 @@
             } catch (err) {
                 console.error('Error:', err);
                 alert('Error uploading Excel file.');
-            }
-        });
-
-        // Handle Workshop Summary form submission
-        document.querySelector('#workshop-summary form').addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const form = this;
-            const formData = new FormData(form);
-            try {
-                const response = await fetch('/submit-workshop-summary', {
-                    method: 'POST',
-                    body: formData
-                });
-                const result = await response.json();
-                if (response.ok) {
-                    alert(result.message || 'Workshop Summary form submitted successfully!');
-                    form.reset();
-                } else {
-                    alert(result.error || 'Failed to submit Workshop Summary form.');
-                }
-            } catch (err) {
-                console.error('Error:', err);
-                alert('Error submitting Workshop Summary form.');
             }
         });
     </script>

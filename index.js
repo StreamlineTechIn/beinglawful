@@ -8,26 +8,26 @@ const nodemailer = require('nodemailer');
 const schedule = require('node-schedule');
 require('dotenv').config();
 const multer = require('multer');
-const xlsx = require('xlsx');
+
 
 // Multer setup for file uploads
-// Multer setup for Excel file uploads
-const storage = multer.memoryStorage();
-const upload = multer({
+const storage = multer.memoryStorage();const upload = multer({
     storage: storage,
     limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
     fileFilter: (req, file, cb) => {
-        const allowedTypes = [
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.ms-excel'
-        ];
-        if (allowedTypes.includes(file.mimetype)) {
+        const allowedTypes = ['image/', 'video/', 'application/pdf'];
+        if (allowedTypes.some(type => file.mimetype.startsWith(type))) {
             cb(null, true);
         } else {
-            cb(new Error('Only Excel files (.xlsx, .xls) are allowed'), false);
+            cb(new Error('Only images, videos, and PDF files are allowed'), false);
         }
     }
-}).single('excelFile');
+}).fields([
+    { name: 'photos', maxCount: 10 },
+    { name: 'videos', maxCount: 5 },
+    { name: 'pdfs', maxCount: 5 } 
+    
+]);
 const uploadImages = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   storage: multer.memoryStorage()
@@ -101,9 +101,12 @@ try {
         universe_domain: "googleapis.com"
     };
 
+   const bucketName = process.env.FIREBASE_STORAGE_BUCKET || 'beinglawful-ee5a4.firebasestorage.app';
+    console.log('Attempting to initialize Firebase with bucket:', bucketName);
+
     admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
-        storageBucket: process.env.FIREBASE_STORAGE_BUCKET || 'beinglawful-ee5a4.appspot.com'
+        storageBucket: bucketName
     });
     db = admin.firestore();
     bucket = admin.storage().bucket(); // Moved inside try block after initialization
@@ -120,31 +123,31 @@ app.use(express.static(path.join(__dirname, '.')));
 
 // Hardcoded admin credentials
 const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'admin12345';
+const ADMIN_PASSWORD = 'admin123';
 
 // Email setup
-// const transporter = nodemailer.createTransport({
-//     host: 'smtp-mail.outlook.com',
-//     port: 587,
-//     secure: false, // Use STARTTLS
-//     auth: {
-//         user: process.env.EMAIL_USER,
-//         pass: process.env.EMAIL_PASS
-//     },
-//     tls: {
-//         // Remove ciphers: 'SSLv3'
-//         // Optionally specify modern TLS versions if needed
-//         minVersion: 'TLSv1.2' // Ensure TLS 1.2 or higher
-//     }
-// });
+const transporter = nodemailer.createTransport({
+    host: 'smtp-mail.outlook.com',
+    port: 587,
+    secure: false, // Use STARTTLS
+    auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASS
+    },
+    tls: {
+        // Remove ciphers: 'SSLv3'
+        // Optionally specify modern TLS versions if needed
+        minVersion: 'TLSv1.2' // Ensure TLS 1.2 or higher
+    }
+});
 
-// transporter.verify(function (error, success) {
-//     if (error) {
-//         console.log('SMTP Verify Error:', error);
-//     } else {
-//         console.log('SMTP Connection Success ✅ Ready to send emails');
-//     }
-// });
+transporter.verify(function (error, success) {
+    if (error) {
+        console.log('SMTP Verify Error:', error);
+    } else {
+        console.log('SMTP Connection Success ✅ Ready to send emails');
+    }
+});
 // Email templates
 const emailTemplates = {
     schoolRegistration: {
@@ -556,7 +559,6 @@ app.post('/student-login', async (req, res) => {
     }
 });
 
-
     // Dashboard (renders dashboard.ejs)
  app.get('/dashboard/:parentMobile1', requireStudentAuth, checkEventDate, async (req, res) => {
     try {
@@ -897,163 +899,248 @@ app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (r
     }
 });
     //student dashboard upload media
-   app.post('/student-dashboard/upload-media', upload, async (req, res) => {
-    try {
-        const { parentMobile1, mediaDescription, mediaLink } = req.body;
-        const photos = req.files['photos'] || [];
-        const videos = req.files['videos'] || [];
 
-        if (!parentMobile1) {
-            return res.status(400).send('Parent Mobile Number is required.');
-        }
+//POST Route: Handle media uploads with console logging
+app.post('/student-dashboard/upload-media', upload, async (req, res) => {
+  const parentMobile1 = req.body.parentMobile1 || '';
 
-        const participantSnapshot = await db.collection('participants')
-            .where('parentMobile1', '==', parentMobile1)
-            .get();
+  try {
+    const { mediaDescription, mediaLink } = req.body;
+    const photos = req.files['photos'] || [];
+    const videos = req.files['videos'] || [];
 
-        if (participantSnapshot.empty) {
-            return res.status(404).send('Student not found.');
-        }
+    // Log received files
+    console.log('Received files:', { photos: photos.length, videos: videos.length });
 
-        const participantId = participantSnapshot.docs[0].id;
-        const participantData = participantSnapshot.docs[0].data();
-
-        if (mediaDescription && mediaDescription.length > 1000) {
-            return res.status(400).send('Media description cannot exceed 1000 words.');
-        }
-
-        const bucket = admin.storage().bucket('beinglawful-ee5a4.appspot.com');
-        const mediaUploads = [];
-
-        for (const file of photos) {
-            const fileName = `studentMedia/${participantId}/photos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
-
-            await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
-            const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-
-            mediaUploads.push({
-                url,
-                type: 'image',
-                path: fileName,
-                description: mediaDescription || '',
-                link: mediaLink || '',
-                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-        }
-
-        for (const file of videos) {
-            const fileName = `studentMedia/${participantId}/videos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
-
-            await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
-            const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-
-            mediaUploads.push({
-                url,
-                type: 'video',
-                path: fileName,
-                description: mediaDescription || '',
-                link: mediaLink || '',
-                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-        }
-
-        if (mediaUploads.length > 0) {
-            const batch = db.batch();
-            mediaUploads.forEach(upload => {
-                const mediaRef = db.collection('participants').doc(participantId).collection('mediaUploads').doc();
-                batch.set(mediaRef, upload);
-            });
-            await batch.commit();
-        }
-
-        const uploadedMediaSnapshot = await db.collection('participants').doc(participantId).collection('mediaUploads').orderBy('uploadedAt', 'desc').get();
-        const allUploadedMedia = uploadedMediaSnapshot.docs.map(doc => doc.data());
-
-        const updatedUser = (await db.collection('participants').doc(participantId).get()).data();
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
-
-        res.render('dashboard', {
-            studentName: updatedUser.studentName || 'Unknown Student',
-            parentMobile1,
-            hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
-            hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
-            hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
-            mcqs: updatedUser.currentMcqs || [],
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate,
-            isOnOrAfterEventDate,
-            eventDateMissing,
-            eventDate,
-            showResults: updatedUser.hasCompletedMCQ || false,
-            score: updatedUser.score || 0,
-            totalQuestions: updatedUser.totalQuestions || 30,
-            percentage: updatedUser.percentage || 0,
-            mediaUploads: allUploadedMedia,
-            error: null
-        });
-
-    } catch (error) {
-        console.error('Error uploading media:', error);
-        res.status(500).send(`Error uploading media: ${error.message}`);
+    // Validate parentMobile1
+    if (!parentMobile1) {
+      return res.status(400).send('Parent Mobile Number is required.');
     }
-});
 
+    // Query participant
+    const participantSnapshot = await db.collection('participants')
+      .where('parentMobile1', '==', parentMobile1)
+      .get();
+
+    if (participantSnapshot.empty) {
+      return res.status(404).send('Student not found.');
+    }
+
+    const participantId = participantSnapshot.docs[0].id;
+    const participantData = participantSnapshot.docs[0].data();
+
+    // Validate media description
+    if (mediaDescription && mediaDescription.length > 1000) {
+      return res.status(400).send('Media description cannot exceed 1000 characters.');
+    }
+
+    const mediaUploads = [];
+
+    // Upload photos with console logging
+    for (const file of photos) {
+      const fileName = `studentMedia/${participantId}/photos/${Date.now()}_${file.originalname}`;
+      const fileUpload = bucket.file(fileName);
+
+      await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
+      const [url] = await fileUpload.getSignedUrl({
+        action: 'read',
+        expires: new Date('2026-03-09')
+      });
+
+      // Log image upload details
+      console.log('Image uploaded successfully:', {
+        fileName: file.originalname,
+        size: file.buffer.length,
+        mimeType: file.mimetype,
+        url,
+        uploadedAt: new Date().toISOString()
+      });
+
+      mediaUploads.push({
+        url,
+        type: 'image',
+        path: fileName,
+        description: mediaDescription || '',
+        link: mediaLink || '',
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    // Upload videos
+    for (const file of videos) {
+      const fileName = `studentMedia/${participantId}/videos/${Date.now()}_${file.originalname}`;
+      const fileUpload = bucket.file(fileName);
+
+      await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
+      const [url] = await fileUpload.getSignedUrl({
+        action: 'read',
+        expires: new Date('2026-03-09')
+      });
+
+      console.log('Video uploaded successfully:', {
+        fileName: file.originalname,
+        size: file.buffer.length,
+        mimeType: file.mimetype,
+        url,
+        uploadedAt: new Date().toISOString()
+      });
+
+      mediaUploads.push({
+        url,
+        type: 'video',
+        path: fileName,
+        description: mediaDescription || '',
+        link: mediaLink || '',
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    // Save to Firestore
+    if (mediaUploads.length > 0) {
+      const batch = db.batch();
+      mediaUploads.forEach(upload => {
+        const mediaRef = db.collection('participants').doc(participantId).collection('mediaUploads').doc();
+        batch.set(mediaRef, upload);
+      });
+      await batch.commit();
+      console.log(`Saved ${mediaUploads.length} media items to Firestore for participant: ${participantId}`);
+
+      // Update hasUploadedMedia field
+      await db.collection('participants').doc(participantId).update({
+        hasUploadedMedia: true
+      });
+    }
+
+    // Fetch updated media
+    const uploadedMediaSnapshot = await db.collection('participants').doc(participantId).collection('mediaUploads').orderBy('uploadedAt', 'desc').get();
+    const allUploadedMedia = uploadedMediaSnapshot.docs.map(doc => doc.data());
+
+    const updatedUser = (await db.collection('participants').doc(participantId).get()).data();
+    const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+
+    res.render('dashboard', {
+      studentName: updatedUser.studentName || 'Unknown Student',
+      parentMobile1,
+      hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
+      hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
+      hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
+      mcqs: updatedUser.currentMcqs || [],
+      trial1: trialTests.trial1 || [],
+      trial2: trialTests.trial2 || [],
+      isEventDate,
+      isOnOrAfterEventDate,
+      eventDateMissing,
+      eventDate,
+      showResults: updatedUser.hasCompletedMCQ || false,
+      score: updatedUser.score || 0,
+      totalQuestions: updatedUser.totalQuestions || 30,
+      percentage: updatedUser.percentage || 0,
+      mediaUploads: allUploadedMedia,
+      showMediaSection: updatedUser.hasCompletedMCQ && (isOnOrAfterEventDate || eventDateMissing),
+      isChampion: updatedUser.isChampion || false,
+      championMessage: updatedUser.championMessage || 'Selected as champion for Being Lawful',
+      hasCompletedRegistration: updatedUser.hasCompletedRegistration || false,
+      hasCertificate: updatedUser.hasCertificate || false,
+      hasAttendedWorkshop: updatedUser.hasAttendedWorkshop || false,
+      hasUploadedMedia: updatedUser.hasUploadedMedia || false,
+      isJudiciarySelected: updatedUser.isJudiciarySelected || false,
+      isStateFelicitated: updatedUser.isStateFelicitated || false,
+      error: null
+    });
+  } catch (error) {
+    console.error('Error uploading media:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack,
+      parentMobile1
+    });
+    res.render('dashboard', {
+      studentName: 'Unknown Student',
+      parentMobile1,
+      hasCompletedMCQ: false,
+      hasCompletedTrial1: false,
+      hasCompletedTrial2: false,
+      mcqs: [],
+      trial1: [],
+      trial2: [],
+      isEventDate: false,
+      isOnOrAfterEventDate: false,
+      eventDateMissing: true,
+      eventDate: 'N/A',
+      showResults: false,
+      score: 0,
+      totalQuestions: 30,
+      percentage: 0,
+      mediaUploads: [],
+      showMediaSection: false,
+      isChampion: false,
+      championMessage: '',
+      hasCompletedRegistration: false,
+      hasCertificate: false,
+      hasAttendedWorkshop: false,
+      hasUploadedMedia: false,
+      isJudiciarySelected: false,
+      isStateFelicitated: false,
+      error: `Error uploading media: ${error.message}`
+    });
+  }
+});
+// GET Route: Display media upload page
 app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, async (req, res) => {
-    try {
-        const { parentMobile1 } = req.params;
-        const user = res.locals.user;
+  try {
+    const { parentMobile1 } = req.params;
+    const user = res.locals.user;
 
-        const participantSnapshot = await db.collection('participants')
-            .where('parentMobile1', '==', parentMobile1)
-            .get();
+    const participantSnapshot = await db.collection('participants')
+      .where('parentMobile1', '==', parentMobile1)
+      .get();
 
-        if (participantSnapshot.empty) {
-            return res.status(404).send('Student not found.');
-        }
-
-        const participantDocId = participantSnapshot.docs[0].id;
-        const participantData = participantSnapshot.docs[0].data();
-
-        const mediaSnapshot = await db.collection('participants')
-            .doc(participantDocId)
-            .collection('mediaUploads')
-            .orderBy('uploadedAt', 'desc')
-            .get();
-
-        const participantMediaUploads = mediaSnapshot.docs.map(doc => doc.data());
-
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(participantData.schoolNameDropdown || '');
-
-        res.render('dashboard', {
-            studentName: participantData.studentName || 'Unknown Student',
-            parentMobile1,
-            hasCompletedMCQ: participantData.hasCompletedMCQ || false,
-            hasCompletedTrial1: participantData.hasCompletedTrial1 || false,
-            hasCompletedTrial2: participantData.hasCompletedTrial2 || false,
-            mcqs: participantData.currentMcqs || [],
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate,
-            isOnOrAfterEventDate,
-            eventDateMissing,
-            eventDate,
-            showResults: participantData.hasCompletedMCQ || false,
-            score: participantData.score || 0,
-            totalQuestions: participantData.totalQuestions || 30,
-            percentage: participantData.percentage || 0,
-            mediaUploads: participantMediaUploads,
-            showMediaSection: true
-        });
-
-    } catch (error) {
-        console.error('Error loading media upload page:', error);
-        res.redirect('/dashboard/' + req.params.parentMobile1);
+    if (participantSnapshot.empty) {
+      return res.status(404).send('Student not found.');
     }
-});
 
+    const participantDocId = participantSnapshot.docs[0].id;
+    const participantData = participantSnapshot.docs[0].data();
+
+    const mediaSnapshot = await db.collection('participants')
+      .doc(participantDocId)
+      .collection('mediaUploads')
+      .orderBy('uploadedAt', 'desc')
+      .get();
+
+    const participantMediaUploads = mediaSnapshot.docs.map(doc => doc.data());
+
+    const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(participantData.schoolNameDropdown || '');
+
+    res.render('dashboard', {
+      studentName: participantData.studentName || 'Unknown Student',
+      parentMobile1,
+      hasCompletedMCQ: participantData.hasCompletedMCQ || false,
+      hasCompletedTrial1: participantData.hasCompletedTrial1 || false,
+      hasCompletedTrial2: participantData.hasCompletedTrial2 || false,
+      mcqs: participantData.currentMcqs || [],
+      trial1: trialTests.trial1,
+      trial2: trialTests.trial2,
+      isEventDate,
+      isOnOrAfterEventDate,
+      eventDateMissing,
+      eventDate,
+      showResults: participantData.hasCompletedMCQ || false,
+      score: participantData.score || 0,
+      totalQuestions: participantData.totalQuestions || 30,
+      percentage: participantData.percentage || 0,
+      mediaUploads: participantMediaUploads,
+      showMediaSection: true
+    });
+  } catch (error) {
+    console.error('Error loading media upload page:', {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+    res.redirect('/dashboard/' + req.params.parentMobile1);
+  }
+});
 
 // Certificate (renders certificate.ejs)
     app.get('/certificate/:parentMobile1', requireStudentAuth, async (req, res) => {
@@ -1223,7 +1310,6 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
             res.status(500).send('Error assigning event date.');
         }
     });
-
 // Upload multiple images one by one to the specified path
 app.post('/upload-image', requireAdmin, uploadImages, async (req, res) => {
   try {
@@ -2168,6 +2254,7 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
     }
 });
 
+
 // Participation form (renders participation.ejs)
     app.get('/participation', async (req, res) => {
         try {
@@ -2526,22 +2613,51 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
         });
 
         // Admin dashboard (renders adminDashboard.ejs)
-app.get('/admin-dashboard', requireAdmin, async (req, res) => {
+ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
     try {
         console.log('---- Admin Dashboard Route Triggered ----');
 
-        // Define formatTime
-        const formatTime = (timestamp) => {
-            if (!timestamp) return null;
-            const dateObj = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
-            return dateObj.toLocaleTimeString('en-IN', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-            });
+        // ✅ Updated formatTime to handle HH:mm strings
+        const formatTime = (timeInput) => {
+            if (!timeInput) return null;
+
+            // Handle Firestore Timestamp
+            if (timeInput.toDate) {
+                const dateObj = timeInput.toDate();
+                return dateObj.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                });
+            }
+
+            // Handle HH:mm string format
+            const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+            if (typeof timeInput === 'string' && timeRegex.test(timeInput)) {
+                const [hours, minutes] = timeInput.split(':').map(Number);
+                const date = new Date();
+                date.setHours(hours, minutes);
+                return date.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                });
+            }
+
+            // Handle full date strings or other formats
+            const dateObj = new Date(timeInput);
+            if (!isNaN(dateObj.getTime())) {
+                return dateObj.toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true,
+                });
+            }
+
+            return null; // Return null for invalid inputs
         };
 
-        // Parse Filters
+        // 1️⃣ Parse Filters
         const filters = {
             schoolApproved: req.query.schoolApproved || '',
             schoolCity: req.query.schoolCity || '',
@@ -2549,14 +2665,14 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             trainerCity: req.query.trainerCity || '',
             studentCompleted: req.query.studentCompleted || '',
             studentCity: req.query.studentCity || '',
-            workshopCompleted: req.query.workshopCompleted || ''
+            workshopCompleted: req.query.workshopCompleted || '',
         };
 
-        // Fetch Schools + School Media
+        // 2️⃣ Fetch Schools + School Media
         let schoolsQuery = db.collection('schools');
         if (filters.schoolApproved) schoolsQuery = schoolsQuery.where('isApproved', '==', filters.schoolApproved === 'true');
         if (filters.schoolCity) schoolsQuery = schoolsQuery.where('city', '==', filters.schoolCity);
-        if (filters.workshopCompleted) schoolsQuery = schoolsQuery.where('workshopCompleted', '==', filters.workshopCompleted === 'true');
+        if (filters.workshopCompleted) schoolsQuery = schoolsQuery.where('isCompleted', '==', filters.workshopCompleted === 'true');
 
         const schoolsSnapshot = await schoolsQuery.get();
         const schools = [];
@@ -2565,6 +2681,8 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
         for (const doc of schoolsSnapshot.docs) {
             const schoolData = doc.data();
             const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
+
+            // ✅ Apply formatting to times
             const workshopStartTime = formatTime(schoolData.workshopStartTime);
             const workshopEndTime = formatTime(schoolData.workshopEndTime);
 
@@ -2572,12 +2690,15 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
                 db.collection('schools').doc(doc.id).collection('mediaUploads').get()
                     .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
                         ...mediaDoc.data(),
+                        id: mediaDoc.id,
                         uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                        uploadedBy: schoolData.schoolName || 'Unknown School'
-                    })))
+                        uploadedBy: schoolData.schoolName || 'Unknown School',
+                        uploaderType: 'School',
+                    }))
+                )
             );
 
-            let trainer1 = null, trainer2 = null, coordinator = null;
+            let trainer1 = null, trainer2 = null;
             if (schoolData.trainerId1) {
                 const t1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
                 if (t1Doc.exists) trainer1 = { id: t1Doc.id, ...t1Doc.data() };
@@ -2586,24 +2707,21 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
                 const t2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
                 if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
             }
-            if (schoolData.coordinatorId) {
-                const coordDoc = await db.collection('coordinators').doc(schoolData.coordinatorId).get();
-                if (coordDoc.exists) coordinator = { id: coordDoc.id, ...coordDoc.data() };
-            }
 
             schools.push({
                 id: doc.id,
                 ...schoolData,
                 eventDate,
-                workshopStartTime,
-                workshopEndTime,
+                workshopStartTime, // ⏰ Formatted time
+                workshopEndTime,   // ⏰ Formatted time
                 trainer1,
                 trainer2,
-                coordinator
+                eventDates: schoolData.eventDates || [],
+                selectedResources: schoolData.resources || [],
             });
         }
 
-        // Fetch Trainers + Trainer Media
+        // 3️⃣ Fetch Trainers + Trainer Media
         let trainersQuery = db.collection('trainers');
         if (filters.trainerApproved) trainersQuery = trainersQuery.where('isApproved', '==', filters.trainerApproved === 'true');
         if (filters.trainerCity) trainersQuery = trainersQuery.where('city', '==', filters.trainerCity);
@@ -2618,28 +2736,23 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
                 db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
                     .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
                         ...mediaDoc.data(),
+                        id: mediaDoc.id,
                         uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                        uploadedBy: data.trainerName || 'Unknown Trainer'
-                    })))
+                        uploadedBy: data.trainerName || 'Unknown Trainer',
+                        uploaderType: 'Trainer',
+                    }))
+                )
             );
 
             trainers.push({
                 id: doc.id,
                 ...data,
                 registeredAt: data.registeredAt?.toDate ? data.registeredAt.toDate() : (data.registeredAt ? new Date(data.registeredAt) : null),
-                isApproved: typeof data.isApproved === 'boolean' ? data.isApproved : false
+                isApproved: typeof data.isApproved === 'boolean' ? data.isApproved : false,
             });
         }
 
-        // Fetch Coordinators
-        const coordinatorsSnapshot = await db.collection('coordinators').get();
-        const coordinators = coordinatorsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() || null
-        }));
-
-        // Fetch Participants
+        // 4️⃣ Fetch Participants
         let participantsQuery = db.collection('participants');
         if (filters.studentCompleted) participantsQuery = participantsQuery.where('hasCompletedMCQ', '==', filters.studentCompleted === 'true');
         if (filters.studentCity) participantsQuery = participantsQuery.where('city', '==', filters.studentCity);
@@ -2671,27 +2784,16 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
                 trial1CorrectAnswers: Number(data.trial1CorrectAnswers) || null,
                 trial1WrongAnswers: Number(data.trial1WrongAnswers) || null,
                 trial2CorrectAnswers: Number(data.trial2CorrectAnswers) || null,
-                trial2WrongAnswers: Number(data.trial2WrongAnswers) || null
+                trial2WrongAnswers: Number(data.trial2WrongAnswers) || null,
             };
         });
 
-        // Fetch Call Logs
-        const callLogsSnapshot = await db.collection('callLogs').get();
-        const callLogs = callLogsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                ...data,
-                callDate: data.callDate?.toDate ? data.callDate.toDate() : (data.callDate ? new Date(data.callDate) : null)
-            };
-        });
-
-        // Fetch Media Uploads
+        // 5️⃣ Combine Media Uploads
         const schoolMedia = (await Promise.all(schoolMediaPromises)).flat();
         const trainerMedia = (await Promise.all(trainerMediaPromises)).flat();
         const mediaUploads = [...schoolMedia, ...trainerMedia].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
 
-        // Calculate Students Today and Average Score
+        // 6️⃣ Calculate Metrics for Today
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
@@ -2713,28 +2815,26 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             console.error('🔥 Firestore Index Error:', indexErr.message);
         }
 
-        // Fetch Trainer Zips
+        // 7️⃣ Fetch Trainer Zips
         const zipSnapshot = await db.collection('trainerZips').get();
         const zips = zipSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
-            uploadedAt: doc.data().uploadedAt?.toDate() || null
+            uploadedAt: doc.data().uploadedAt?.toDate() || null,
         }));
 
-        // Render Template
+        // 8️⃣ Render Dashboard
         res.render('adminDashboard', {
             schools,
             trainers,
-            coordinators, // Add coordinators
             participants,
-            callLogs,
             filters,
             studentsTodayCount,
             averageScore,
             zips,
             mediaUploads,
             error: null,
-            success: req.query.success || null
+            success: req.query.success || null,
         });
 
     } catch (err) {
@@ -2742,48 +2842,18 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
         res.render('adminDashboard', {
             schools: [],
             trainers: [],
-            coordinators: [], // Fallback for coordinators
             participants: [],
-            callLogs: [],
             filters: {},
             studentsTodayCount: 0,
             averageScore: 0,
             zips: [],
             mediaUploads: [],
             error: 'Failed to load dashboard data.',
-            success: null
+            success: null,
         });
     }
 });
-///admin/assign-coordinator/:schoolId
-app.post('/admin/assign-coordinator/:schoolId', requireAdmin, async (req, res) => {
-    try {
-        const schoolId = req.params.schoolId;
-        const { coordinatorId } = req.body;
 
-        if (!coordinatorId) {
-            return res.status(400).json({ message: 'Coordinator ID is required' });
-        }
-
-        // Verify coordinator exists
-        const coordinatorDoc = await db.collection('coordinators').doc(coordinatorId).get();
-        if (!coordinatorDoc.exists) {
-            return res.status(404).json({ message: 'Coordinator not found' });
-        }
-
-        // Update school with coordinatorId
-        await db.collection('schools').doc(schoolId).update({
-            coordinatorId,
-            updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        console.log(`Coordinator ${coordinatorId} assigned to school ${schoolId}`);
-        res.redirect('/admin-dashboard?success=Coordinator assigned successfully');
-    } catch (error) {
-        console.error('Error assigning coordinator:', error.message, error.stack);
-        res.redirect('/admin-dashboard?error=Failed to assign coordinator');
-    }
-});
     // Delete a participant by ID
     app.post('/admin-dashboard/delete-student/:id', requireAdmin, async (req, res) => {
         const participantId = req.params.id;
@@ -3946,12 +4016,11 @@ async function renderFormWithErrors(res, errors) {
 
 
     // logistic Dashboard route
-// Logistic Dashboard Route
-app.get('/logistic-dashboard', async (req, res) => {
+app.get("/logistic-dashboard", async (req, res) => {
   try {
     const snapshot = await db
-      .collection('schools')
-      .where('isApproved', '==', true)
+      .collection("schools")
+      .where("isApproved", "==", true)
       .get();
 
     const schools = [];
@@ -3962,18 +4031,15 @@ app.get('/logistic-dashboard', async (req, res) => {
 
       schools.push({
         id: doc.id,
-        name: data.schoolName || 'N/A',
-        civicsSirNumber: data.civicsTeacherNumber || 'N/A',
-        schoolPhoneNumber: data.schoolPhoneNumber || 'N/A',
-        principalNumber: data.principalNumber || 'N/A',
-        city: data.city || 'N/A',
-        district: data.district || 'N/A',
-        agency: data.agency || '',
-        deliveryMode: data.deliveryMode || 'pending',
-        deliveryNumber: data.deliveryNumber || '',
+        name: data.schoolName,
+       civicsSirNumber: data.civicsTeacherNumber,
+      schoolPhoneNumber: data.schoolPhoneNumber,
+    principalNumber: data.principalNumber,  
+        city: data.city,
+        district: data.district,
         rawEventDate: rawDate,
-        eventDate: rawDate ? rawDate.toLocaleDateString('en-IN') : 'N/A',
-        status: data.status || 'pending' // Use status field instead of isCompleted
+        eventDate: rawDate ? rawDate.toLocaleDateString("en-IN") : "N/A",
+        status: data.isCompleted ? "delivered" : "pending",
       });
     });
 
@@ -3984,64 +4050,26 @@ app.get('/logistic-dashboard', async (req, res) => {
       return a.rawEventDate - b.rawEventDate;
     });
 
-    res.render('logistic-dashboard', { schools });
+    res.render("logistic-dashboard", { schools });
   } catch (error) {
-    console.error('Error fetching school data:', error);
-    res.status(500).send('Internal Server Error');
-  }
-});
+    console.error("Error fetching school data:", error);
+    res.status(500).send("Internal Server Error");
+  } });
 
-// Update Delivery Details Route
-app.post('/update-delivery', async (req, res) => {
+
+// New POST route to update status
+app.post("/update-status", async (req, res) => {
+  const { id, status } = req.body;
+
   try {
-    const { id, deliveryMode, deliveryNumber, agency } = req.body;
-
-    // Validate inputs
-    if (!id) {
-      return res.status(400).send('School ID is required');
-    }
-    if (!['pending', 'by hand', 'post', 'train', 'bus', 'courier'].includes(deliveryMode)) {
-      return res.status(400).send('Invalid delivery mode');
-    }
-
-    // Prepare update data
-    const updateData = {
-      deliveryMode: deliveryMode || 'pending',
-      deliveryNumber: (deliveryMode === 'bus' || deliveryMode === 'train' || deliveryMode === 'post') ? (deliveryNumber || '') : '',
-      agency: agency || ''
-    };
-
-    await db.collection('schools').doc(id).update(updateData);
-    res.status(200).send('Delivery updated successfully');
-  } catch (error) {
-    console.error('Error updating delivery:', error);
-    res.status(500).send('Error updating delivery');
-  }
-});
-
-// Update Status Route
-app.post('/update-status', async (req, res) => {
-  try {
-    const { id, status } = req.body;
-
-    // Validate inputs
-    if (!id) {
-      return res.status(400).send('School ID is required');
-    }
-    if (!['pending', 'pack', 'delivered'].includes(status)) {
-      return res.status(400).send('Invalid status');
-    }
-
-    // Update status in Firestore
-    await db.collection('schools').doc(id).update({
+    await db.collection("schools").doc(id).update({
       status: status,
-      isCompleted: status === 'delivered' // Maintain compatibility with isCompleted
+      isCompleted: status === "delivered"
     });
-
-    res.status(200).send('Status updated successfully');
+    res.redirect("/logistic-dashboard");
   } catch (error) {
-    console.error('Error updating status:', error);
-    res.status(500).send('Error updating status');
+    console.error("Status update failed:", error);
+    res.status(500).send("Error updating status");
   }
 });
 
@@ -4133,6 +4161,8 @@ module.exports = {
   postPhotoToFacebook,
   postVideoToFacebook
 };
+
+
 
 //instagram routes
 
@@ -4237,313 +4267,6 @@ app.put('/update-description/:id', async (req, res) => {
     console.error('Error updating description:', err);
     res.status(500).json({ message: 'Internal Server Error' });
   }
-});
-// Register Coordinator Route
-app.post('/co-ordinator-register', async (req, res) => {
-    try {
-        // Same logic as /register-coordinator but with redirect
-        if (!req.body) {
-            return res.status(400).render('co-ordinator', { error: 'Request body is missing', success: null });
-        }
-
-        const { name, number, email, organization, password } = req.body;
-        // ... (same validation and Firestore logic as above) ...
-
-        await db.collection('coordinators').add({
-            name: name.trim(),
-            number: number.trim(),
-            email: email.trim(),
-            organization: organization.trim(),
-            password: await bcrypt.hash(password.trim(), saltRounds),
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-
-        res.redirect('/co-ordinator?success=Coordinator registered successfully');
-    } catch (error) {
-        res.status(500).render('co-ordinator', {
-            error: 'Something went wrong: ' + error.message,
-            success: null
-        });
-    }
-});
-// POST: Login coordinator
-app.get('/coordinator-dashboard', async (req, res) => {
-    if (!req.session.coordinator) {
-        return res.redirect('/login-coordinator');
-    }
-
-    try {
-        const coordinatorId = req.session.coordinator.id;
-        const trainerId = req.query.trainerId || null;
-
-        // Fetch approved schools
-        const approvedSnapshot = await db.collection('schools')
-            .where('isApproved', '==', true)
-            .get();
-
-        const schools = approvedSnapshot.docs.map(doc => {
-            const data = doc.data();
-            const eventDate = data.eventDate?.toDate ? data.eventDate.toDate() : (data.eventDate ? new Date(data.eventDate) : null);
-            return {
-                id: doc.id,
-                name: data.schoolName || 'N/A',
-                civicsSirNumber: data.civicsTeacherNumber || 'N/A',
-                schoolPhoneNumber: data.schoolPhoneNumber || 'N/A',
-                principalNumber: data.principalNumber || 'N/A',
-                city: data.city || 'N/A',
-                district: data.district || 'N/A',
-                eventDate: eventDate ? eventDate.toLocaleDateString('en-IN') : 'Not set',
-                status: data.status || 'pending'
-            };
-        }).sort((a, b) => {
-            if (!a.eventDate) return 1;
-            if (!b.eventDate) return -1;
-            return new Date(a.eventDate) - new Date(b.eventDate);
-        });
-
-        // Fetch visited schools (filtered by trainerId if provided)
-        let visitedQuery = db.collection('schools').where('status', '==', 'delivered');
-        if (trainerId) {
-            visitedQuery = visitedQuery.where('trainerId1', '==', trainerId);
-        }
-        const visitedSnapshot = await visitedQuery.get();
-
-        const visitedSchools = visitedSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                name: data.schoolName || 'N/A',
-                number: data.number || 'N/A',
-                email: data.email || 'N/A',
-                contactPerson: data.contactPerson || 'N/A'
-            };
-        });
-
-        // Fetch completed schools (filtered by trainerId if provided)
-        let completedQuery = db.collection('schools').where('isCompleted', '==', true);
-        if (trainerId) {
-            completedQuery = completedQuery.where('trainerId1', '==', trainerId);
-        }
-        const completedSnapshot = await completedQuery.get();
-
-        const completedSchools = completedSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                name: data.schoolName || 'N/A',
-                principalName: data.principalName || data.principalNumber || 'N/A',
-                schoolPhoneNumber: data.schoolPhoneNumber || 'N/A',
-                email: data.email || 'N/A',
-                contactPersonNumber: data.contactPersonNumber || data.principalNumber || 'N/A'
-            };
-        });
-
-        // Fetch trainers for filter dropdown
-        const trainersSnapshot = await db.collection('trainers').get();
-        const trainers = trainersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().trainerName || 'Unknown Trainer'
-        }));
-
-        res.render('coordinator-dashboard', {
-            coordinator: req.session.coordinator,
-            schools: schools,
-            visitedSchools: visitedSchools,
-            completedSchools: completedSchools,
-            trainers: trainers,
-            trainerId: trainerId,
-            error: req.query.error || null,
-            success: req.query.success || null
-        });
-    } catch (error) {
-        console.error('Error fetching schools:', error.message, error.stack);
-        res.status(500).render('coordinator-dashboard', {
-            coordinator: req.session.coordinator || {},
-            schools: [],
-            visitedSchools: [],
-            completedSchools: [],
-            trainers: [],
-            trainerId: null,
-            error: 'Failed to load schools data',
-            success: null
-        });
-    }
-});
-
-// Login Page Route
-app.get('/login-coordinator', (req, res) => {
-    res.render('co-ordinator', { error: null, success: null });
-});
-
-// POST: Login Coordinator
-app.post('/login-coordinator', async (req, res) => {
-    try {
-        const number = String(req.body.number || '').trim();
-        const password = String(req.body.password || '').trim();
-
-        if (!number || !password) {
-            return res.status(400).render('co-ordinator', {
-                error: 'Phone number and password are required',
-                success: null
-            });
-        }
-
-        const snapshot = await db.collection('coordinators')
-            .where('number', '==', number)
-            .limit(1)
-            .get();
-
-        if (snapshot.empty) {
-            return res.status(401).render('co-ordinator', {
-                error: 'Invalid phone number or password',
-                success: null
-            });
-        }
-
-        const coordinator = snapshot.docs[0].data();
-
-        if (coordinator.password !== password) {
-            return res.status(401).render('co-ordinator', {
-                error: 'Invalid phone number or password',
-                success: null
-            });
-        }
-
-        req.session.coordinator = {
-            id: snapshot.docs[0].id,
-            name: coordinator.name,
-            number: coordinator.number,
-            organization: coordinator.organization
-        };
-
-        res.redirect('/coordinator-dashboard');
-    } catch (error) {
-        console.error('Error logging in:', error.message, error.stack);
-        res.status(500).render('co-ordinator', {
-            error: 'Something went wrong. Please try again.',
-            success: null
-        });
-    }
-});
-
-// POST: Update School Status
-app.post('/update-status', async (req, res) => {
-    try {
-        const { id, status } = req.body;
-
-        if (!id || !['pending', 'pack', 'delivered'].includes(status)) {
-            return res.status(400).send('Invalid school ID or status');
-        }
-
-        const schoolRef = db.collection('schools').doc(id);
-        const schoolDoc = await schoolRef.get();
-
-        if (!schoolDoc.exists) {
-            return res.status(404).send('School not found');
-        }
-
-        const schoolData = schoolDoc.data();
-
-        if (status === 'delivered' && (!schoolData.isApproved || !schoolData.eventDate)) {
-            return res.status(400).send('Cannot mark as delivered: School is not approved or has no event date');
-        }
-
-        await schoolRef.update({
-            status: status,
-            isCompleted: status === 'delivered',
-            completionDate: status === 'delivered' ? admin.firestore.FieldValue.serverTimestamp() : null
-        });
-
-        res.status(200).send('Status updated');
-    } catch (error) {
-        console.error('Error updating status:', error.message, error.stack);
-        res.status(500).send('Error updating status');
-    }
-});
-
-// Download Excel Template
-app.get('/download-template', (req, res) => {
-    const workbook = xlsx.utils.book_new();
-    const worksheetData = [
-        ['School Name', 'Number', 'Email', 'Contact Person'],
-   
-    ];
-    const worksheet = xlsx.utils.aoa_to_sheet(worksheetData);
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Visited Schools');
-
-    // Write to buffer and send as response
-    const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    res.setHeader('Content-Disposition', 'attachment; filename=visited_schools_template.xlsx');
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.send(buffer);
-});
-
-// POST: Upload Excel File
-app.post('/upload-excel', upload, async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-
-        // Parse Excel file from buffer
-        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const data = xlsx.utils.sheet_to_json(sheet);
-
-        // Validate headerso
-        const expectedHeaders = ['School Name', 'Number', 'Email', 'Contact Person'];
-        const headers = Object.keys(data[0] || {});
-        const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
-        if (missingHeaders.length > 0) {
-            return res.status(400).json({ error: `Missing required headers: ${missingHeaders.join(', ')}` });
-        }
-
-        // Clear existing delivered schools
-        const deliveredSnapshot = await db.collection('schools').where('status', '==', 'delivered').get();
-        const batch = db.batch();
-        deliveredSnapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-
-        // Map Excel data to Firestore
-        const schools = data.map(row => ({
-            schoolName: row['School Name'] || 'N/A',
-            number: String(row['Number'] || 'N/A'),
-            email: row['Email'] || 'N/A',
-            contactPerson: row['Contact Person'] || 'N/A',
-            status: 'delivered',
-            isApproved: true,
-            isCompleted: true,
-            completionDate: admin.firestore.FieldValue.serverTimestamp(),
-            registeredAt: admin.firestore.FieldValue.serverTimestamp()
-        }));
-
-        // Batch write to Firestore
-        const writeBatch = db.batch();
-        for (const school of schools) {
-            const schoolRef = db.collection('schools').doc();
-            writeBatch.set(schoolRef, school);
-        }
-        await writeBatch.commit();
-
-        res.json({ message: 'Excel file uploaded successfully! Visited Schools table updated.' });
-    } catch (error) {
-        console.error('Error uploading Excel file:', error.message, error.stack);
-        res.status(500).json({ error: 'Error uploading Excel file' });
-    }
-});
-// Middleware to require coordinator authentication
-
-// Logout
-app.get('/logout', (req, res) => {
-    req.session.destroy(err => {
-        if (err) {
-            console.error('Error destroying session:', err.message, err.stack);
-        }
-        res.redirect('/login-coordinator');
-    });
 });
 
 

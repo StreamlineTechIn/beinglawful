@@ -478,12 +478,12 @@ function requireStudentAuth(req, res, next) {
                             day: 'numeric'
                         });
                         console.log(`Sending workshop reminder to ${parentEmail} for event on ${formattedEventDate}`);
-                        await sendEmail(
-                            parentEmail,
-                            emailTemplates.studentWorkshopReminder.subject,
-                            emailTemplates.studentWorkshopReminder.text(studentName, formattedEventDate),
-                            emailTemplates.studentWorkshopReminder.html(studentName, formattedEventDate)
-                        );
+                        // await sendEmail(
+                        //     parentEmail,
+                        //     emailTemplates.studentWorkshopReminder.subject,
+                        //     emailTemplates.studentWorkshopReminder.text(studentName, formattedEventDate),
+                        //     emailTemplates.studentWorkshopReminder.html(studentName, formattedEventDate)
+                        // );
                     }
                 } else {
                     console.log(`School ${schoolName} for student ${studentName} has no event date`);
@@ -1166,18 +1166,18 @@ app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, as
                 console.log(`Order created with ID: ${orderRef.id}`);
 
                 // Optionally send confirmation email (using existing nodemailer setup)
-                await sendEmail(
-                    email,
-                    'Book Order Confirmation - Being Lawful',
-                    `Dear ${buyerName},\n\nThank you for your book order! Your order ID is ${orderRef.id}.\n\nBest regards,\nBeing Lawful Team`,
-                    `
-                        <h2>Book Order Confirmation</h2>
-                        <p>Dear ${buyerName},</p>
-                        <p>Thank you for your book order with <strong>Being Lawful</strong>!</p>
-                        <p>Your order ID is: <strong>${orderRef.id}</strong></p>
-                        <p>Best regards,<br>Being Lawful Team</p>
-                    `
-                );
+                // await sendEmail(
+                //     email,
+                //     'Book Order Confirmation - Being Lawful',
+                //     `Dear ${buyerName},\n\nThank you for your book order! Your order ID is ${orderRef.id}.\n\nBest regards,\nBeing Lawful Team`,
+                //     `
+                //         <h2>Book Order Confirmation</h2>
+                //         <p>Dear ${buyerName},</p>
+                //         <p>Thank you for your book order with <strong>Being Lawful</strong>!</p>
+                //         <p>Your order ID is: <strong>${orderRef.id}</strong></p>
+                //         <p>Best regards,<br>Being Lawful Team</p>
+                //     `
+                // );
 
                 // Render confirmation page
                 res.render('orderConfirmation', {
@@ -3877,12 +3877,12 @@ app.post('/trainer-participate', [
             isApproved: false
         });
 
-        await sendEmail(
-            email,
-            emailTemplates.trainerRegistration.subject,
-            emailTemplates.trainerRegistration.text(trainerName, email, mobileNumber),
-            emailTemplates.trainerRegistration.html(trainerName, email, mobileNumber)
-        );
+        // await sendEmail(
+        //     email,
+        //     emailTemplates.trainerRegistration.subject,
+        //     emailTemplates.trainerRegistration.text(trainerName, email, mobileNumber),
+        //     emailTemplates.trainerRegistration.html(trainerName, email, mobileNumber)
+        // );
 
         res.render('confirmation', {
             schoolEmail: email,

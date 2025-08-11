@@ -5,7 +5,7 @@
 {
   "@context": "https://schema.org",
   "@type": "EducationalOrganization",
-  "name": "Being Lawful", 
+  "name": "Being Lawful",
   "url": "https://beinglawful.in",
   "address": {
     "@type": "PostalAddress",
@@ -147,7 +147,7 @@
   <meta name="preload" content="./Assets/Activities/Product Photoggraphy12.jpg" as="image">
   <meta name="preload" content="./Assets/Activities/Product Photoggraphy13.jpg" as="image">
   <meta name="preload" content="./Assets/Activities/Product Photoggraphy14.jpg" as="image">
-  <meta name="content-security-policy" content="default-src 'self'; img-src 'self' https://beinglawful.in https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; object-src 'none'; frame-src 'self' https://samvidhanai.beinglawful.in; media-src 'self' https://beinglawful.in;">
+  <meta name="content-security-policy" content="default-src 'self'; img-src 'self' https://beinglawful.in https://cdn.jsdelivr.net; style-src 'self' https://cdn.jsdelivr.net; script-src 'self' https://cdn.jsdelivr.net; object-src 'none'; media-src 'self' https://beinglawful.in;">
   <meta property="og:video" content="https://beinglawful.in/Assets/videoactivity.mp4">
   <meta property="og:video:secure_url" content="https://beinglawful.in/Assets/videoactivity.mp4">
   <meta property="og:video:type" content="video/mp4">
@@ -570,6 +570,10 @@
       border: 2px solid #1e40af;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
+      padding: 0.75rem 3rem; /* Increased padding for larger width and height */
+      width: auto;
+      min-width: 180px; /* Increased min-width for wider button */
+      line-height: 1.5; /* Adjusted for better text alignment */
     }
     .blink-button:hover {
       transform: scale(1.1);
@@ -999,21 +1003,6 @@
     </div>
   </div>
 
-  <!-- AI Modal -->
-  <div id="aiModal" class="ai-modal" onclick="closeAIModal(event)">
-    <span class="ai-close-modal" onclick="closeAIModal(event)" aria-label="Close Samvidhan AI">×</span>
-    <div class="ai-modal-content">
-      <iframe id="aiIframe" src="https://samvidhanai.beinglawful.in/" title="Samvidhan AI" aria-label="Samvidhan AI Interface"></iframe>
-    </div>
-  </div>
-
-  <!-- AI Icon -->
-  <div class="ai-icon-container">
-    <div class="ai-icon" onclick="openAIModal()" role="button" aria-label="Open Samvidhan AI">
-      <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff'%3E%3Cpath d='M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12zM7 9h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z'/%3E%3C/svg%3E" alt="Samvidhan AI Chat Icon">
-    </div>
-  </div>
-
   <!-- Author Note Section -->
   <section class="author-bg-section min-h-[70vh] flex flex-col items-center justify-center py-8 px-4" id="author" data-aos="fade-up">
     <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Author Note</h2>
@@ -1220,12 +1209,6 @@
           <span class="gallery-title">Feedback form</span>
         </div>
       </div>
-      <!-- <div class="gallery-item" data-aos="fade-up" data-aos-delay="650">
-        <img src="./Assets/Activities/Product Photoggraphy8.jpg" alt="Workshop Kit Item 8" onclick="openModal(this)">
-        <div class="gallery-overlay">
-          <span class="gallery-title">Workshop Kit Item 8</span>
-        </div>
-      </div> -->
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="700">
         <img src="./Assets/Activities/Product Photoggraphy9.jpg" alt="Workshop Kit Item 9" onclick="openModal(this)">
         <div class="gallery-overlay">
@@ -1350,20 +1333,6 @@
       if (event.target.classList.contains('modal') || event.target.classList.contains('close-modal')) {
         modal.style.display = 'none';
         modal.classList.remove('active');
-      }
-    }
-
-    function openAIModal() {
-      const aiModal = document.getElementById('aiModal');
-      aiModal.classList.add('active');
-      aiModal.style.display = 'flex';
-    }
-
-    function closeAIModal(event) {
-      const aiModal = document.getElementById('aiModal');
-      if (event.target.classList.contains('ai-modal') || event.target.classList.contains('ai-close-modal')) {
-        aiModal.style.display = 'none';
-        aiModal.classList.remove('active');
       }
     }
 

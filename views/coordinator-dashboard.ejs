@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <title>Coordinator Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .status-pending { color: #fd7e14; font-weight: 600; }
+        .status-pack { color: #007bff; font-weight: 600; }
+        .status-delivered { color: #28a745; font-weight: 600; }
+        .status-inprogress { color: #17a2b8; font-weight: 600; }
+        .status-register { color: #6f42c1; font-weight: 600; }
+        .status-done { color: #28a745; font-weight: 600; }
+        .status-notinterested { color: #dc3545; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-gray-100 flex min-h-screen">
+    <div class="w-64 bg-gray-800 text-white p-6 fixed h-full">
+        <h2 class="text-xl font-bold border-b border-gray-600 pb-2 mb-4">Coordinator Portal</h2>
+        <ul class="space-y-2">
+            <li><a href="#dashboard" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium active">Dashboard</a></li>
+            <li><a href="#visited-school" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Visited School</a></li>
+            <li><a href="#complete-school" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Complete School</a></li>
+            <li><a href="#summary" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Summary</a></li>
+            <li><a href="#sop" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">SOP</a></li>
+            <li><a href="#workshop-summary" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Workshop Summary</a></li>
+            <li><a href="#upload-media" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Upload Media</a></li>
+            <li><a href="/logout" class="block px-4 py-2 bg-red-500 hover:bg-red-600 rounded text-white font-medium">Logout</a></li>
+        </ul>
+    </div>
+
+    <div class="ml-64 p-6 w-full">
+        <h1 class="text-2xl font-bold mb-4">Welcome, <%= coordinator?.name || 'Coordinator' %>!</h1>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+                <%= error %>
+            </div>
+        <% } %>
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+                <%= success %>
+            </div>
+        <% } %>
+
+        <!-- Dashboard Tab -->
+        <div id="dashboard" class="tab-content active">
+            <h3 class="text-xl font-semibold mb-4">Approved Schools</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white shadow-md rounded-lg">
+                    <thead class="bg-gray-700 text-white">
+                        <tr>
+                            <th class="py-3 px-4 text-left">School Name</th>
+                            <th class="py-3 px-4 text-left">Civics Sir Number</th>
+                            <th class="py-3 px-4 text-left">School Phone Number</th>
+                            <th class="py-3 px-4 text-left">Principal Number</th>
+                            <th class="py-3 px-4 text-left">City</th>
+                            <th class="py-3 px-4 text-left">District</th>
+                            <th class="py-3 px-4 text-left">Event Date</th>
+                            <th class="py-3 px-4 text-left">Status</th>
+                            <th class="py-3 px-4 text-left">Change Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (!schools || schools.length === 0) { %>
+                            <tr><td colspan="9" class="py-3 px-4 text-center">No schools found.</td></tr>
+                        <% } else { %>
+                            <% schools.forEach(school => { %>
+                                <tr class="border-b">
+                                    <td class="py-3 px-4"><%= school.name || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.civicsSirNumber || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.schoolPhoneNumber || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.principalNumber || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.city || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.district || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.eventDate || 'Not set' %></td>
+                                    <td class="status-cell py-3 px-4" data-id="<%= school.id %>">
+                                        <% if (school.status === 'delivered') { %>
+                                            <span class="status-delivered">Delivered</span>
+                                        <% } else if (school.status === 'pack') { %>
+                                            <span class="status-pack">Pack</span>
+                                        <% } else { %>
+                                            <span class="status-pending">Pending</span>
+                                        <% } %>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <form method="POST" action="/update-status" class="update-status-form flex space-x-2" data-id="<%= school.id %>">
+                                            <input type="hidden" name="id" value="<%= school.id %>">
+                                            <select name="status" class="border rounded px-2 py-1">
+                                                <option value="pending" <%= school.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                                                <option value="pack" <%= school.status === 'pack' ? 'selected' : '' %>>Pack</option>
+                                                <option value="delivered" <%= school.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                                            </select>
+                                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Submit</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Visited Schools Tab -->
+        <div id="visited-school" class="tab-content">
+            <h3 class="text-xl font-semibold mb-4">Visited Schools</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white shadow-md rounded-lg">
+                    <thead class="bg-gray-700 text-white">
+                        <tr>
+                            <th class="py-3 px-4 text-left">School Name</th>
+                            <th class="py-3 px-4 text-left">Number</th>
+                            <th class="py-3 px-4 text-left">Email</th>
+                            <th class="py-3 px-4 text-left">Contact Person</th>
+                            <th class="py-3 px-4 text-left">Status</th>
+                            <th class="py-3 px-4 text-left">Change Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (!visitedSchools || visitedSchools.length === 0) { %>
+                            <tr><td colspan="6" class="py-3 px-4 text-center">No visited schools found.</td></tr>
+                        <% } else { %>
+                            <% visitedSchools.forEach(school => { %>
+                                <tr class="border-b">
+                                    <td class="py-3 px-4"><%= school.name || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.number || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.email || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.contactPerson || 'N/A' %></td>
+                                    <td class="status-cell py-3 px-4" data-id="<%= school.id %>">
+                                        <% if (school.status === 'inprogress') { %>
+                                            <span class="status-inprogress">In Progress</span>
+                                        <% } else if (school.status === 'register') { %>
+                                            <span class="status-register">Register</span>
+                                        <% } else if (school.status === 'done') { %>
+                                            <span class="status-done">Done</span>
+                                        <% } else if (school.status === 'notinterested') { %>
+                                            <span class="status-notinterested">Not Interested</span>
+                                        <% } else { %>
+                                            <span class="status-pending">Pending</span>
+                                        <% } %>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <form method="POST" action="/update-status-visited" class="update-status-form flex space-x-2" data-id="<%= school.id %>">
+                                            <input type="hidden" name="id" value="<%= school.id %>">
+                                            <select name="status" class="border rounded px-2 py-1">
+                                                <option value="inprogress" <%= school.status === 'inprogress' ? 'selected' : '' %>>In Progress</option>
+                                                <option value="register" <%= school.status === 'register' ? 'selected' : '' %>>Register</option>
+                                                <option value="done" <%= school.status === 'done' ? 'selected' : '' %>>Done</option>
+                                                <option value="notinterested" <%= school.status === 'notinterested' ? 'selected' : '' %>>Not Interested</option>
+                                            </select>
+                                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Submit</button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Complete Schools Tab -->
+        <div id="complete-school" class="tab-content">
+            <h3 class="text-xl font-semibold mb-4">Completed Schools</h3>
+            <form method="GET" action="/coordinator-dashboard" class="mb-4">
+                <label for="trainerIdComplete" class="block text-sm font-medium text-gray-700">Filter by Trainer</label>
+                <select name="trainerId" id="trainerIdComplete" class="border rounded px-2 py-1 mr-2">
+                    <option value="">All Trainers</option>
+                    <% if (trainers && trainers.length > 0) { %>
+                        <% trainers.forEach(trainer => { %>
+                            <option value="<%= trainer.id %>" <%= trainerId === trainer.id ? 'selected' : '' %>><%= trainer.name || 'Unknown Trainer' %></option>
+                        <% }); %>
+                    <% } %>
+                </select>
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Filter</button>
+            </form>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white shadow-md rounded-lg">
+                    <thead class="bg-gray-700 text-white">
+                        <tr>
+                            <th class="py-3 px-4 text-left">School Name</th>
+                            <th class="py-3 px-4 text-left">Principal</th>
+                            <th class="py-3 px-4 text-left">Phone Number</th>
+                            <th class="py-3 px-4 text-left">Email</th>
+                            <th class="py-3 px-4 text-left">Contact Person Number</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (!completedSchools || completedSchools.length === 0) { %>
+                            <tr><td colspan="5" class="py-3 px-4 text-center">No completed schools found.</td></tr>
+                        <% } else { %>
+                            <% completedSchools.forEach(school => { %>
+                                <tr class="border-b">
+                                    <td class="py-3 px-4"><%= school.name || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.principalName || school.principalNumber || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.schoolPhoneNumber || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.email || 'N/A' %></td>
+                                    <td class="py-3 px-4"><%= school.contactPersonNumber || school.principalNumber || 'N/A' %></td>
+                                </tr>
+                            <% }); %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- SOP Tab -->
+        <div id="sop" class="tab-content">
+            <h3 class="text-xl font-semibold mb-4">Standard Operating Procedure</h3>
+            <div class="space-y-4">
+                <div class="flex space-x-4">
+                    <a href="https://drive.google.com/file/d/1s4alRAcycaWQix_4sONdCM7Z4NKSzIR9/view" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">View SOP</a>
+                    <a href="https://drive.google.com/uc?export=download&id=1s4alRAcycaWQix_4sONdCM7Z4NKSzIR9" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Download SOP</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workshop Summary Tab -->
+        <div id="workshop-summary" class="tab-content">
+            <h3 class="text-xl font-semibold mb-4">Being Lawful Workshop Summary Form</h3>
+            <form method="POST" action="/submit-workshop-summary" class="space-y-6 bg-white p-6 rounded-lg shadow-md">
+                <p class="text-sm text-gray-600 italic">To be filled by Coordinator</p>
+
+                <!-- School Details -->
+                <div>
+                    <h4 class="text-lg font-medium mb-2">School Details</h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label for="schoolName" class="block text-sm font-medium text-gray-700">School Name</label>
+                            <input type="text" id="schoolName" name="schoolName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                        <div>
+                            <label for="schoolAddress" class="block text-sm font-medium text-gray-700">School Address</label>
+                            <textarea id="schoolAddress" name="schoolAddress" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required></textarea>
+                        </div>
+                        <div>
+                            <label for="workshopDate" class="block text-sm font-medium text-gray-700">Workshop Date</label>
+                            <input type="date" id="workshopDate" name="workshopDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Team Details -->
+                <div>
+                    <h4 class="text-lg font-medium mb-2">Team Details</h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label for="trainer1" class="block text-sm font-medium text-gray-700">Trainer 1</label>
+                            <input type="text" id="trainer1" name="trainer1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                        <div>
+                            <label for="trainer2" class="block text-sm font-medium text-gray-700">Trainer 2 (if any)</label>
+                            <input type="text" id="trainer2" name="trainer2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="coordinatorName" class="block text-sm font-medium text-gray-700">Coordinator Name</label>
+                            <input type="text" id="coordinatorName" name="coordinatorName" value="<%= coordinator?.name || '' %>" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                        <div>
+                            <label for="techSupport" class="block text-sm font-medium text-gray-700">Tech Support (if assigned)</label>
+                            <input type="text" id="techSupport" name="techSupport" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="principalName" class="block text-sm font-medium text-gray-700">School Principal Name</label>
+                            <input type="text" id="principalName" name="principalName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Financial Details -->
+                <div>
+                    <h4 class="text-lg font-medium mb-2">Financial Details</h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Financial Status</label>
+                            <div class="mt-2 space-x-4">
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="financialStatus" value="Done" class="form-radio" required>
+                                    <span class="ml-2">Done</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="financialStatus" value="Partial Done" class="form-radio">
+                                    <span class="ml-2">Partial Done</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="financialStatus" value="Partial Pending" class="form-radio">
+                                    <span class="ml-2">Partial Pending</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="financialStatus" value="Pending" class="form-radio">
+                                    <span class="ml-2">Pending</span>
+                                </label>
+                            </div>
+                        </div>
+                        <div>
+                            <label for="kitPaymentStatus" class="block text-sm font-medium text-gray-700">Kit Payment Status</label>
+                            <input type="text" id="kitPaymentStatus" name="kitPaymentStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                        <div>
+                            <label for="trainerRemunerationStatus" class="block text-sm font-medium text-gray-700">Trainer Remuneration Status</label>
+                            <input type="text" id="trainerRemunerationStatus" name="trainerRemunerationStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                        <div>
+                            <label for="paymentMode" class="block text-sm font-medium text-gray-700">Payment Mode</label>
+                            <input type="text" id="paymentMode" name="paymentMode" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                        <div>
+                            <label for="transactionId" class="block text-sm font-medium text-gray-700">Cheque/UPI Transaction ID</label>
+                            <input type="text" id="transactionId" name="transactionId" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coordinator Declaration -->
+                <div>
+                    <h4 class="text-lg font-medium mb-2">Coordinator Declaration</h4>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="coordinatorDeclaration" name="coordinatorDeclaration" class="form-checkbox" required>
+                        <label for="coordinatorDeclaration" class="ml-2 text-sm text-gray-700">I confirm that all workshop responsibilities were completed and documents collected.</label>
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 mt-4">
+                        <div>
+                            <label for="coordinatorSignature" class="block text-sm font-medium text-gray-700">Signature (Coordinator)</label>
+                            <input type="text" id="coordinatorSignature" name="coordinatorSignature" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                        <div>
+                            <label for="coordinatorDate" class="block text-sm font-medium text-gray-700">Date</label>
+                            <input type="date" id="coordinatorDate" name="coordinatorDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                        <div>
+                            <label for="coordinatorPlace" class="block text-sm font-medium text-gray-700">Place</label>
+                            <input type="text" id="coordinatorPlace" name="coordinatorPlace" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Central Office Use Only -->
+                <div>
+                    <h4 class="text-lg font-medium mb-2">Central Office Use Only</h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label for="feedbackFormsReceived" class="block text-sm font-medium text-gray-700">No. of Feedback Forms Received</label>
+                            <input type="number" id="feedbackFormsReceived" name="feedbackFormsReceived" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="kitPaymentReceived" class="block text-sm font-medium text-gray-700">Kit Payment Received</label>
+                            <input type="text" id="kitPaymentReceived" name="kitPaymentReceived" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="trainerRemunerationReceived" class="block text-sm font-medium text-gray-700">Trainer Remuneration Received</label>
+                            <input type="text" id="trainerRemunerationReceived" name="trainerRemunerationReceived" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="centralPaymentMode" class="block text-sm font-medium text-gray-700">Payment Mode</label>
+                            <input type="text" id="centralPaymentMode" name="centralPaymentMode" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="receivedBy" class="block text-sm font-medium text-gray-700">Received By (Name)</label>
+                            <input type="text" id="receivedBy" name="receivedBy" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="centralSignature" class="block text-sm font-medium text-gray-700">Signature</label>
+                            <input type="text" id="centralSignature" name="centralSignature" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="centralDate" class="block text-sm font-medium text-gray-700">Date</label>
+                            <input type="date" id="centralDate" name="centralDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="centralPlace" class="block text-sm font-medium text-gray-700">Place</label>
+                            <input type="text" id="centralPlace" name="centralPlace" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Submit Form</button>
+            </form>
+        </div>
+
+        <!-- Upload Media Tab -->
+        <div id="upload-media" class="tab-content">
+            <h3 class="text-xl font-semibold mb-4">Upload Media</h3>
+            <div class="space-y-4">
+                <!-- Download Template Button -->
+                <div>
+                    <a href="/download-template" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-block" download>Download Excel Template</a>
+                </div>
+                <!-- Upload Form -->
+                <form method="POST" action="/upload-excel" enctype="multipart/form-data" class="space-y-4">
+                    <div>
+                        <label for="excelFile" class="block text-sm font-medium text-gray-700">Upload Excel File</label>
+                        <input type="file" id="excelFile" name="excelFile" accept=".xlsx, .xls" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">Upload</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching logic
+        document.querySelectorAll('.tab-link').forEach(link => {
+            link.addEventListener('click', function (e) {
+                e.preventDefault();
+                const targetTab = this.getAttribute('href').substring(1);
+                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+                document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
+                document.getElementById(targetTab).classList.add('active');
+                this.classList.add('active');
+            });
+        });
+
+        // Status update logic
+        document.querySelectorAll('.update-status-form').forEach(form => {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const id = this.getAttribute('data-id');
+                const status = this.querySelector('select[name="status"]').value;
+                const action = this.getAttribute('action');
+                console.log(`Submitting status update: id=${id}, status=${status}, action=${action}`); // Debugging log
+
+                try {
+                    const response = await fetch(action, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: new URLSearchParams({ id, status })
+                    });
+
+                    if (response.ok) {
+                        const statusCell = document.querySelector(`.status-cell[data-id="${id}"]`);
+                        let statusHTML = '';
+                        let statusText = '';
+                        if (action === '/update-status') {
+                            if (status === 'delivered') {
+                                statusHTML = '<span class="status-delivered">Delivered</span>';
+                                statusText = 'Delivered';
+                            } else if (status === 'pack') {
+                                statusHTML = '<span class="status-pack">Pack</span>';
+                                statusText = 'Pack';
+                            } else {
+                                statusHTML = '<span class="status-pending">Pending</span>';
+                                statusText = 'Pending';
+                            }
+                        } else if (action === '/update-status-visited') {
+                            if (status === 'inprogress') {
+                                statusHTML = '<span class="status-inprogress">In Progress</span>';
+                                statusText = 'In Progress';
+                            } else if (status === 'register') {
+                                statusHTML = '<span class="status-register">Register</span>';
+                                statusText = 'Register';
+                            } else if (status === 'done') {
+                                statusHTML = '<span class="status-done">Done</span>';
+                                statusText = 'Done';
+                            } else if (status === 'notinterested') {
+                                statusHTML = '<span class="status-notinterested">Not Interested</span>';
+                                statusText = 'Not Interested';
+                            } else {
+                                statusHTML = '<span class="status-pending">Pending</span>';
+                                statusText = 'Pending';
+                            }
+                        }
+                        statusCell.innerHTML = statusHTML;
+                        alert(`Status updated to ${statusText} for school ID ${id}`);
+                    } else {
+                        const errorText = await response.text();
+                        console.error(`Failed to update status: ${errorText}`);
+                        alert(`Failed to update status: ${errorText || 'Unknown error'}`);
+                    }
+                } catch (err) {
+                    console.error('Error updating status:', err);
+                    alert(`Error updating status: ${err.message}`);
+                }
+            });
+        });
+
+        // Handle Excel upload feedback
+        document.querySelector('#upload-media form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const form = this;
+            const formData = new FormData(form);
+            try {
+                const response = await fetch('/upload-excel', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message || 'Excel file uploaded successfully! Visited Schools table updated.');
+                    document.querySelector('.tab-link[href="#visited-school"]').click();
+                    window.location.href = '/coordinator-dashboard?success=' + encodeURIComponent(result.message);
+                } else {
+                    alert(result.error || 'Failed to upload Excel file.');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                alert('Error uploading Excel file.');
+            }
+        });
+
+        // Handle Workshop Summary form submission
+        document.querySelector('#workshop-summary form').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const form = this;
+            const formData = new FormData(form);
+            try {
+                const response = await fetch('/submit-workshop-summary', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    alert(result.message || 'Workshop Summary form submitted successfully!');
+                    form.reset();
+                } else {
+                    alert(result.error || 'Failed to submit Workshop Summary form.');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                alert('Error submitting Workshop Summary form.');
+            }
+        });
+    </script>
+</body>
+</html>

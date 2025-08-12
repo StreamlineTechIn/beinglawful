@@ -9,31 +9,56 @@ const schedule = require('node-schedule');
 require('dotenv').config();
 const multer = require('multer');
 const xlsx = require('xlsx');
-
+const XLSX = require('xlsx');
 // Multer setup for file uploads
 // Multer setup for Excel file uploads
 const storage = multer.memoryStorage();
+
+
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB limit
+    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
     fileFilter: (req, file, cb) => {
         const allowedTypes = [
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.ms-excel'
+            'application/vnd.ms-excel',
+            'image/jpeg',
+            'image/png',
+            'image/jpg'
         ];
         if (allowedTypes.includes(file.mimetype)) {
             cb(null, true);
         } else {
-            cb(new Error('Only Excel files (.xlsx, .xls) are allowed'), false);
+            cb(new Error('Only Excel (.xlsx, .xls) and image files are allowed'), false);
         }
     }
-}).single('excelFile');
+}).fields([
+    { name: 'excelFile', maxCount: 1 },
+    { name: 'images', maxCount: 10 }
+]);
 const uploadImages = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
   storage: multer.memoryStorage()
 }).array('images', 10);
 const app = express();
-
+const uploadSchoolMedia = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB per file
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      'image/jpeg', 'image/png', 'image/jpg',
+      'video/mp4', 'video/mpeg', 'video/quicktime'
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only image and video files are allowed'), false);
+    }
+  }
+}).fields([
+  { name: 'photos', maxCount: 2 },
+  { name: 'videos', maxCount: 2 }
+]);
 
 // Set view engine to EJS and specify the views directory
 app.set('view engine', 'ejs');
@@ -1899,7 +1924,7 @@ app.post('/school-dashboard/delete-student/:id', async (req, res) => {
     });
 
     // School upload media 
-    app.post('/school-dashboard/upload-media', upload, async (req, res) => {
+    app.post('/school-dashboard/upload-media', uploadSchoolMedia , async (req, res) => {
         try {
             const { schoolEmail, mediaDescription, mediaLink } = req.body;
             const photos = req.files['photos'] || [];
@@ -2311,28 +2336,67 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
 });
 
 
- app.post('/admin/complete-school/:schoolId', async (req, res) => {
+// Route to mark a school as completed
+app.post('/admin/complete-school/:schoolId', async (req, res) => {
     try {
         const { schoolId } = req.params;
-        if (!req.session.isAdmin) {
-            return res.status(401).json({ error: 'Unauthorized' });
+
+        // Validate schoolId format (basic check for non-empty string)
+        if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
+            return res.status(400).json({ error: 'Invalid school ID' });
         }
+
+        // Check if session exists and user is admin
+        if (!req.session || !req.session.isAdmin) {
+            return res.status(401).json({ error: 'Unauthorized: Admin access required' });
+        }
+
+        // Reference to the school document
         const schoolRef = db.collection('schools').doc(schoolId);
         const schoolDoc = await schoolRef.get();
+
+        // Check if school exists
         if (!schoolDoc.exists) {
             return res.status(404).json({ error: 'School not found' });
         }
-        if (schoolDoc.data().isCompleted) {
-            return res.status(400).json({ error: ' Jorge is already completed' });
+
+        // Check if school is already completed
+        const schoolData = schoolDoc.data();
+        if (schoolData.isCompleted) {
+            return res.status(400).json({ error: 'School is already completed' });
         }
+
+        // Update school document
         await schoolRef.update({
             isCompleted: true,
-            completedAt: admin.firestore.FieldValue.serverTimestamp()
+            completedAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedBy: req.session.userId || 'admin' // Optional: Track who updated it
         });
-        res.status(200).json({ message: 'School marked as completed', schoolId });
+
+        // Fetch updated document to return
+        const updatedSchoolDoc = await schoolRef.get();
+        const updatedSchoolData = updatedSchoolDoc.data();
+
+        // Respond with success message and updated data
+        res.status(200).json({
+            message: 'School marked as completed',
+            schoolId,
+            school: {
+                id: schoolId,
+                ...updatedSchoolData
+            }
+        });
     } catch (error) {
-        console.error('Error in complete-school route:', error.message, error.stack);
-        res.status(500).json({ error: 'Server error', details: error.message });
+        // Enhanced error logging
+        console.error(`Error in complete-school route for schoolId ${schoolId}:`, {
+            message: error.message,
+            stack: error.stack,
+            code: error.code // Firestore-specific error code, if available
+        });
+        res.status(500).json({
+            error: 'Server error',
+            details: error.message || 'An unexpected error occurred'
+        });
     }
 });
     // School participation form (renders schoolParticipation.ejs)
@@ -2525,6 +2589,241 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
             res.redirect('/admin-dashboard');
         });
 
+
+
+
+
+// Helper function to format time
+
+// Helper function to create a worksheet from data
+const createWorksheet = (data, columns) => {
+    const worksheetData = [
+        columns.map(col => col.header), // Headers
+        ...data.map(item => columns.map(col => {
+            if (col.transform) return col.transform(item[col.key], item);
+            return item[col.key] !== undefined && item[col.key] !== null ? item[col.key] : 'N/A';
+        }))
+    ];
+    return xlsx.utils.aoa_to_sheet(worksheetData);
+};
+
+app.get('/admin/export-data', requireAdmin, async (req, res) => {
+    try {
+        console.log('Starting export-data endpoint');
+        
+        // Fetch Schools
+        console.log('Fetching schools...');
+        const schoolsSnapshot = await db.collection('schools').get();
+        const schools = [];
+        for (const doc of schoolsSnapshot.docs) {
+            const schoolData = doc.data();
+            console.log(`Processing school: ${doc.id}`);
+            const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
+            const workshopStartTime = formatTime(schoolData.workshopStartTime);
+            const workshopEndTime = formatTime(schoolData.workshopEndTime);
+            let trainer1 = null, trainer2 = null, coordinator = null;
+            if (schoolData.trainerId1) {
+                const t1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
+                if (t1Doc.exists) trainer1 = { id: t1Doc.id, ...t1Doc.data() };
+            }
+            if (schoolData.trainerId2) {
+                const t2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
+                if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
+            }
+            if (schoolData.coordinatorId) {
+                const coordDoc = await db.collection('coordinators').doc(schoolData.coordinatorId).get();
+                if (coordDoc.exists) coordinator = { id: coordDoc.id, ...coordDoc.data() };
+            }
+            schools.push({
+                id: doc.id,
+                ...schoolData,
+                eventDate,
+                workshopStartTime,
+                workshopEndTime,
+                trainer1Name: trainer1 ? trainer1.trainerName : 'N/A',
+                trainer2Name: trainer2 ? trainer2.trainerName : 'N/A',
+                coordinatorName: coordinator ? coordinator.name : 'N/A'
+            });
+        }
+        console.log(`Fetched ${schools.length} schools`);
+
+        // Fetch Trainers
+        console.log('Fetching trainers...');
+        const trainersSnapshot = await db.collection('trainers').get();
+        const trainers = trainersSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            registeredAt: doc.data().registeredAt?.toDate ? doc.data().registeredAt.toDate() : (doc.data().registeredAt ? new Date(doc.data().registeredAt) : null),
+            isApproved: typeof doc.data().isApproved === 'boolean' ? doc.data().isApproved : false
+        }));
+        console.log(`Fetched ${trainers.length} trainers`);
+
+        // Fetch Coordinators
+        console.log('Fetching coordinators...');
+        const coordinatorsSnapshot = await db.collection('coordinators').get();
+        const coordinators = coordinatorsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            createdAt: doc.data().createdAt?.toDate() || null
+        }));
+        console.log(`Fetched ${coordinators.length} coordinators`);
+
+        // Fetch Participants
+        console.log('Fetching participants...');
+        const participantsSnapshot = await db.collection('participants').get();
+        const participants = participantsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const score = Number(data.score) || null;
+            const totalQuestions = Number(data.totalQuestions) || null;
+            return {
+                id: doc.id,
+                ...data,
+                birthdate: data.birthdate?.toDate ? data.birthdate.toDate() : (data.birthdate ? new Date(data.birthdate) : null),
+                completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : (data.completedAt ? new Date(data.completedAt) : null),
+                score,
+                totalQuestions,
+                percentage: score && totalQuestions ? ((score / totalQuestions) * 100).toFixed(2) : null
+            };
+        });
+        console.log(`Fetched ${participants.length} participants`);
+
+        // Fetch Call Logs
+        console.log('Fetching call logs...');
+        const callLogsSnapshot = await db.collection('callLogs').get();
+        const callLogs = callLogsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            callDate: doc.data().callDate?.toDate ? doc.data().callDate.toDate() : (doc.data().callDate ? new Date(doc.data().callDate) : null)
+        }));
+        console.log(`Fetched ${callLogs.length} call logs`);
+
+        // Fetch Media Uploads
+        console.log('Fetching media uploads...');
+        const schoolMediaPromises = schoolsSnapshot.docs.map(doc =>
+            db.collection('schools').doc(doc.id).collection('mediaUploads').get()
+                .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                    ...mediaDoc.data(),
+                    uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                    uploadedBy: doc.data().schoolName || 'Unknown School'
+                })))
+        );
+        const trainerMediaPromises = trainersSnapshot.docs.map(doc =>
+            db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
+                .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                    ...mediaDoc.data(),
+                    uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                    uploadedBy: doc.data().trainerName || 'Unknown Trainer'
+                })))
+        );
+        const mediaUploads = [...(await Promise.all(schoolMediaPromises)).flat(), ...(await Promise.all(trainerMediaPromises)).flat()];
+        console.log(`Fetched ${mediaUploads.length} media uploads`);
+
+        // Define columns for each sheet
+        const schoolColumns = [
+            { header: 'Doc ID', key: 'id' },
+            { header: 'School Name', key: 'schoolName' },
+            { header: 'Registered At', key: 'registeredAt', transform: formatTimestamp },
+            { header: 'Email', key: 'schoolEmail' },
+            { header: 'City', key: 'city' },
+            { header: 'District', key: 'district' },
+            { header: 'Pincode', key: 'pincode' },
+            { header: 'Event Date', key: 'eventDate', transform: formatTimestamp },
+            { header: 'Workshop Time', key: 'workshopStartTime', transform: (val, item) => `${val || 'N/A'} - ${item.workshopEndTime || 'N/A'}` },
+            { header: 'Approved', key: 'isApproved', transform: (val) => val ? 'Yes' : 'No' },
+            { header: 'Completed', key: 'isCompleted', transform: (val) => val ? 'Yes' : 'No' },
+            { header: 'Trainer 1', key: 'trainer1Name' },
+            { header: 'Trainer 2', key: 'trainer2Name' },
+            { header: 'Coordinator', key: 'coordinatorName' },
+            { header: 'Principal Phone', key: 'principalNumber' },
+            { header: 'Civics Teacher Phone', key: 'civicsTeacherNumber' },
+            { header: 'School Phone', key: 'schoolPhoneNumber' },
+            { header: 'Principal Email', key: 'principalEmail' },
+            { header: 'Civics Teacher Email', key: 'civicsTeacherEmail' },
+            { header: 'Resources Confirmed', key: 'resourcesConfirmed', transform: (val) => val ? 'Yes' : 'No' },
+            { header: 'Selected Resources', key: 'selectedResources', transform: (val) => Array.isArray(val) ? val.join(', ') : 'None' },
+            { header: 'Spot', key: 'spot' },
+            { header: 'Reference Name', key: 'referenceName' }
+        ];
+
+        const trainerColumns = [
+            { header: 'Doc ID', key: 'id' },
+            { header: 'Name', key: 'trainerName' },
+            { header: 'Email', key: 'trainerEmail' },
+            { header: 'City', key: 'city' },
+            { header: 'Profession', key: 'profession' },
+            { header: 'Approved', key: 'isApproved', transform: (val) => val ? 'Yes' : 'No' },
+            { header: 'Registered At', key: 'registeredAt', transform: formatTimestamp }
+        ];
+
+        const coordinatorColumns = [
+            { header: 'Doc ID', key: 'id' },
+            { header: 'Name', key: 'name' },
+            { header: 'Email', key: 'email' },
+            { header: 'Number', key: 'number' },
+            { header: 'Organization', key: 'organization' },
+            { header: 'Created At', key: 'createdAt', transform: formatTimestamp }
+        ];
+
+        const participantColumns = [
+            { header: 'Doc ID', key: 'id' },
+            { header: 'Name', key: 'name' },
+            { header: 'School Name', key: 'schoolNameDropdown' },
+            { header: 'City', key: 'city' },
+            { header: 'Birthdate', key: 'birthdate', transform: formatTimestamp },
+            { header: 'Completed MCQ', key: 'hasCompletedMCQ', transform: (val) => val ? 'Yes' : 'No' },
+            { header: 'Score', key: 'score' },
+            { header: 'Total Questions', key: 'totalQuestions' },
+            { header: 'Percentage', key: 'percentage' },
+            { header: 'Completed At', key: 'completedAt', transform: formatTimestamp }
+        ];
+
+        const callLogColumns = [
+            { header: 'Doc ID', key: 'id' },
+            { header: 'Call Date', key: 'callDate', transform: formatTimestamp },
+            { header: 'Caller', key: 'caller' },
+            { header: 'Recipient', key: 'recipient' },
+            { header: 'Duration', key: 'duration' },
+            { header: 'Notes', key: 'notes' }
+        ];
+
+        const mediaColumns = [
+            { header: 'Media ID', key: 'mediaId' },
+            { header: 'Uploaded By', key: 'uploadedBy' },
+            { header: 'Uploaded At', key: 'uploadedAt', transform: formatTimestamp },
+            { header: 'Description', key: 'description' },
+            { header: 'Type', key: 'type' },
+            { header: 'Seen', key: 'seen', transform: (val) => val ? 'Yes' : 'No' }
+        ];
+
+        console.log('Creating worksheets...');
+        const schoolWorksheet = createWorksheet(schools, schoolColumns);
+        const trainerWorksheet = createWorksheet(trainers, trainerColumns);
+        const coordinatorWorksheet = createWorksheet(coordinators, coordinatorColumns);
+        const participantWorksheet = createWorksheet(participants, participantColumns);
+        const callLogWorksheet = createWorksheet(callLogs, callLogColumns);
+        const mediaWorksheet = createWorksheet(mediaUploads, mediaColumns);
+
+        console.log('Creating workbook...');
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, schoolWorksheet, 'Schools');
+        XLSX.utils.book_append_sheet(workbook, trainerWorksheet, 'Trainers');
+        XLSX.utils.book_append_sheet(workbook, coordinatorWorksheet, 'Coordinators');
+        XLSX.utils.book_append_sheet(workbook, participantWorksheet, 'Participants');
+        XLSX.utils.book_append_sheet(workbook, callLogWorksheet, 'Call Logs');
+        XLSX.utils.book_append_sheet(workbook, mediaWorksheet, 'Media Uploads');
+
+        console.log('Generating buffer...');
+        const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
+
+        console.log('Sending response...');
+        res.setHeader('Content-Disposition', `attachment; filename=admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error generating Excel file:', error.message, error.stack);
+        res.status(500).json({ error: `Failed to generate Excel file: ${error.message}` });
+    }
+});
         // Admin dashboard (renders adminDashboard.ejs)
 app.get('/admin-dashboard', requireAdmin, async (req, res) => {
     try {
@@ -4239,15 +4538,23 @@ app.put('/update-description/:id', async (req, res) => {
   }
 });
 // Register Coordinator Route
+// Middleware to check if coordinator is authenticated
+const isAuthenticated = (req, res, next) => {
+    if (!req.session.coordinator || req.session.coordinator.role !== 'coordinator') {
+        return res.redirect('/login-coordinator');
+    }
+    next();
+};
+
+// Register Coordinator Route
 app.post('/co-ordinator-register', async (req, res) => {
     try {
-        // Same logic as /register-coordinator but with redirect
         if (!req.body) {
             return res.status(400).render('co-ordinator', { error: 'Request body is missing', success: null });
         }
 
         const { name, number, email, organization, password } = req.body;
-        // ... (same validation and Firestore logic as above) ...
+        // Add validation logic here if needed...
 
         await db.collection('coordinators').add({
             name: name.trim(),
@@ -4262,128 +4569,6 @@ app.post('/co-ordinator-register', async (req, res) => {
     } catch (error) {
         res.status(500).render('co-ordinator', {
             error: 'Something went wrong: ' + error.message,
-            success: null
-        });
-    }
-});
-// POST: Login coordinator
-app.get('/coordinator-dashboard', async (req, res) => {
-    if (!req.session.coordinator) {
-        return res.redirect('/login-coordinator');
-    }
-
-    try {
-        const coordinatorId = req.session.coordinator.id;
-        const trainerId = req.query.trainerId || null;
-
-        // Fetch approved schools assigned to the coordinator
-        const approvedSnapshot = await db.collection('schools')
-            .where('isApproved', '==', true)
-            .where('coordinatorId', '==', coordinatorId)
-            .get();
-
-        const schools = approvedSnapshot.docs.map(doc => {
-            const data = doc.data();
-            const eventDate = data.eventDate?.toDate ? data.eventDate.toDate() : (data.eventDate ? new Date(data.eventDate) : null);
-            return {
-                id: doc.id,
-                name: data.schoolName || 'N/A',
-                civicsSirNumber: data.civicsTeacherNumber || 'N/A',
-                schoolPhoneNumber: data.schoolPhoneNumber || 'N/A',
-                principalNumber: data.principalNumber || 'N/A',
-                city: data.city || 'N/A',
-                district: data.district || 'N/A',
-                eventDate: eventDate ? eventDate.toLocaleDateString('en-IN') : 'Not set',
-                status: data.status || 'pending',
-                trainerId1: data.trainerId1 || null,
-                trainerId2: data.trainerId2 || null,
-                workshopStartTime: data.workshopStartTime || null,
-                workshopEndTime: data.workshopEndTime || null,
-                resourcesConfirmed: data.resourcesConfirmed || false,
-                coordinatorId: data.coordinatorId || null
-            };
-        }).sort((a, b) => {
-            if (!a.eventDate) return 1;
-            if (!b.eventDate) return -1;
-            return new Date(a.eventDate) - new Date(b.eventDate);
-        });
-
-        // Fetch visited schools (filtered by trainerId if provided)
-        let visitedQuery = db.collection('schools')
-            .where('status', '==', 'delivered')
-            .where('coordinatorId', '==', coordinatorId);
-        if (trainerId) {
-            visitedQuery = visitedQuery.where('trainerId1', '==', trainerId);
-        }
-        const visitedSnapshot = await visitedQuery.get();
-
-        const visitedSchools = visitedSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-                id: doc.id,
-                name: data.schoolName || 'N/A',
-                number: data.number || 'N/A',
-                email: data.email || 'N/A',
-                contactPerson: data.contactPerson || 'N/A'
-            };
-        });
-
-        // Fetch completed schools (filtered by trainerId if provided)
-        let completedQuery = db.collection('schools')
-            .where('isCompleted', '==', true)
-            .where('coordinatorId', '==', coordinatorId);
-        if (trainerId) {
-            completedQuery = completedQuery.where('trainerId1', '==', trainerId);
-        }
-        const completedSnapshot = await completedQuery.get();
-
-        const completedSchools = completedSnapshot.docs.map(doc => {
-            const data = doc.data();
-            const eventDate = data.eventDate?.toDate ? data.eventDate.toDate() : (data.eventDate ? new Date(data.eventDate) : null);
-            return {
-                id: doc.id,
-                name: data.schoolName || 'N/A',
-                principalName: data.principalName || data.principalNumber || 'N/A',
-                schoolPhoneNumber: data.schoolPhoneNumber || 'N/A',
-                email: data.email || 'N/A',
-                contactPersonNumber: data.contactPersonNumber || data.principalNumber || 'N/A',
-                eventDate: eventDate ? eventDate.toLocaleDateString('en-IN') : 'Not set',
-                trainerId1: data.trainerId1 || null,
-                trainerId2: data.trainerId2 || null,
-                workshopStartTime: data.workshopStartTime || null,
-                workshopEndTime: data.workshopEndTime || null,
-                resourcesConfirmed: data.resourcesConfirmed || false,
-                coordinatorId: data.coordinatorId || null
-            };
-        });
-
-        // Fetch trainers for filter dropdown
-        const trainersSnapshot = await db.collection('trainers').get();
-        const trainers = trainersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().trainerName || 'Unknown Trainer'
-        }));
-
-        res.render('coordinator-dashboard', {
-            coordinator: req.session.coordinator,
-            schools: schools,
-            visitedSchools: visitedSchools,
-            completedSchools: completedSchools,
-            trainers: trainers,
-            trainerId: trainerId,
-            error: req.query.error || null,
-            success: req.query.success || null
-        });
-    } catch (error) {
-        console.error('Error fetching schools:', error.message, error.stack);
-        res.status(500).render('coordinator-dashboard', {
-            coordinator: req.session.coordinator || {},
-            schools: [],
-            visitedSchools: [],
-            completedSchools: [],
-            trainers: [],
-            trainerId: null,
-            error: 'Failed to load schools data',
             success: null
         });
     }
@@ -4421,7 +4606,8 @@ app.post('/login-coordinator', async (req, res) => {
 
         const coordinator = snapshot.docs[0].data();
 
-        if (coordinator.password !== password) {
+        const isPasswordValid = await bcrypt.compare(password, coordinator.password);
+        if (!isPasswordValid) {
             return res.status(401).render('co-ordinator', {
                 error: 'Invalid phone number or password',
                 success: null
@@ -4432,7 +4618,8 @@ app.post('/login-coordinator', async (req, res) => {
             id: snapshot.docs[0].id,
             name: coordinator.name,
             number: coordinator.number,
-            organization: coordinator.organization
+            organization: coordinator.organization,
+            role: 'coordinator'
         };
 
         res.redirect('/coordinator-dashboard');
@@ -4445,116 +4632,496 @@ app.post('/login-coordinator', async (req, res) => {
     }
 });
 
-// POST: Update School Status
-app.post('/update-status', async (req, res) => {
+// Route: Coordinator Dashboard
+app.get('/coordinator-dashboard', isAuthenticated, async (req, res) => {
+    try {
+        const coordinatorId = req.session.coordinator.id;
+        const trainerId = req.query.trainerId || null;
+
+        // Fetch approved schools assigned to the coordinator
+        const approvedSnapshot = await db
+            .collection('schools')
+            .where('isApproved', '==', true)
+            .where('coordinatorId', '==', coordinatorId)
+            .get();
+
+        const schools = approvedSnapshot.docs
+            .map(doc => {
+                const data = doc.data();
+                const eventDate = data.eventDate?.toDate
+                    ? data.eventDate.toDate()
+                    : data.eventDate
+                        ? new Date(data.eventDate)
+                        : null;
+
+                return {
+                    id: doc.id,
+                    name: data.schoolName || 'N/A',
+                    civicsSirNumber: data.civicsTeacherNumber || 'N/A',
+                    schoolPhoneNumber: data.schoolPhoneNumber || 'N/A',
+                    principalNumber: data.principalNumber || 'N/A',
+                    city: data.city || 'N/A',
+                    district: data.district || 'N/A',
+                    eventDate: eventDate ? eventDate.toLocaleDateString('en-IN') : 'Not set',
+                    status: data.coordinatorStatus || 'inprogress',
+                    trainerId1: data.trainerId1 || null,
+                    trainerId2: data.trainerId2 || null,
+                    workshopStartTime: data.workshopStartTime || null,
+                    workshopEndTime: data.workshopEndTime || null,
+                    resourcesConfirmed: data.resourcesConfirmed || false,
+                    coordinatorId: data.coordinatorId || null,
+                    agency: data.agency || '',
+                    deliveryMode: data.deliveryMode || 'pending',
+                    registerStatus: data.registerStatus || 'Yes',
+                    mcqStatus: data.mcqStatus || 'Pending',
+                    approvalStatus: data.mcqStatus === 'Completed' ? 'Approved' : 'Approved, MCQ Remaining'
+                };
+            })
+            .sort((a, b) => {
+                if (!a.eventDate) return 1;
+                if (!b.eventDate) return -1;
+                return new Date(a.eventDate) - new Date(b.eventDate);
+            });
+
+        // Fetch visited schools
+        let visitedQuery = db
+            .collection('schools')
+            .where('coordinatorStatus', '==', 'delivered')
+            .where('coordinatorId', '==', coordinatorId);
+        if (trainerId) {
+            visitedQuery = visitedQuery.where('trainerId1', '==', trainerId);
+        }
+        const visitedSnapshot = await visitedQuery.get();
+
+        const visitedSchools = visitedSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                name: data.schoolName || 'N/A',
+                number: data.number || 'N/A',
+                principalNumber: data.principalNumber || data.contactPerson || 'N/A',
+                email: data.email || 'N/A',
+                contactPerson: data.contactPerson || 'N/A',
+                agency: data.agency || '',
+                deliveryMode: data.deliveryMode || 'pending',
+                status: data.coordinatorStatus || 'inprogress'
+            };
+        });
+
+        // Fetch completed schools
+        let completedQuery = db
+            .collection('schools')
+            .where('isCompleted', '==', true)
+            .where('coordinatorId', '==', coordinatorId);
+        if (trainerId) {
+            completedQuery = completedQuery.where('trainerId1', '==', trainerId);
+        }
+        const completedSnapshot = await completedQuery.get();
+
+        const completedSchools = completedSnapshot.docs.map(doc => {
+            const data = doc.data();
+            const eventDate = data.eventDate?.toDate
+                ? data.eventDate.toDate()
+                : data.eventDate
+                    ? new Date(data.eventDate)
+                    : null;
+            return {
+                id: doc.id,
+                name: data.schoolName || 'N/A',
+                principalName: data.principalName || data.principalNumber || 'N/A',
+                schoolPhoneNumber: data.schoolPhoneNumber || 'N/A',
+                email: data.email || 'N/A',
+                contactPersonNumber: data.contactPersonNumber || data.principalNumber || 'N/A',
+                eventDate: eventDate ? eventDate.toLocaleDateString('en-IN') : 'Not set',
+                trainerId1: data.trainerId1 || null,
+                trainerId2: data.trainerId2 || null,
+                workshopStartTime: data.workshopStartTime || null,
+                workshopEndTime: data.workshopEndTime || null,
+                resourcesConfirmed: data.resourcesConfirmed || false,
+                coordinatorId: data.coordinatorId || null,
+                agency: data.agency || '',
+                deliveryMode: data.deliveryMode || 'pending',
+                status: data.coordinatorStatus || 'inprogress',
+                registerStatus: 'Yes',
+                mcqStatus: data.mcqStatus || 'Completed',
+                approvalStatus: 'Approved'
+            };
+        });
+
+        // Fetch trainers for filter dropdown
+        const trainersSnapshot = await db.collection('trainers').get();
+        const trainers = trainersSnapshot.docs.map(doc => ({
+            id: doc.id,
+            name: doc.data().trainerName || 'Unknown Trainer',
+        }));
+
+        res.render('coordinator-dashboard', {
+            coordinator: req.session.coordinator,
+            schools,
+            visitedSchools,
+            completedSchools,
+            trainers,
+            trainerId,
+            error: req.query.error || null,
+            success: req.query.success || null
+        });
+    } catch (error) {
+        console.error('Error fetching schools:', error.message, error.stack);
+        res.status(500).render('coordinator-dashboard', {
+            coordinator: req.session.coordinator || {},
+            schools: [],
+            visitedSchools: [],
+            completedSchools: [],
+            trainers: [],
+            trainerId: null,
+            error: 'Failed to load schools data',
+            success: null
+        });
+    }
+});
+
+
+
+// POST: Update Visited School Status (Coordinator-specific, using coordinatorStatus)
+app.post('/update-status-visited', isAuthenticated, async (req, res) => {
     try {
         const { id, status } = req.body;
+        const coordinatorId = req.session.coordinator.id;
 
-        if (!id || !['pending', 'pack', 'delivered'].includes(status)) {
-            return res.status(400).send('Invalid school ID or status');
+        if (!id || !status) {
+            return res.status(400).json({ error: 'School ID and status are required' });
+        }
+
+        const validStatuses = ['inprogress', 'register', 'done', 'notinterested'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: 'Invalid status value' });
         }
 
         const schoolRef = db.collection('schools').doc(id);
         const schoolDoc = await schoolRef.get();
 
         if (!schoolDoc.exists) {
-            return res.status(404).send('School not found');
+            return res.status(404).json({ error: 'School not found' });
+        }
+        if (schoolDoc.data().coordinatorId !== coordinatorId) {
+            return res.status(403).json({ error: 'Unauthorized: School not assigned to this coordinator' });
         }
 
-        const schoolData = schoolDoc.data();
+        await schoolRef.update({ coordinatorStatus: status });
 
-        if (status === 'delivered' && (!schoolData.isApproved || !schoolData.eventDate)) {
-            return res.status(400).send('Cannot mark as delivered: School is not approved or has no event date');
-        }
-
-        await schoolRef.update({
-            status: status,
-            isCompleted: status === 'delivered',
-            completionDate: status === 'delivered' ? admin.firestore.FieldValue.serverTimestamp() : null
-        });
-
-        res.status(200).send('Status updated');
+        res.json({ message: `Coordinator status updated to ${status} for school ID ${id}` });
     } catch (error) {
-        console.error('Error updating status:', error.message, error.stack);
-        res.status(500).send('Error updating status');
+        console.error('Error updating coordinator status:', error.message, error.stack);
+        res.status(500).json({ error: 'Failed to update coordinator status' });
+    }
+});
+
+// GET: Visited Schools (for compatibility with previous logic)
+app.get('/visited-schools', isAuthenticated, async (req, res) => {
+    try {
+        console.log('---- Visited Schools Route Triggered ----');
+        const coordinatorId = req.session.coordinator.id; // Get coordinator ID from session
+        const { page = 1, limit = 10, status, schoolName } = req.query; // Query params for filtering and pagination
+
+        // Build Firestore query for the 'schools' collection
+        let query = db.collection('schools').where('coordinatorId', '==', coordinatorId);
+
+        // Optional filtering by status (using coordinatorStatus)
+        if (status) {
+            query = query.where('coordinatorStatus', '==', status);
+        }
+
+        // Optional filtering by schoolName (case-insensitive partial match)
+        if (schoolName) {
+            query = query.where('schoolName', '>=', schoolName.toLowerCase())
+                         .where('schoolName', '<=', schoolName.toLowerCase() + '\uf8ff');
+        }
+
+        // Apply pagination
+        const parsedLimit = parseInt(limit, 10);
+        const parsedPage = parseInt(page, 10);
+        const startAt = (parsedPage - 1) * parsedLimit;
+
+        // Fetch total count for pagination metadata
+        const totalSnapshot = await query.get();
+        const totalItems = totalSnapshot.size;
+
+        // Fetch paginated data
+        const snapshot = await query
+            .orderBy('schoolName') // Sort by schoolName for consistent ordering
+            .limit(parsedLimit)
+            .offset(startAt)
+            .get();
+
+        // Map Firestore documents to response data
+        const visitedSchools = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            registeredAt: doc.data().registeredAt?.toDate().toISOString() || 'N/A',
+            updatedAt: doc.data().updatedAt?.toDate().toISOString() || 'N/A',
+            status: doc.data().coordinatorStatus || 'inprogress'
+        }));
+
+        // Render dashboard with schools and pagination metadata
+        res.render('dashboard', {
+            visitedSchools,
+            isVisitedSchools: true,
+            pagination: {
+                currentPage: parsedPage,
+                itemsPerPage: parsedLimit,
+                totalItems,
+                totalPages: Math.ceil(totalItems / parsedLimit)
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching visited schools:', error.message, error.stack);
+        res.status(500).render('error', { error: 'Error fetching visited schools' });
     }
 });
 
 // Download Excel Template
 app.get('/download-template', (req, res) => {
-    const workbook = xlsx.utils.book_new();
-    const worksheetData = [
-        ['School Name', 'Number', 'Email', 'Contact Person'],
-   
-    ];
-    const worksheet = xlsx.utils.aoa_to_sheet(worksheetData);
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'Visited Schools');
-
-    // Write to buffer and send as response
-    const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-    res.setHeader('Content-Disposition', 'attachment; filename=visited_schools_template.xlsx');
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.send(buffer);
+    const filePath = path.join(__dirname, 'public', 'school-template.xlsx');
+    res.download(filePath, 'school-template.xlsx', (err) => {
+        if (err) {
+            console.error('Error downloading template:', err);
+            res.status(500).send('Error downloading template');
+        }
+    });
 });
 
 // POST: Upload Excel File
-app.post('/upload-excel', upload, async (req, res) => {
+app.post('/upload-excel', isAuthenticated, upload, async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
         }
 
-        // Parse Excel file from buffer
         const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const data = xlsx.utils.sheet_to_json(sheet);
 
-        // Validate headerso
-        const expectedHeaders = ['School Name', 'Number', 'Email', 'Contact Person'];
+        const expectedHeaders = ['School Name', 'Personal Number', 'Principal Number', 'Email'];
         const headers = Object.keys(data[0] || {});
         const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
         if (missingHeaders.length > 0) {
             return res.status(400).json({ error: `Missing required headers: ${missingHeaders.join(', ')}` });
         }
 
-        // Clear existing delivered schools
-        const deliveredSnapshot = await db.collection('schools').where('status', '==', 'delivered').get();
-        const batch = db.batch();
-        deliveredSnapshot.docs.forEach(doc => {
-            batch.delete(doc.ref);
-        });
-        await batch.commit();
-
-        // Map Excel data to Firestore
         const schools = data.map(row => ({
-            schoolName: row['School Name'] || 'N/A',
-            number: String(row['Number'] || 'N/A'),
-            email: row['Email'] || 'N/A',
-            contactPerson: row['Contact Person'] || 'N/A',
-            status: 'delivered',
+            schoolName: row['School Name']?.toString().trim() || 'N/A',
+            number: String(row['Personal Number'] || 'N/A'),
+            principalNumber: String(row['Principal Number'] || 'N/A'),
+            email: row['Email']?.toString().trim() || 'N/A',
+            coordinatorStatus: 'delivered', // Adjusted to coordinatorStatus
             isApproved: true,
-            isCompleted: true,
-            completionDate: admin.firestore.FieldValue.serverTimestamp(),
-            registeredAt: admin.firestore.FieldValue.serverTimestamp()
+            isCompleted: false,
+            registeredAt: admin.firestore.FieldValue.serverTimestamp(),
+            coordinatorId: req.session.coordinator.id,
         }));
 
-        // Batch write to Firestore
         const writeBatch = db.batch();
         for (const school of schools) {
-            const schoolRef = db.collection('schools').doc();
-            writeBatch.set(schoolRef, school);
+            const existingSchool = await db.collection('schools')
+                .where('schoolName', '==', school.schoolName)
+                .where('coordinatorId', '==', school.coordinatorId)
+                .get();
+
+            if (existingSchool.empty) {
+                const schoolRef = db.collection('schools').doc();
+                writeBatch.set(schoolRef, school);
+            } else {
+                const schoolRef = existingSchool.docs[0].ref;
+                writeBatch.update(schoolRef, {
+                    number: school.number,
+                    principalNumber: school.principalNumber,
+                    email: school.email,
+                    coordinatorStatus: school.coordinatorStatus,
+                    isApproved: school.isApproved,
+                    isCompleted: school.isCompleted,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+                });
+            }
         }
         await writeBatch.commit();
 
         res.json({ message: 'Excel file uploaded successfully! Visited Schools table updated.' });
     } catch (error) {
         console.error('Error uploading Excel file:', error.message, error.stack);
-        res.status(500).json({ error: 'Error uploading Excel file' });
+        res.status(500).json({ error: `Error uploading Excel file: ${error.message}` });
     }
 });
-// Middleware to require coordinator authentication
 
+// GET: Download Feedback Excel template
+app.get('/download-feedback-template', (req, res) => {
+    try {
+        const workbook = xlsx.utils.book_new();
+        const worksheetData = [['Student Name', 'School Name', 'Feedback', 'Rating', 'Submission Date']];
+        const worksheet = xlsx.utils.aoa_to_sheet(worksheetData);
+        xlsx.utils.book_append_sheet(workbook, worksheet, 'Student Feedback');
+
+        const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        res.setHeader('Content-Disposition', 'attachment; filename=student_feedback_template.xlsx');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error generating feedback template:', error.message, error.stack);
+        res.status(500).json({ error: 'Error generating feedback template' });
+    }
+});
+
+// POST: Upload Student Feedback Excel File
+app.post('/upload-feedback-excel', isAuthenticated, upload, async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const data = xlsx.utils.sheet_to_json(sheet);
+
+        const expectedHeaders = ['Student Name', 'School Name', 'Feedback', 'Rating', 'Submission Date'];
+        const headers = Object.keys(data[0] || {});
+        const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+        if (missingHeaders.length > 0) {
+            return res.status(400).json({ error: `Missing required headers: ${missingHeaders.join(', ')}` });
+        }
+
+        for (const row of data) {
+            if (!row['Student Name'] || !row['School Name'] || !row['Feedback'] || !row['Rating']) {
+                return res.status(400).json({ error: 'Student Name, School Name, Feedback, and Rating are required for all entries' });
+            }
+            const rating = parseFloat(row['Rating']);
+            if (isNaN(rating) || rating < 1 || rating > 5) {
+                return res.status(400).json({ error: `Invalid Rating for ${row['Student Name']}: must be a number between 1 and 5` });
+            }
+            if (row['Submission Date'] && isNaN(Date.parse(row['Submission Date']))) {
+                return res.status(400).json({ error: `Invalid Submission Date for ${row['Student Name']}: must be a valid date` });
+            }
+        }
+
+        const feedbackSnapshot = await db.collection('studentFeedback').where('status', '==', 'submitted').get();
+        const batch = db.batch();
+        feedbackSnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        const feedbackEntries = data.map(row => ({
+            studentName: row['Student Name'] || 'N/A',
+            schoolName: row['School Name'] || 'N/A',
+            feedback: row['Feedback'] || 'N/A',
+            rating: parseFloat(row['Rating']) || 0,
+            submissionDate: row['Submission Date'] ? new Date(row['Submission Date']).toISOString() : admin.firestore.FieldValue.serverTimestamp(),
+            status: 'submitted',
+            coordinatorId: req.session.coordinator.id,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        }));
+
+        const writeBatch = db.batch();
+        for (const feedback of feedbackEntries) {
+            const feedbackRef = db.collection('studentFeedback').doc();
+            writeBatch.set(feedbackRef, feedback);
+        }
+        await writeBatch.commit();
+
+        res.json({ message: 'Feedback Excel file uploaded successfully! Student Feedback collection updated.' });
+    } catch (error) {
+        console.error('Error uploading Feedback Excel file:', error.message, error.stack);
+        res.status(500).json({ error: 'Error uploading Feedback Excel file' });
+    }
+});
+
+// POST /submit-workshop-summary
+app.post('/submit-workshop-summary', isAuthenticated, async (req, res) => {
+    res.setHeader('Content-Type', 'application/json');
+
+    try {
+        console.log('Received form data:', req.body);
+
+        const formData = {
+            schoolName: req.body.schoolName?.trim(),
+            schoolAddress: req.body.schoolAddress?.trim(),
+            workshopDate: req.body.workshopDate?.trim(),
+            trainer1: req.body.trainer1?.trim(),
+            trainer2: req.body.trainer2?.trim() || null,
+            coordinatorName: req.body.coordinatorName?.trim(),
+            techSupport: req.body.techSupport?.trim() || null,
+            principalName: req.body.principalName?.trim(),
+            financialStatus: req.body.financialStatus?.trim(),
+            kitPaymentStatus: req.body.kitPaymentStatus?.trim(),
+            trainerRemunerationStatus: req.body.trainerRemunerationStatus?.trim(),
+            paymentMode: req.body.paymentMode?.trim(),
+            transactionId: req.body.transactionId?.trim(),
+            coordinatorDeclaration: req.body.coordinatorDeclaration === 'on',
+            coordinatorSignature: req.body.coordinatorSignature?.trim(),
+            coordinatorDate: req.body.coordinatorDate?.trim(),
+            coordinatorPlace: req.body.coordinatorPlace?.trim()
+        };
+
+        // Fetch valid school names from Firestore
+        const schoolsSnapshot = await db.collection('schools').get();
+        const validSchools = schoolsSnapshot.docs.map(doc => doc.data().schoolName);
+
+        // Server-side validation
+        const errors = [];
+        if (!formData.schoolName) errors.push('School Name is required');
+        if (!formData.schoolAddress) errors.push('School Address is required');
+        if (!formData.workshopDate) errors.push('Workshop Date is required');
+        if (!formData.trainer1) errors.push('Trainer 1 is required');
+        if (!formData.coordinatorName) errors.push('Coordinator Name is required');
+        if (!formData.principalName) errors.push('Principal Name is required');
+        if (!formData.financialStatus) errors.push('Financial Status is required');
+        if (!formData.kitPaymentStatus) errors.push('Kit Payment Status is required');
+        if (!formData.trainerRemunerationStatus) errors.push('Trainer Remuneration Status is required');
+        if (!formData.paymentMode) errors.push('Payment Mode is required');
+        if (!formData.transactionId) errors.push('Transaction ID is required');
+        if (!formData.coordinatorDeclaration) errors.push('Coordinator Declaration must be checked');
+        if (!formData.coordinatorSignature) errors.push('Coordinator Signature is required');
+        if (!formData.coordinatorDate) errors.push('Coordinator Date is required');
+        if (!formData.coordinatorPlace) errors.push('Coordinator Place is required');
+
+        // Validate schoolName
+        if (formData.schoolName && !validSchools.some(school => school.toLowerCase() === formData.schoolName.toLowerCase())) {
+            errors.push('Invalid School Name. Must match a registered school.');
+        }
+
+        if (errors.length > 0) {
+            console.error('Validation errors:', errors);
+            return res.status(400).json({ error: 'Validation failed', details: errors });
+        }
+
+        // Log form data
+        console.log('Workshop Summary Form Submission:', formData);
+
+        // Save to Firestore
+        await db.collection('workshopSummaries').add({
+            ...formData,
+            coordinatorId: req.session.coordinator.id,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        res.status(200).json({
+            message: 'Workshop Summary form submitted successfully!',
+            data: formData
+        });
+    } catch (error) {
+        console.error('Error processing Workshop Summary form:', error.message, error.stack);
+        res.status(500).json({
+            error: 'Failed to submit Workshop Summary form.',
+            details: error.message
+        });
+    }
+});
+// GET route to handle direct access to /submit-workshop-summary
+app.get('/submit-workshop-summary', (req, res) => {
+    res.redirect('/coordinator-dashboard?error=' + encodeURIComponent('Direct access to this endpoint is not allowed. Please use the Workshop Summary form.'));
+});
+    
 // Logout
 app.get('/logout', (req, res) => {
     req.session.destroy(err => {
@@ -4564,9 +5131,27 @@ app.get('/logout', (req, res) => {
         res.redirect('/login-coordinator');
     });
 });
+app.post('/add-call-log', (req, res) => {
+    const { callDate, caller, recipient, notes } = req.body;
+    if (!callDate || !caller || !recipient || !notes) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+    const newLog = {
+        id: `log-${Date.now()}`,
+        callDate,
+        caller,
+        recipient,
+        notes,
+        duration: 'N/A'
+    };
+    callLogs.push(newLog);
+    res.json({ id: newLog.id, message: 'Call log added successfully', ...newLog });
+});
 
-
-    // Start the server
+app.get('/get-call-logs', (req, res) => {
+    res.json(callLogs);
+});
+// Start the server
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

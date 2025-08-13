@@ -10,7 +10,7 @@ require('dotenv').config();
 const multer = require('multer');
 const xlsx = require('xlsx');
 const XLSX = require('xlsx');
-const bcrypt = require('bcrypt');
+
 const saltRounds = 10;
 // Multer setup for file uploads
 // Multer setup for Excel file uploads
@@ -69,10 +69,11 @@ const uploadExcel = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
 }).single('excelFile');
+
 const uploadFeedback = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-}).single('excelFile');
+}).single('feedbackExcelFile');
 // Set view engine to EJS and specify the views directory
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
@@ -4811,6 +4812,33 @@ app.get('/coordinator-dashboard', isAuthenticated, async (req, res) => {
             name: doc.data().trainerName || 'Unknown Trainer',
         }));
 
+        // Fetch feedback data
+        const feedbackSnapshot = await db
+            .collection('studentFeedback')
+            .where('coordinatorId', '==', coordinatorId)
+            .get();
+
+        const feedbackData = feedbackSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                studentName: data.studentName || 'N/A',
+                className: data.className || 'N/A',
+                question1: data.question1 || 'N/A',
+                question2: data.question2 || 'N/A',
+                question3: data.question3 || 'N/A',
+                question4: data.question4 || 'N/A',
+                question5: data.question5 || 'N/A',
+                status: data.status || 'submitted',
+                createdAt: data.createdAt?.toDate
+                    ? data.createdAt.toDate().toLocaleDateString('en-IN')
+                    : 'N/A',
+                updatedAt: data.updatedAt?.toDate
+                    ? data.updatedAt.toDate().toLocaleDateString('en-IN')
+                    : 'N/A'
+            };
+        });
+
         res.render('coordinator-dashboard', {
             coordinator: req.session.coordinator,
             schools,
@@ -4818,6 +4846,7 @@ app.get('/coordinator-dashboard', isAuthenticated, async (req, res) => {
             completedSchools,
             trainers,
             trainerId,
+            feedbackData, // Add feedbackData to the render context
             error: req.query.error || null,
             success: req.query.success || null
         });
@@ -4830,12 +4859,12 @@ app.get('/coordinator-dashboard', isAuthenticated, async (req, res) => {
             completedSchools: [],
             trainers: [],
             trainerId: null,
+            feedbackData: [], // Add feedbackData to the error case
             error: 'Failed to load dashboard data',
             success: null
         });
     }
 });
-
 
 
     // POST: Update Visited School Status (Coordinator-specific, using coordinatorStatus)

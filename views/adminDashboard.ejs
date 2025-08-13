@@ -1019,168 +1019,6 @@ if (callLogForm) {
                 exportExcelButton.addEventListener('click', downloadExcel);
             }
         });
-        // Fetch student feedback data
-async function fetchFeedbackData() {
-    try {
-        const response = await fetch('/student-feedback');
-        if (!response.ok) {
-            throw new Error('Failed to fetch student feedback');
-        }
-        const feedbackData = await response.json();
-        renderFeedbackTable(feedbackData);
-    } catch (error) {
-        console.error('Error fetching student feedback:', error);
-        const tbody = document.getElementById('student-feedback-body');
-        if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="8" class="text-gray-700 text-center py-4">Error loading student feedback.</td></tr>';
-        }
-    }
-}
-
-// Render student feedback table
-function renderFeedbackTable(feedbackData = []) {
-    const tbody = document.getElementById('student-feedback-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
-    if (feedbackData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-gray-700 text-center py-4">No student feedback available yet.</td></tr>';
-        return;
-    }
-    feedbackData.forEach(feedback => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50';
-        row.innerHTML = `
-            <td class="py-2 px-4 border-b text-gray-700" data-column="studentName">${feedback.studentName || 'N/A'}</td>
-            <td class="py-2 px-4 border-b text-gray-700" data-column="className">${feedback.className || 'N/A'}</td>
-            <td class="py-2 px-4 border-b text-gray-700">${feedback.question1 || 'N/A'}</td>
-            <td class="py-2 px-4 border-b text-gray-700">${feedback.question2 || 'N/A'}</td>
-            <td class="py-2 px-4 border-b text-gray-700">${feedback.question3 || 'N/A'}</td>
-            <td class="py-2 px-4 border-b text-gray-700">${feedback.question4 || 'N/A'}</td>
-            <td class="py-2 px-4 border-b text-gray-700">${feedback.question5 || 'N/A'}</td>
-            <td class="py-2 px-4 border-b text-gray-700" data-column="createdAt">${formatDateIST(feedback.createdAt)}</td>
-        `;
-        tbody.appendChild(row);
-    });
-    updateFeedbackFilters();
-}
-
-// Update filter dropdowns for student feedback
-function updateFeedbackFilters() {
-    const columns = ['studentName', 'className', 'createdAt'];
-    columns.forEach(column => {
-        const select = document.querySelector(`#student-feedback select[data-column="${column}"]`);
-        if (!select) return;
-        select.innerHTML = '<option value="All">All</option>';
-        const values = new Set();
-        feedbackData.forEach(feedback => {
-            const value = column === 'createdAt' ? formatDateIST(feedback[column]) : feedback[column];
-            if (value && !values.has(value)) {
-                values.add(value);
-            }
-        });
-        [...values].sort().forEach(value => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            select.appendChild(option);
-        });
-        select.addEventListener('change', () => applyFilters('student-feedback'));
-    });
-}
-
-// Modified downloadExcel function to handle feedback data
-async function downloadExcel(tabName = 'all') {
-    const button = document.getElementById('exportExcelButton');
-    const buttonText = document.getElementById('exportButtonText');
-    const loadingText = document.getElementById('exportLoadingText');
-
-    if (button && buttonText && loadingText) {
-        button.disabled = true;
-        buttonText.classList.add('hidden');
-        loadingText.classList.remove('hidden');
-    }
-
-    try {
-        let url = '/admin/export-data';
-        if (tabName === 'student-feedback') {
-            url = '/student-feedback/export'; // Specific endpoint for feedback export
-        }
-
-        const response = await fetch(url, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
-        }
-
-        const blob = await response.blob();
-        if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
-            throw new Error('Invalid response type: Expected Excel file');
-        }
-
-        const blobUrl = window.URL.createObjectURL(blob);
-        const filename = tabName === 'student-feedback' 
-            ? `student_feedback_${new Date().toISOString().split('T')[0]}.xlsx`
-            : `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-        const anchor = document.createElement('a');
-        anchor.href = blobUrl;
-        anchor.download = filename;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-        console.error('Error downloading Excel:', err);
-        alert(`Failed to download Excel file: ${err.message}`);
-    } finally {
-        if (button && buttonText && loadingText) {
-            button.disabled = false;
-            buttonText.classList.remove('hidden');
-            loadingText.classList.add('hidden');
-        }
-    }
-}
-// Update export button to pass tabName
-document.getElementById('exportExcelButton').addEventListener('click', () => {
-    const activeTab = document.querySelector('.tab.bg-blue-600');
-    const tabName = activeTab ? activeTab.getAttribute('onclick').match(/'([^']+)'/)[1] : 'all';
-    downloadExcel(tabName);
-});
-// Update openTab to fetch feedback data when the student-feedback tab is opened
-function openTab(tabName) {
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => content.classList.add('hidden'));
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
-        tab.classList.remove('bg-blue-600', 'text-white');
-        tab.classList.add('bg-gray-200', 'text-gray-700');
-    });
-    const targetTab = document.getElementById(tabName);
-    if (targetTab) {
-        targetTab.classList.remove('hidden');
-    }
-    const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
-    if (activeTab) {
-        activeTab.classList.remove('bg-gray-200', 'text-gray-700');
-        activeTab.classList.add('bg-blue-600', 'text-white');
-    }
-    if (tabName === 'workshop-form') {
-        fetchWorkshopSummaries();
-    } else if (tabName === 'login-log') {
-        renderLoginLogTable();
-    } else if (tabName === 'student-feedback') {
-        fetchFeedbackData();
-    } else if (tabName === 'call-log') {
-        fetchCallLogs();
-    }
-}
 
         // Window onload for initialization
         window.onload = function () {
@@ -2607,28 +2445,27 @@ function openTab(tabName) {
     </div>
 </div>
         
-<div id="student-feedback" class="tab-content">
-            <h2 class="text-2xl font-bold mb-4 text-gray-700">Student Feedback</h2>
-            <p class="text-gray-600 mb-4">Showing student feedback submissions</p>
-            <div class="overflow-x-auto mb-6">
-                <table id="student-feedback" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-                    <thead class="bg-gray-100 sticky top-0">
-                        <tr>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">Student Name<br><select class="filter-select text-sm w-full" data-column="studentName"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="className">Class<br><select class="filter-select text-sm w-full" data-column="className"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 1</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 2</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 3</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 4</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 5</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="createdAt">Submission Date (IST)<br><select class="filter-select text-sm w-full" data-column="createdAt"></select></th>
-                        </tr>
-                    </thead>
-                    <tbody id="student-feedback-body"></tbody>
-                </table>
-            </div>
-        </div>
- </div>
+<div id="student-feedback" class="tab-content hidden">
+    <h2 class="text-2xl font-bold mb-4 text-gray-700">Student Feedback</h2>
+    <p class="text-gray-600 mb-4">Showing student feedback submissions</p>
+    <div class="overflow-x-auto mb-6">
+        <table id="student-feedback" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+            <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">Student Name<br><select class="filter-select text-sm w-full" data-column="studentName"></select></th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="className">Class<br><select class="filter-select text-sm w-full" data-column="className"></select></th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 1</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 2</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 3</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 4</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 5</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="createdAt">Submission Date (IST)<br><select class="filter-select text-sm w-full" data-column="createdAt"></select></th>
+                </tr>
+            </thead>
+            <tbody id="student-feedback-body"></tbody>
+        </table>
+    </div>
+</div>
 
 </body>
 </html>

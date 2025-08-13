@@ -57,17 +57,17 @@
     }
 
     .status-pending {
-      color: #fd7e14; /* Orange */
+      color: #fd7e14;
       font-weight: 600;
     }
 
     .status-pack {
-      color: #007bff; /* Bootstrap Blue */
+      color: #007bff;
       font-weight: 600;
     }
 
     .status-delivered {
-      color: #28a745; /* Bootstrap Green */
+      color: #28a745;
       font-weight: 600;
     }
 
@@ -78,6 +78,15 @@
 
     .btn-primary:hover {
       background-color: #0056b3;
+    }
+
+    .delivery-number-input {
+      display: none;
+      width: 100px;
+    }
+
+    .agency-input {
+      width: 150px;
     }
 
     @media (max-width: 768px) {
@@ -95,7 +104,6 @@
   </style>
 </head>
 <body>
-
 <div class="sidebar">
   <h2>Logistic Portal</h2>
   <ul>
@@ -108,60 +116,88 @@
   <h3 class="mb-4">Approved Schools</h3>
 
   <table class="table table-bordered table-striped">
-  <thead class="thead-dark">
-    <tr>
-      <th>School Name</th>
-      <th>Civics Sir Number</th>
-      <th>School Phone Number</th>
-      <th>Principal Number</th>
-      <th>City</th>
-      <th>District</th>
-      <th>Event Date</th>
-      <th>Status</th>
-      <th>Change Status</th>
-    </tr>
-  </thead>
-  <tbody>
-    <% if (schools.length === 0) { %>
-      <tr><td colspan="9">No schools found.</td></tr>
-    <% } else { %>
-      <% schools.forEach(school => { %>
-        <tr>
-          <td><%= school.name %></td>
-          <td><%= school.civicsSirNumber %></td>
-          <td><%= school.schoolPhoneNumber %></td>
-          <td><%= school.principalNumber %></td>
-          <td><%= school.city %></td>
-          <td><%= school.district %></td>
-          <td><%= school.eventDate %></td>
-          <td class="status-cell" data-id="<%= school.id %>">
-            <% if (school.status === 'delivered') { %>
-              <span class="status-delivered">Delivered</span>
-            <% } else if (school.status === 'pack') { %>
-              <span class="status-pack">Pack</span>
-            <% } else { %>
-              <span class="status-pending">Pending</span>
-            <% } %>
-          </td>
-          <td>
-            <form method="POST" action="/update-status" class="form-inline update-status-form" data-id="<%= school.id %>">
-              <input type="hidden" name="id" value="<%= school.id %>">
-              <select name="status" class="form-control mr-2">
-                <option value="pending" <%= school.status === 'pending' ? 'selected' : '' %>>Pending</option>
-                <option value="pack" <%= school.status === 'pack' ? 'selected' : '' %>>Pack</option>
-                <option value="delivered" <%= school.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
-              </select>
-              <button type="submit" class="btn btn-sm btn-primary">Submit</button>
-            </form>
-          </td>
-        </tr>
-      <% }); %>
-    <% } %>
-  </tbody>
-</table>
+    <thead class="thead-dark">
+      <tr>
+        <th>School Name</th>
+        <th>Civics Sir Number</th>
+        <th>School Phone Number</th>
+        <th>Principal Number</th>
+        <th>City</th>
+        <th>District</th>
+        <th>Agency</th>
+        <th>Event Date</th>
+        <th>Status</th>
+        <th>Delivery Mode</th>
+        <th>Change Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% if (schools.length === 0) { %>
+        <tr><td colspan="11">No schools found.</td></tr>
+      <% } else { %>
+        <% schools.forEach(school => { %>
+          <tr>
+            <td><%= school.name %></td>
+            <td><%= school.civicsSirNumber %></td>
+            <td><%= school.schoolPhoneNumber %></td>
+            <td><%= school.principalNumber %></td>
+            <td><%= school.city %></td>
+            <td><%= school.district %></td>
+            <td>
+              <form method="POST" action="/update-delivery" class="form-inline update-delivery-form" data-id="<%= school.id %>">
+                <input type="text" name="agency" class="form-control mr-2 agency-input" value="<%= school.agency %>" placeholder="Enter agency">
+                <input type="hidden" name="id" value="<%= school.id %>">
+                <input type="hidden" name="deliveryMode" value="<%= school.deliveryMode %>">
+                <input type="hidden" name="deliveryNumber" value="<%= school.deliveryNumber %>">
+                <button type="submit" class="btn btn-sm btn-primary">Update</button>
+              </form>
+            </td>
+            <td><%= school.eventDate %></td>
+            <td class="status-cell" data-id="<%= school.id %>">
+              <% if (school.status === 'delivered') { %>
+                <span class="status-delivered">Delivered</span>
+              <% } else if (school.status === 'pack') { %>
+                <span class="status-pack">Pack</span>
+              <% } else { %>
+                <span class="status-pending">Pending</span>
+              <% } %>
+            </td>
+            <td>
+              <form method="POST" action="/update-delivery" class="form-inline update-delivery-form" data-id="<%= school.id %>">
+                <input type="hidden" name="id" value="<%= school.id %>">
+                <input type="hidden" name="agency" value="<%= school.agency %>">
+                <select name="deliveryMode" class="form-control mr-2 delivery-mode-select">
+                  <option value="pending" <%= school.deliveryMode === 'pending' ? 'selected' : '' %>>Pending</option>
+                  <option value="by hand" <%= school.deliveryMode === 'by hand' ? 'selected' : '' %>>By Hand</option>
+                  <option value="post" <%= school.deliveryMode === 'post' ? 'selected' : '' %>>Post</option>
+                  <option value="train" <%= school.deliveryMode === 'train' ? 'selected' : '' %>>Train</option>
+                  <option value="bus" <%= school.deliveryMode === 'bus' ? 'selected' : '' %>>Bus</option>
+                  <option value="courier" <%= school.deliveryMode === 'courier' ? 'selected' : '' %>>Courier</option>
+                </select>
+                <input type="text" name="deliveryNumber" class="form-control mr-2 delivery-number-input" value="<%= school.deliveryNumber %>" placeholder="Enter barcode">
+                <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+              </form>
+            </td>
+            <td>
+              <form method="POST" action="/update-status" class="form-inline update-status-form" data-id="<%= school.id %>">
+                <input type="hidden" name="id" value="<%= school.id %>">
+                <select name="status" class="form-control mr-2">
+                  <option value="pending" <%= school.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                  <option value="pack" <%= school.status === 'pack' ? 'selected' : '' %>>Pack</option>
+                  <option value="delivered" <%= school.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                </select>
+                <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+              </form>
+            </td>
+          </tr>
+        <% }); %>
+      <% } %>
+    </tbody>
+  </table>
 </div>
 
 <script>
+  // Handle status updates
   document.querySelectorAll('.update-status-form').forEach(form => {
     form.addEventListener('submit', async function (e) {
       e.preventDefault();
@@ -200,7 +236,52 @@
       }
     });
   });
-</script>
 
+  // Handle delivery mode and agency updates
+  document.querySelectorAll('.update-delivery-form').forEach(form => {
+    const select = form.querySelector('.delivery-mode-select');
+    const numberInput = form.querySelector('.delivery-number-input');
+
+    // Initial state for delivery number input
+    if (select && (select.value === 'bus' || select.value === 'train' || select.value === 'post')) {
+      numberInput.style.display = 'block';
+    } else if (select) {
+      numberInput.style.display = 'none';
+    }
+
+    // Toggle number input based on delivery mode selection
+    if (select) {
+      select.addEventListener('change', () => {
+        numberInput.style.display = (select.value === 'bus' || select.value === 'train' || select.value === 'post') ? 'block' : 'none';
+      });
+    }
+
+    // Handle form submission
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const id = this.getAttribute('data-id');
+      const formData = new FormData(this);
+      const data = Object.fromEntries(formData);
+
+      try {
+        const response = await fetch('/update-delivery', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: new URLSearchParams(data)
+        });
+
+        if (!response.ok) {
+          alert('Failed to update delivery details.');
+        }
+      } catch (err) {
+        console.error('Error:', err);
+        alert('Error updating delivery details.');
+      }
+    });
+  });
+</script>
 </body>
 </html>

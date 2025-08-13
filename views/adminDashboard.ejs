@@ -6,31 +6,1074 @@
     <title>Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-<script>
-// Initialize callLogs array
-let callLogs = [];
+    <script>
+        // Initialize callLogs and loginLogs arrays
+        let callLogs = [];
+        let loginLogs = [];
+const button = document.getElementById('exportExcelBtn');
+const buttonText = document.getElementById('exportButtonText');
+const loadingText = document.getElementById('loadingText');
+        // Format date to IST
+        function formatDateIST(date) {
+            return new Date(date).toLocaleString('en-US', {
+                timeZone: 'Asia/Kolkata',
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+        }
+  async function fetchCallLogs() {
+            try {
+                const response = await fetch('/call-logs');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch call logs');
+                }
+                callLogs = await response.json();
+                renderCallLogTable(callLogs);
+            } catch (error) {
+                console.error('Error fetching call logs:', error);
+                const tbody = document.getElementById('call-logs-body');
+                if (tbody) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">Error loading call logs.</td></tr>';
+                }
+            }
+        }   
+        // Update filter dropdowns for call logs
+        function updateCallLogFilters() {
+            const columns = ['id', 'callDate', 'caller', 'recipient'];
+            columns.forEach(column => {
+                const select = document.querySelector(`#call-logs select[data-column="${column}"]`);
+                if (!select) return;
+                select.innerHTML = '<option value="All">All</option>';
+                const values = new Set();
+                callLogs.forEach(log => {
+                    const value = column === 'callDate' ? formatDateIST(log[column]) : log[column];
+                    if (value && !values.has(value)) {
+                        values.add(value);
+                    }
+                });
+                [...values].sort().forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    select.appendChild(option);
+                });
+                select.addEventListener('change', () => applyFilters('call-logs'));
+            });
+        }
 
-// Format date to IST
-function formatDateIST(date) {
-    return new Date(date).toLocaleDateString('en-US', {
-        timeZone: 'Asia/Kolkata',
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+        // Update filter dropdowns for login logs
+        function updateLoginLogFilters() {
+            const columns = ['id', 'userEmail', 'ipAddress', 'loginTime'];
+            columns.forEach(column => {
+                const select = document.querySelector(`#login-logs select[data-column="${column}"]`);
+                if (!select) return;
+                select.innerHTML = '<option value="All">All</option>';
+                const values = new Set();
+                loginLogs.forEach(log => {
+                    const value = column === 'loginTime' ? formatDateIST(log[column]) : log[column];
+                    if (value && !values.has(value)) {
+                        values.add(value);
+                    }
+                });
+                [...values].sort().forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    select.appendChild(option);
+                });
+                select.addEventListener('change', () => applyFilters('login-logs'));
+            });
+        }
+
+        // Render call log table
+        function renderCallLogTable(logs = callLogs) {
+            const tbody = document.getElementById('call-logs-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">No call logs available yet.</td></tr>';
+                return;
+            }
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="id">${log.id}</td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="callDate">${formatDateIST(log.callDate)}</td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="caller">${log.caller}</td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="recipient">${log.recipient}</td>
+                    <td class="py-2 px-4 border-b text-gray-700">${log.duration || 'N/A'}</td>
+                    <td class="py-2 px-4 border-b text-gray-700">${log.notes}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            updateCallLogFilters();
+        }
+
+
+        // WebSocket for live login activity
+function setupWebSocket() {
+    const ws = new WebSocket('ws://localhost:3000/ws/login-updates');
+    
+    ws.onopen = () => {
+        console.log('WebSocket connection established for login updates');
+    };
+
+    ws.onmessage = (event) => {
+        try {
+            const newLog = JSON.parse(event.data);
+            if (newLog.id && newLog.userEmail && newLog.ipAddress && newLog.loginTime) {
+                loginLogs.unshift(newLog); // Add new log to the beginning
+                renderLoginLogTable();
+                openTab('login-log'); // Switch to Login Log tab
+                showNotification(`New login by ${newLog.userEmail} at ${formatDateIST(newLog.loginTime)}`);
+            }
+        } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+        }
+    };
+
+    ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+    };
+
+    ws.onclose = () => {
+        console.log('WebSocket connection closed. Attempting to reconnect...');
+        setTimeout(setupWebSocket, 5000); // Reconnect after 5 seconds
+    };
+}
+        // Render login log table
+        function renderLoginLogTable(logs = loginLogs) {
+            const tbody = document.getElementById('login-logs-body');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            if (logs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-gray-700 text-center py-4">No login logs available yet.</td></tr>';
+                return;
+            }
+            logs.forEach(log => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                row.innerHTML = `
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="id">${log.id}</td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="userEmail">${log.userEmail}</td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="ipAddress">${log.ipAddress}</td>
+                    <td class="py-2 px-4 border-b text-gray-700" data-column="loginTime">${formatDateIST(log.loginTime)}</td>
+                    <td class="py-2 px-4 border-b text-gray-700">${log.userRole || 'N/A'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+            updateLoginLogFilters();
+        }
+
+        // General showMessage function
+        function showMessage(message, type, messageDiv) {
+            if (messageDiv) {
+                messageDiv.textContent = message;
+                messageDiv.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
+                messageDiv.classList.add(type === 'success' ? 'bg-green-100' : 'bg-red-100', type === 'success' ? 'text-green-700' : 'text-red-700');
+                setTimeout(() => {
+                    messageDiv.classList.add('hidden');
+                    messageDiv.classList.remove('bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
+                }, 5000);
+            }
+        }
+
+        // Tab navigation
+        function openTab(tabName) {
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => content.classList.add('hidden'));
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('bg-blue-600', 'text-white');
+                tab.classList.add('bg-gray-200', 'text-gray-700');
+            });
+            const targetTab = document.getElementById(tabName);
+            if (targetTab) {
+                targetTab.classList.remove('hidden');
+            }
+            const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
+            if (activeTab) {
+                activeTab.classList.remove('bg-gray-200', 'text-gray-700');
+                activeTab.classList.add('bg-blue-600', 'text-white');
+            }
+            if (tabName === 'workshop-form') {
+                fetchWorkshopSummaries();
+            } else if (tabName === 'login-log') {
+                renderLoginLogTable();
+            }
+        }
+
+        // Apply filters to tables
+        function applyFilters(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) {
+                console.warn(`Table with ID ${tableId} not found`);
+                return;
+            }
+            const rows = table.querySelectorAll('tbody tr');
+            const filters = {};
+
+            table.querySelectorAll('.filter-select').forEach(select => {
+                filters[select.dataset.column] = select.value.trim();
+            });
+
+            rows.forEach(row => {
+                let show = true;
+                for (const [column, value] of Object.entries(filters)) {
+                    if (value && value !== 'All' && value !== '') {
+                        const cell = row.querySelector(`td[data-column="${column}"]`);
+                        if (cell) {
+                            let cellText = cell.textContent.trim();
+                            if (cellText !== value) {
+                                show = false;
+                                break;
+                            }
+                        }
+                    }
+                }
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        // Initialize filters for tables
+        function initializeFilters(tableId) {
+            const table = document.getElementById(tableId);
+            if (!table) {
+                console.warn(`Table with ID ${tableId} not found`);
+                return;
+            }
+            const headers = table.querySelectorAll('th[data-filter]');
+            const rows = table.querySelectorAll('tbody tr');
+
+            headers.forEach(header => {
+                const column = header.dataset.filter;
+                const select = header.querySelector('.filter-select');
+                if (!select) {
+                    console.warn(`Filter select not found for column ${column} in table ${tableId}`);
+                    return;
+                }
+
+                const values = new Set(['All']);
+                rows.forEach(row => {
+                    const cell = row.querySelector(`td[data-column="${column}"]`);
+                    if (cell) {
+                        let cellText = cell.textContent.trim();
+                        if (cellText && !values.has(cellText)) {
+                            values.add(cellText);
+                        }
+                    }
+                });
+
+                select.innerHTML = '';
+                let isAllSet = false;
+                [...values].sort().forEach(value => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = value;
+                    if (value === 'All' && !isAllSet) {
+                        option.selected = true;
+                        isAllSet = true;
+                    }
+                    select.appendChild(option);
+                });
+
+                select.addEventListener('change', () => applyFilters(tableId));
+            });
+        }
+
+        // Confirm trainer deletion
+        function confirmDelete(name) {
+            return confirm(`Are you sure you want to delete trainer "${name}"?`);
+        }
+
+        // Handle trainer actions
+        async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
+            event.preventDefault();
+            const form = event.target.closest('form');
+            const formData = new FormData(form);
+            try {
+                const response = await fetch(url.replace(':schoolId', schoolId), {
+                    method: 'POST',
+                    body: formData
+                });
+                const redirectUrl = new URL(window.location.href);
+                if (response.ok) {
+                    redirectUrl.searchParams.set('success', successMessage);
+                } else {
+                    const result = await response.json();
+                    redirectUrl.searchParams.set('error', result.message || errorMessage);
+                }
+                window.location.href = redirectUrl.toString();
+            } catch (error) {
+                console.error('Trainer action error:', error);
+                const redirectUrl = new URL(window.location.href);
+                redirectUrl.searchParams.set('error', 'Error processing trainer action');
+                window.location.href = redirectUrl.toString();
+            }
+        }
+
+        // Mark school as completed
+        async function markSchoolCompleted(schoolId, button, row) {
+            try {
+                const response = await fetch(`/admin/complete-school/${schoolId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                if (response.ok) {
+                    const completedTable = document.querySelector('#completed-schools tbody');
+                    if (completedTable) {
+                        const completedStatusCell = row.querySelector('td[data-column="isCompleted"]');
+                        if (completedStatusCell) {
+                            completedStatusCell.textContent = 'Yes';
+                        }
+                        if (button) {
+                            button.remove();
+                        }
+                        completedTable.appendChild(row);
+                        applyFilters('completed-schools');
+                        console.log(`School ${schoolId} marked as completed`);
+                    }
+                } else {
+                    const errorData = await response.json();
+                    console.error('Failed to mark school as completed:', errorData.error);
+                    alert(`Failed to mark school as completed: ${errorData.error}`);
+                }
+            } catch (err) {
+                console.error('Error marking school:', err);
+                alert('Error marking school. Please check your connection and try again.');
+            }
+        }
+
+        // Filter media cards
+        function filterMedia() {
+            const uploaderFilter = document.getElementById('uploaderFilter');
+            const seenFilter = document.getElementById('seenFilter');
+            if (!uploaderFilter || !seenFilter) {
+                console.warn('uploaderFilter or seenFilter not found');
+                return;
+            }
+            const uploaderValue = uploaderFilter.value;
+            const seenValue = seenFilter.value;
+            const mediaCards = document.querySelectorAll('#mediaSection .media-card');
+
+            mediaCards.forEach(card => {
+                const uploader = card.dataset.uploaderType;
+                const seen = card.dataset.seen === 'true';
+                let show = true;
+
+                if (uploaderValue !== 'All' && uploader !== uploaderValue) {
+                    show = false;
+                }
+
+                if (seenValue === 'Seen' && !seen) {
+                    show = false;
+                } else if (seenValue === 'Unseen' && seen) {
+                    show = false;
+                }
+
+                card.style.display = show ? '' : 'none';
+            });
+        }
+
+        // Mark media as seen
+        async function markMediaSeen(mediaId, checkbox, cardElement) {
+            const isSeen = checkbox.checked;
+            try {
+                const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ seen: isSeen })
+                });
+
+                if (response.ok) {
+                    cardElement.dataset.seen = isSeen;
+                    checkbox.classList.toggle('bg-green-500', isSeen);
+                    checkbox.classList.toggle('border-green-500', isSeen);
+                    filterMedia();
+                    console.log(`Media ${mediaId} marked as ${isSeen ? 'seen' : 'unseen'}`);
+                } else {
+                    console.error('Failed to update seen status:', await response.text());
+                    checkbox.checked = !isSeen;
+                    alert('Failed to update seen status. Please try again.');
+                }
+            } catch (err) {
+                console.error('Error marking media:', err);
+                checkbox.checked = !isSeen;
+                alert('Error marking media. Please check your connection and try again.');
+            }
+        }
+
+        // Open media modal
+        function openMediaModal(mediaId, mediaUrl, mediaType) {
+            const modal = document.getElementById('mediaModal');
+            const content = document.getElementById('mediaContent');
+            if (!modal || !content) {
+                console.warn('mediaModal or mediaContent not found');
+                return;
+            }
+
+            content.innerHTML = '';
+            if (mediaType === 'image') {
+                content.innerHTML = `<img src="${mediaUrl}" alt="Media" class="w-full rounded shadow">`;
+            } else if (mediaType === 'video') {
+                content.innerHTML = `
+                    <video controls class="w-full rounded shadow">
+                        <source src="${mediaUrl}" type="video/mp4">
+                        Your browser does not support the video tag.
+                    </video>
+                `;
+            }
+            modal.classList.remove('hidden');
+        }
+
+        // Toggle description edit
+        function toggleDescriptionEdit(button) {
+            const parentDiv = button.closest(".text-gray-700");
+            if (!parentDiv) return;
+            const span = parentDiv.querySelector(".description-text");
+            const input = parentDiv.querySelector(".edit-description-input");
+            const saveBtn = parentDiv.querySelector(".save-description-btn");
+            if (span && input && saveBtn) {
+                span.classList.add("hidden");
+                input.classList.remove("hidden");
+                button.classList.add("hidden");
+                saveBtn.classList.remove("hidden");
+            }
+        }
+
+        // Save description
+        async function saveDescription(button) {
+            const parentDiv = button.closest(".text-gray-700");
+            if (!parentDiv) return;
+            const span = parentDiv.querySelector(".description-text");
+            const input = parentDiv.querySelector(".edit-description-input");
+            const editBtn = parentDiv.querySelector(".edit-description-btn");
+            if (!span || !input || !editBtn) return;
+            const mediaId = input.dataset.mediaId;
+            const newDescription = input.value.trim();
+
+            try {
+                const response = await fetch(`/update-description/${mediaId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ description: newDescription })
+                });
+
+                if (response.ok) {
+                    span.textContent = newDescription || 'No description provided';
+                    span.classList.remove("hidden");
+                    input.classList.add("hidden");
+                    button.classList.add("hidden");
+                    editBtn.classList.remove("hidden");
+                } else {
+                    alert("Failed to update description.");
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("An error occurred while updating description.");
+            }
+        }
+
+        // Download media
+        async function downloadMedia(mediaId, type) {
+            try {
+                const response = await fetch(`/download-media/${mediaId}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch media: ${response.statusText}`);
+                }
+                const blob = await response.blob();
+                const blobUrl = window.URL.createObjectURL(blob);
+                const extension = type === 'video' ? 'mp4' : 'jpg';
+                const filename = `${mediaId}.${extension}`;
+
+                const anchor = document.createElement('a');
+                anchor.href = blobUrl;
+                anchor.download = filename;
+                document.body.appendChild(anchor);
+                anchor.click();
+                document.body.removeChild(anchor);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (err) {
+                console.error('Error downloading media:', err);
+                alert('Failed to download media. Please check your connection or try again.');
+            }
+        }
+
+        // Download Excel data
+      async function downloadExcel() {
+    const button = document.getElementById('exportExcelButton');
+    const buttonText = document.getElementById('exportButtonText');
+    const loadingText = document.getElementById('exportLoadingText');
+
+    if (button && buttonText && loadingText) {
+        button.disabled = true;
+        buttonText.classList.add('hidden');
+        loadingText.classList.remove('hidden');
+    }
+
+    try {
+        const response = await fetch('/admin/export-data', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+            throw new Error('Invalid response type: Expected Excel file');
+        }
+
+        const blobUrl = window.URL.createObjectURL(blob);
+        const filename = `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+        const anchor = document.createElement('a');
+        anchor.href = blobUrl;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+        console.error('Error downloading Excel:', err);
+        alert(`Failed to download Excel file: ${err.message}`);
+    } finally {
+        if (button && buttonText && loadingText) {
+            button.disabled = false;
+            buttonText.classList.remove('hidden');
+            loadingText.classList.add('hidden');
+        }
+    }
 }
 
-// Update filter dropdowns for call logs
-function updateCallLogFilters() {
-    const columns = ['id', 'callDate', 'caller', 'recipient'];
+// Toggle the visibility of the custom date input field based on the dropdown selection
+// Show or hide custom date input based on select value
+  function toggleCustomDateInput(selectElem, schoolId) {
+    const customDateInput = document.getElementById(`custom-date-${schoolId}`);
+    const hiddenInput = document.getElementById(`eventDateFinal-${schoolId}`);
+
+    if (selectElem.value === 'other') {
+      customDateInput.classList.remove('hidden');
+      customDateInput.value = '';
+      hiddenInput.value = '';
+
+      // Update hidden input when user picks a date
+      customDateInput.onchange = () => {
+        hiddenInput.value = customDateInput.value;
+      };
+    } else {
+      customDateInput.classList.add('hidden');
+      hiddenInput.value = selectElem.value;
+    }
+  }
+        // Consolidated DOMContentLoaded listener
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initialize dialog polyfill for call log dialog
+            const callLogDialog = document.getElementById('callLogDialog');
+            if (callLogDialog && window.dialogPolyfill) {
+                console.log('Registering dialog polyfill for callLogDialog');
+                dialogPolyfill.registerDialog(callLogDialog);
+            } else if (!callLogDialog) {
+                console.warn('callLogDialog not found');
+            } else if (!window.dialogPolyfill) {
+                console.warn('Dialog polyfill not loaded');
+            }
+
+            // Call Log Dialog Controls
+            const openCallLogDialog = document.getElementById('openCallLogDialog');
+            const cancelCallLogButton = document.getElementById('cancelCallLogButton');
+            if (openCallLogDialog && callLogDialog) {
+                console.log('Found openCallLogDialog and callLogDialog, attaching event listener');
+                openCallLogDialog.addEventListener('click', () => {
+                    console.log('Add Call button clicked');
+                    callLogDialog.showModal();
+                });
+            } else {
+                console.error('openCallLogDialog or callLogDialog not found');
+            }
+            if (cancelCallLogButton && callLogDialog) {
+                console.log('Found cancelCallLogButton, attaching event listener');
+                cancelCallLogButton.addEventListener('click', () => {
+                    console.log('Cancel button clicked');
+                    callLogDialog.close();
+                });
+            } else {
+                console.warn('cancelCallLogButton or callLogDialog not found');
+            }
+
+            // Coordinator Form Submission
+            const coordinatorForm = document.getElementById('coordinatorForm');
+            const coordinatorMessage = document.getElementById('coordinatorMessage');
+            const submitButton = document.getElementById('submitButton');
+            const buttonText = document.getElementById('buttonText');
+            const loadingText = document.getElementById('loadingText');
+
+            console.log('Checking coordinatorForm elements:');
+            console.log('coordinatorForm:', coordinatorForm);
+            console.log('coordinatorMessage:', coordinatorMessage);
+            console.log('submitButton:', submitButton);
+            console.log('buttonText:', buttonText);
+            console.log('loadingText:', loadingText);
+
+            if (coordinatorForm && coordinatorMessage && submitButton && buttonText && loadingText) {
+                coordinatorForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    const form = event.target;
+                    const messageDiv = coordinatorMessage;
+                    const name = form.querySelector('#name')?.value.trim();
+                    const email = form.querySelector('#email')?.value.trim();
+                    const number = form.querySelector('#number')?.value.trim();
+                    const password = form.querySelector('#password')?.value.trim();
+                    const organization = form.querySelector('#organization')?.value.trim();
+
+                    console.log('Form data:', { name, email, number, password, organization });
+
+                    const nameRegex = /^[a-zA-Z\s]+$/;
+                    if (!name || !nameRegex.test(name)) {
+                        showMessage('Name can only contain letters and spaces', 'error', messageDiv);
+                        return;
+                    }
+
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!email || !emailRegex.test(email)) {
+                        showMessage('Please enter a valid email address', 'error', messageDiv);
+                        return;
+                    }
+
+                    const phoneRegex = /^[0-9]{10}$/;
+                    if (!number || !phoneRegex.test(number)) {
+                        showMessage('Phone number must be 10 digits', 'error', messageDiv);
+                        return;
+                    }
+
+                    if (!password || password.length < 6) {
+                        showMessage('Password must be at least 6 characters', 'error', messageDiv);
+                        return;
+                    }
+
+                    const orgRegex = /^[a-zA-Z0-9\s]+$/;
+                    if (!organization || !orgRegex.test(organization)) {
+                        showMessage('Organization can only contain letters, numbers, and spaces', 'error', messageDiv);
+                        return;
+                    }
+
+                    submitButton.disabled = true;
+                    buttonText.classList.add('hidden');
+                    loadingText.classList.remove('hidden');
+
+                    try {
+                        const formData = new FormData(form);
+                        for (const [key, value] of formData.entries()) {
+                            console.log(`FormData: ${key}=${value}`);
+                        }
+
+                        const response = await fetch('http://localhost:3000/co-ordinator-register', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        let result;
+                        if (response.headers.get('content-type')?.includes('application/json')) {
+                            result = await response.json();
+                        } else {
+                            result = { error: await response.text() || 'Unknown server error' };
+                        }
+
+                        if (response.ok) {
+                            showMessage(result.message || 'Registration successful', 'success', messageDiv);
+                            form.reset();
+                            setTimeout(() => location.reload(), 1000);
+                        } else {
+                            showMessage(result.error || result.message || 'Registration failed', 'error', messageDiv);
+                            console.error('Server response:', result);
+                        }
+                    } catch (error) {
+                        showMessage('Network error. Please check your connection and try again.', 'error', messageDiv);
+                        console.error('Submission error:', error);
+                    } finally {
+                        submitButton.disabled = false;
+                        buttonText.classList.remove('hidden');
+                        loadingText.classList.add('hidden');
+                    }
+                });
+            } else {
+                console.error('Required DOM elements not found for coordinatorForm', {
+                    coordinatorForm: !!coordinatorForm,
+                    coordinatorMessage: !!coordinatorMessage,
+                    submitButton: !!submitButton,
+                    buttonText: !!buttonText,
+                    loadingText: !!loadingText
+                });
+                setupWebSocket();
+            }
+
+            // Call Log Form Submission
+          // Call Log Form Submission
+const callLogForm = document.getElementById('callLogForm');
+if (callLogForm) {
+    callLogForm.addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const form = event.target;
+        const messageDiv = document.getElementById('callLogMessage');
+        const submitButton = document.getElementById('submitCallLogButton');
+        const buttonText = document.getElementById('callLogButtonText');
+        const loadingText = document.getElementById('callLogLoadingText');
+
+        const callDate = form.querySelector('#callDate')?.value.trim();
+        const caller = form.querySelector('#caller')?.value.trim();
+        const recipient = form.querySelector('#recipient')?.value.trim();
+        const notes = form.querySelector('#notes')?.value.trim();
+
+        if (!callDate || !caller || !recipient || !notes) {
+            showMessage('All required fields must be filled', 'error', messageDiv);
+            return;
+        }
+
+        submitButton.disabled = true;
+        buttonText.classList.add('hidden');
+        loadingText.classList.remove('hidden');
+
+        try {
+            const response = await fetch('/add-call-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    callDate: new Date(callDate).toISOString(),
+                    caller,
+                    recipient,
+                    notes
+                })
+            });
+
+            let result;
+            if (response.headers.get('content-type')?.includes('application/json')) {
+                result = await response.json();
+            } else {
+                result = { message: await response.text() };
+            }
+
+            if (response.ok) {
+                // Fetch updated call logs from the server
+                const logsResponse = await fetch('/call-logs');
+                if (!logsResponse.ok) {
+                    throw new Error('Failed to fetch updated call logs');
+                }
+                callLogs = await logsResponse.json();
+                renderCallLogTable(callLogs);
+                showMessage(result.message || 'Call log added successfully', 'success', messageDiv);
+                form.reset();
+                document.getElementById('callLogDialog').close();
+            } else {
+                showMessage(result.error || 'Failed to add call log', 'error', messageDiv);
+                console.error('Server error response:', result);
+            }
+        } catch (error) {
+            showMessage('Error adding call log. Please try again.', 'error', messageDiv);
+            console.error('Submission error:', error);
+        } finally {
+            submitButton.disabled = false;
+            buttonText.classList.remove('hidden');
+            loadingText.classList.add('hidden');
+        }
+    });
+} else {
+    console.warn('callLogForm not found');
+}
+
+            // Post to social media
+            const postButtons = document.querySelectorAll('.post-to-fb-btn');
+            postButtons.forEach(button => {
+                button.addEventListener('click', async (event) => {
+                    event.stopPropagation();
+                    const id = button.dataset.id;
+                    const url = decodeURI(button.dataset.url);
+                    const type = button.dataset.type;
+                    const caption = decodeURI(button.dataset.caption || '');
+
+                    const postText = button.querySelector('.post-text');
+                    const postingText = button.querySelector('.posting-text');
+                    if (postText && postingText) {
+                        postText.classList.add('hidden');
+                        postingText.classList.remove('hidden');
+                        button.disabled = true;
+                    }
+
+                    try {
+                        const res = await fetch('/post-to-socials', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id, url, type, caption })
+                        });
+
+                        let data;
+                        if (res.headers.get('content-type')?.includes('application/json')) {
+                            data = await res.json();
+                        } else {
+                            data = { message: await res.text() };
+                        }
+
+                        if (res.ok) {
+                            alert(`✅ ${data.message}`);
+                        } else {
+                            console.error('Server error:', data);
+                            alert(`❌ Failed: ${data.message || 'Unknown error'}`);
+                        }
+                    } catch (err) {
+                        console.error('Fetch error:', err);
+                        alert('❌ Error posting to social platforms. Please check your connection or try again later.');
+                    } finally {
+                        if (postText && postingText) {
+                            button.disabled = false;
+                            postText.classList.remove('hidden');
+                            postingText.classList.add('hidden');
+                        }
+                    }
+
+                });
+            });
+
+            // Upload photo form submission
+            const uploadForm = document.getElementById('upload-form');
+            if (uploadForm) {
+                uploadForm.addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    const form = event.target;
+                    const formData = new FormData(form);
+                    const successMessageDiv = document.getElementById('success-message');
+
+                    try {
+                        const response = await fetch(form.action, {
+                            method: form.method,
+                            body: formData
+                        });
+
+                        let result;
+                        if (response.headers.get('content-type')?.includes('application/json')) {
+                            result = await response.json();
+                        } else {
+                            result = { message: await response.text() };
+                        }
+
+                        if (successMessageDiv) {
+                            successMessageDiv.textContent = result.message;
+                            successMessageDiv.classList.remove('hidden');
+                            if (!response.ok) {
+                                successMessageDiv.classList.add('bg-red-100', 'text-red-700');
+                            }
+                            form.reset();
+                            setTimeout(() => {
+                                successMessageDiv.classList.add('hidden');
+                                successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
+                            }, 5000);
+                        }
+                    } catch (error) {
+                        if (successMessageDiv) {
+                            successMessageDiv.textContent = 'Error uploading files. Please try again.';
+                            successMessageDiv.classList.remove('hidden');
+                            successMessageDiv.classList.add('bg-red-100', 'text-red-700');
+                            setTimeout(() => {
+                                successMessageDiv.classList.add('hidden');
+                                successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
+                            }, 5000);
+                        }
+                        console.error('Upload error:', error);
+                    }
+                });
+            } else {
+                console.warn('upload-form not found');
+            }
+
+            // Media upload form
+            const mediaUploadForm = document.getElementById('mediaUploadForm');
+            if (mediaUploadForm) {
+                mediaUploadForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const uploadStatus = document.getElementById('uploadStatus');
+                    const file = document.getElementById('mediaFile')?.files[0];
+                    const formData = new FormData();
+                    formData.append('mediaFile', file);
+                    const button = document.getElementById('uploadButton');
+
+                    if (uploadStatus) {
+                        uploadStatus.innerHTML = 'Uploading...';
+                    }
+                    if (button) {
+                        button.disabled = true;
+                    }
+
+                    try {
+                        const res = await fetch('/upload-image', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        let result;
+                        if (res.headers.get('content-type')?.includes('application/json')) {
+                            result = await res.json();
+                        } else {
+                            result = { error: await res.text() };
+                        }
+
+                        if (res.ok && uploadStatus) {
+                            uploadStatus.innerHTML = `✅ Upload successful! <a href="${result.files[0].downloadUrl}" target="_blank">View</a>`;
+                        } else if (uploadStatus) {
+                            uploadStatus.innerHTML = `❌ Upload failed: ${result.error}`;
+                        }
+                    } catch (err) {
+                        if (uploadStatus) {
+                            uploadStatus.innerHTML = '❌ Upload error.';
+                        }
+                        console.error('Media upload error:', err);
+                    } finally {
+                        if (button) {
+                            button.disabled = false;
+                        }
+                    }
+                });
+            } else {
+                console.warn('mediaUploadForm not found');
+            }
+
+            // Initialize media filters and checkboxes
+            const uploaderFilter = document.getElementById('uploaderFilter');
+            const seenFilter = document.getElementById('seenFilter');
+            if (uploaderFilter && seenFilter) {
+                uploaderFilter.addEventListener('change', filterMedia);
+                seenFilter.addEventListener('change', filterMedia);
+                filterMedia();
+            } else {
+                console.warn('uploaderFilter or seenFilter not found');
+            }
+
+            const markSeenCheckboxes = document.querySelectorAll('.mark-seen-checkbox');
+            markSeenCheckboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', (event) => {
+                    event.stopPropagation();
+                    const mediaId = checkbox.dataset.mediaId;
+                    const cardElement = checkbox.closest('.media-card');
+                    if (mediaId && cardElement) {
+                        markMediaSeen(mediaId, checkbox, cardElement);
+                    }
+                });
+                checkbox.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                });
+            });
+
+            const closeModal = document.getElementById('closeModal');
+            if (closeModal) {
+                closeModal.addEventListener('click', () => {
+                    const mediaModal = document.getElementById('mediaModal');
+                    if (mediaModal) {
+                        mediaModal.classList.add('hidden');
+                    }
+                });
+            }
+
+            // Complete school buttons
+            const completeSchoolButtons = document.querySelectorAll('.complete-school-btn');
+            completeSchoolButtons.forEach(button => {
+                button.addEventListener('click', (event) => {
+                    event.preventDefault();
+                    const schoolId = button.dataset.schoolId;
+                    const row = button.closest('tr');
+                    if (!row) return;
+                    const isApproved = row.querySelector('[data-column="isApproved"]')?.textContent.trim() === 'Yes';
+                    const eventDate = row.querySelector('[data-column="eventDate"]')?.textContent.trim();
+                    const isCompleted = row.querySelector('[data-column="isCompleted"]')?.textContent.trim() === 'Yes';
+
+                    if (!isApproved) {
+                        alert('Cannot complete: School is not approved.');
+                        return;
+                    }
+                    if (eventDate === 'Not assigned') {
+                        alert('Cannot complete: Event date is not assigned.');
+                        return;
+                    }
+                    if (isCompleted) {
+                        alert('School is already marked as completed.');
+                        return;
+                    }
+
+                    markSchoolCompleted(schoolId, button, row);
+                });
+            });
+
+            // Export Excel button
+            const exportExcelButton = document.getElementById('exportExcelButton');
+            if (exportExcelButton) {
+                exportExcelButton.addEventListener('click', downloadExcel);
+            }
+        });
+        // Fetch student feedback data
+async function fetchFeedbackData() {
+    try {
+        const response = await fetch('/student-feedback');
+        if (!response.ok) {
+            throw new Error('Failed to fetch student feedback');
+        }
+        const feedbackData = await response.json();
+        renderFeedbackTable(feedbackData);
+    } catch (error) {
+        console.error('Error fetching student feedback:', error);
+        const tbody = document.getElementById('student-feedback-body');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="8" class="text-gray-700 text-center py-4">Error loading student feedback.</td></tr>';
+        }
+    }
+}
+
+// Render student feedback table
+function renderFeedbackTable(feedbackData = []) {
+    const tbody = document.getElementById('student-feedback-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (feedbackData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-gray-700 text-center py-4">No student feedback available yet.</td></tr>';
+        return;
+    }
+    feedbackData.forEach(feedback => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.innerHTML = `
+            <td class="py-2 px-4 border-b text-gray-700" data-column="studentName">${feedback.studentName || 'N/A'}</td>
+            <td class="py-2 px-4 border-b text-gray-700" data-column="className">${feedback.className || 'N/A'}</td>
+            <td class="py-2 px-4 border-b text-gray-700">${feedback.question1 || 'N/A'}</td>
+            <td class="py-2 px-4 border-b text-gray-700">${feedback.question2 || 'N/A'}</td>
+            <td class="py-2 px-4 border-b text-gray-700">${feedback.question3 || 'N/A'}</td>
+            <td class="py-2 px-4 border-b text-gray-700">${feedback.question4 || 'N/A'}</td>
+            <td class="py-2 px-4 border-b text-gray-700">${feedback.question5 || 'N/A'}</td>
+            <td class="py-2 px-4 border-b text-gray-700" data-column="createdAt">${formatDateIST(feedback.createdAt)}</td>
+        `;
+        tbody.appendChild(row);
+    });
+    updateFeedbackFilters();
+}
+
+// Update filter dropdowns for student feedback
+function updateFeedbackFilters() {
+    const columns = ['studentName', 'className', 'createdAt'];
     columns.forEach(column => {
-        const select = document.querySelector(`#call-logs select[data-column="${column}"]`);
+        const select = document.querySelector(`#student-feedback select[data-column="${column}"]`);
         if (!select) return;
         select.innerHTML = '<option value="All">All</option>';
         const values = new Set();
-        callLogs.forEach(log => {
-            const value = column === 'callDate' ? formatDateIST(log[column]) : log[column];
+        feedbackData.forEach(feedback => {
+            const value = column === 'createdAt' ? formatDateIST(feedback[column]) : feedback[column];
             if (value && !values.has(value)) {
                 values.add(value);
             }
@@ -41,48 +1084,76 @@ function updateCallLogFilters() {
             option.textContent = value;
             select.appendChild(option);
         });
-        select.addEventListener('change', () => applyFilters('call-logs'));
+        select.addEventListener('change', () => applyFilters('student-feedback'));
     });
 }
 
-// Render call log table
-function renderCallLogTable(logs = callLogs) {
-    const tbody = document.getElementById('call-logs-body');
-    tbody.innerHTML = '';
-    if (logs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">No call logs available yet.</td></tr>';
-        return;
-    }
-    logs.forEach(log => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50';
-        row.innerHTML = `
-            <td class="py-2 px-4 border-b text-gray-700" data-column="id">${log.id}</td>
-            <td class="py-2 px-4 border-b text-gray-700" data-column="callDate">${formatDateIST(log.callDate)}</td>
-            <td class="py-2 px-4 border-b text-gray-700" data-column="caller">${log.caller}</td>
-            <td class="py-2 px-4 border-b text-gray-700" data-column="recipient">${log.recipient}</td>
-            <td class="py-2 px-4 border-b text-gray-700">${log.duration || 'N/A'}</td>
-            <td class="py-2 px-4 border-b text-gray-700">${log.notes}</td>
-        `;
-        tbody.appendChild(row);
-    });
-    updateCallLogFilters();
-}
+// Modified downloadExcel function to handle feedback data
+async function downloadExcel(tabName = 'all') {
+    const button = document.getElementById('exportExcelButton');
+    const buttonText = document.getElementById('exportButtonText');
+    const loadingText = document.getElementById('exportLoadingText');
 
-// General showMessage function
-function showMessage(message, type, messageDiv) {
-    if (messageDiv) {
-        messageDiv.textContent = message;
-        messageDiv.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
-        messageDiv.classList.add(type === 'success' ? 'bg-green-100' : 'bg-red-100', type === 'success' ? 'text-green-700' : 'text-red-700');
-        setTimeout(() => {
-            messageDiv.classList.add('hidden');
-            messageDiv.classList.remove('bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
-        }, 5000);
+    if (button && buttonText && loadingText) {
+        button.disabled = true;
+        buttonText.classList.add('hidden');
+        loadingText.classList.remove('hidden');
+    }
+
+    try {
+        let url = '/admin/export-data';
+        if (tabName === 'student-feedback') {
+            url = '/student-feedback/export'; // Specific endpoint for feedback export
+        }
+
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
+        }
+
+        const blob = await response.blob();
+        if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+            throw new Error('Invalid response type: Expected Excel file');
+        }
+
+        const blobUrl = window.URL.createObjectURL(blob);
+        const filename = tabName === 'student-feedback' 
+            ? `student_feedback_${new Date().toISOString().split('T')[0]}.xlsx`
+            : `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+        const anchor = document.createElement('a');
+        anchor.href = blobUrl;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+        console.error('Error downloading Excel:', err);
+        alert(`Failed to download Excel file: ${err.message}`);
+    } finally {
+        if (button && buttonText && loadingText) {
+            button.disabled = false;
+            buttonText.classList.remove('hidden');
+            loadingText.classList.add('hidden');
+        }
     }
 }
-
-// Tab navigation
+// Update export button to pass tabName
+document.getElementById('exportExcelButton').addEventListener('click', () => {
+    const activeTab = document.querySelector('.tab.bg-blue-600');
+    const tabName = activeTab ? activeTab.getAttribute('onclick').match(/'([^']+)'/)[1] : 'all';
+    downloadExcel(tabName);
+});
+// Update openTab to fetch feedback data when the student-feedback tab is opened
 function openTab(tabName) {
     const tabContents = document.querySelectorAll('.tab-content');
     tabContents.forEach(content => content.classList.add('hidden'));
@@ -100,292 +1171,209 @@ function openTab(tabName) {
         activeTab.classList.remove('bg-gray-200', 'text-gray-700');
         activeTab.classList.add('bg-blue-600', 'text-white');
     }
+    if (tabName === 'workshop-form') {
+        fetchWorkshopSummaries();
+    } else if (tabName === 'login-log') {
+        renderLoginLogTable();
+    } else if (tabName === 'student-feedback') {
+        fetchFeedbackData();
+    } else if (tabName === 'call-log') {
+        fetchCallLogs();
+    }
 }
 
-// Apply filters to tables
-function applyFilters(tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) {
-        console.warn(`Table with ID ${tableId} not found`);
-        return;
-    }
-    const rows = table.querySelectorAll('tbody tr');
-    const filters = {};
+        // Window onload for initialization
+        window.onload = function () {
+            openTab('visualization');
+            renderCallLogTable();
+            updateCallLogFilters();
+            renderLoginLogTable();
+            updateLoginLogFilters();
 
-    table.querySelectorAll('.filter-select').forEach(select => {
-        filters[select.dataset.column] = select.value.trim();
-    });
+            const tableIds = ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students', 'call-logs', 'login-logs','student-feedback'];
+            tableIds.forEach(tableId => {
+                const table = document.getElementById(tableId);
+                if (table) {
+                    initializeFilters(tableId);
+                } else {
+                    console.warn(`Table with ID ${tableId} not found`);
+                }
+            });
 
-    rows.forEach(row => {
-        let show = true;
-        for (const [column, value] of Object.entries(filters)) {
-            if (value && value !== 'All' && value !== '') {
-                const cell = row.querySelector(`td[data-column="${column}"]`);
-                if (cell) {
-                    let cellText = cell.textContent.trim();
-                    if (cellText !== value) {
-                        show = false;
-                        break;
+            const districtData = <%- JSON.stringify(
+                schools ? schools.reduce((acc, school) => {
+                    acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
+                    acc[school.district].schools += 1;
+                    acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
+                    acc[school.district].trainers += (school.trainerId1 || school.trainerId2 ? (school.trainerId1 && school.trainerId2 ? 2 : 1) : 0);
+                    return acc;
+                }, {}) : {}
+            ) %>;
+            const districtChartCanvas = document.getElementById('districtChart');
+            if (districtChartCanvas) {
+                const districtChart = new Chart(districtChartCanvas, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(districtData),
+                        datasets: [
+                            { label: 'Schools', data: Object.values(districtData).map(d => d.schools), backgroundColor: 'rgba(54, 162, 235, 0.5)' },
+                            { label: 'Students', data: Object.values(districtData).map(d => d.students), backgroundColor: 'rgba(75, 192, 192, 0.5)' },
+                            { label: 'Trainers', data: Object.values(districtData).map(d => d.trainers), backgroundColor: 'rgba(255, 99, 132, 0.5)' }
+                        ]
+                    },
+                    options: { scales: { y: { beginAtZero: true }, x: { stacked: false } } }
+                });
+            }
+
+            const professionData = <%- JSON.stringify(
+                trainers ? trainers.reduce((acc, trainer) => {
+                    acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
+                    return acc;
+                }, {}) : {}
+            ) %>;
+            const professionChartCanvas = document.getElementById('professionChart');
+            if (professionChartCanvas) {
+                const professionChart = new Chart(professionChartCanvas, {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(professionData),
+                        datasets: [{ data: Object.values(professionData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
+                    },
+                    options: { responsive: true, plugins: { legend: { position: 'top' } } }
+                });
+            }
+
+            let workshopDataList = [];
+
+            async function fetchWorkshopSummaries() {
+                const tableBody = document.getElementById('workshopTableBody');
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Loading...</td></tr>`;
+
+                try {
+                    const res = await fetch('/workshop-summaries');
+                    if (!res.ok) throw new Error('Failed to fetch');
+
+                    workshopDataList = await res.json();
+
+                    if (!workshopDataList.length) {
+                        tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No workshop summaries found</td></tr>`;
+                        return;
                     }
+
+                    tableBody.innerHTML = workshopDataList.map((s, index) => `
+                        <tr>
+                            <td class="border border-gray-300 px-4 py-2">${s.schoolName || ''}</td>
+                            <td class="border border-gray-300 px-4 py-2">${s.coordinatorName || ''}</td>
+                            <td class="border border-gray-300 px-4 py-2">${s.workshopDate ? formatDate(s.workshopDate) : ''}</td>
+                            <td class="border border-gray-300 px-4 py-2">${s.financialStatus || ''}</td>
+                            <td class="border border-gray-300 px-4 py-2 text-center">
+                                <button 
+                                    class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                    onclick="showDetails(${index})">
+                                    View
+                                </button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } catch (err) {
+                    console.error(err);
+                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading data</td></tr>`;
                 }
             }
-        }
-        row.style.display = show ? '' : 'none';
-    });
-}
 
-// Initialize filters for tables
-function initializeFilters(tableId) {
-    const table = document.getElementById(tableId);
-    if (!table) {
-        console.warn(`Table with ID ${tableId} not found`);
-        return;
-    }
-    const headers = table.querySelectorAll('th[data-filter]');
-    const rows = table.querySelectorAll('tbody tr');
-
-    headers.forEach(header => {
-        const column = header.dataset.filter;
-        const select = header.querySelector('.filter-select');
-        if (!select) {
-            console.warn(`Filter select not found for column ${column} in table ${tableId}`);
-            return;
-        }
-
-        const values = new Set(['All']);
-        rows.forEach(row => {
-            const cell = row.querySelector(`td[data-column="${column}"]`);
-            if (cell) {
-                let cellText = cell.textContent.trim();
-                if (cellText && !values.has(cellText)) {
-                    values.add(cellText);
+            function formatDate(dateObj) {
+                if (dateObj._seconds) {
+                    return new Date(dateObj._seconds * 1000).toLocaleDateString();
                 }
+                return new Date(dateObj).toLocaleDateString();
             }
-        });
 
-        select.innerHTML = '';
-        let isAllSet = false;
-        [...values].sort().forEach(value => {
-            const option = document.createElement('option');
-            option.value = value;
-            option.textContent = value;
-            if (value === 'All' && !isAllSet) {
-                option.selected = true;
-                isAllSet = true;
+            function showDetails(index) {
+                const data = workshopDataList[index];
+                const modalContent = document.getElementById('modalContent');
+                modalContent.innerHTML = Object.entries(data)
+                    .map(([key, value]) => {
+                        if (value && value._seconds) value = formatDate(value);
+                        return `<div><strong>${key}:</strong></div><div>${value ?? '-'}</div>`;
+                    })
+                    .join('');
+                document.getElementById('detailsModal').classList.remove('hidden');
             }
-            select.appendChild(option);
-        });
 
-        select.addEventListener('change', () => applyFilters(tableId));
-    });
-}
-
-// Confirm trainer deletion
-function confirmDelete(name) {
-    return confirm(`Are you sure you want to delete trainer "${name}"?`);
-}
-
-// Handle trainer actions
-async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
-    event.preventDefault();
-    const form = event.target.closest('form');
-    const formData = new FormData(form);
-    try {
-        const response = await fetch(url.replace(':schoolId', schoolId), {
-            method: 'POST',
-            body: formData
-        });
-        const redirectUrl = new URL(window.location.href);
-        if (response.ok) {
-            redirectUrl.searchParams.set('success', successMessage);
-        } else {
-            const result = await response.json();
-            redirectUrl.searchParams.set('error', result.message || errorMessage);
+            function closeModal() {
+                document.getElementById('detailsModal').classList.add('hidden');
+            }
+             function toggleCustomDateInput(select, schoolId) {
+            const customDateInput = document.getElementById(`custom-date-${schoolId}`);
+            if (select.value === 'other') {
+                customDateInput.classList.remove('hidden');
+                customDateInput.setAttribute('required', 'required');
+            } else {
+                customDateInput.classList.add('hidden');
+                customDateInput.removeAttribute('required');
+            }
         }
-        window.location.href = redirectUrl.toString();
-    } catch (error) {
-        console.error('Trainer action error:', error);
-        const redirectUrl = new URL(window.location.href);
-        redirectUrl.searchParams.set('error', 'Error processing trainer action');
-        window.location.href = redirectUrl.toString();
+       // Toggle the visibility of the custom date input field based on the dropdown selection
+function toggleCustomDateInput(selectElement, schoolId) {
+    const customDateInput = document.getElementById(`custom-date-${schoolId}`);
+    
+    if (selectElement.value === 'other') {
+        customDateInput.classList.remove('hidden'); // Show the date input
+        customDateInput.focus(); // Optionally focus on the date input for better UX
+    } else {
+        customDateInput.classList.add('hidden'); // Hide the date input
+        customDateInput.value = ''; // Clear the custom date input
     }
 }
 
-// Mark school as completed
-async function markSchoolCompleted(schoolId, button, row) {
+// Validate the event date form before submission
+function validateEventDateForm(form, schoolId) {
+    const selectElem = form.querySelector('select[name="eventDate"]');
+    const customDateInput = form.querySelector(`#custom-date-${schoolId}`);
+    const hiddenInput = form.querySelector(`#eventDateFinal-${schoolId}`);
+
+    if (!selectElem.value) {
+      alert('Please select an event date or "Other" to choose a custom date.');
+      return false;
+    }
+
+    if (selectElem.value === 'other') {
+      if (!customDateInput.value) {
+        alert('Please select a custom event date.');
+        return false;
+      }
+      hiddenInput.value = customDateInput.value;
+    } else {
+      hiddenInput.value = selectElem.value;
+    }
+
+    return true;
+  }
+
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    buttonText.classList.add('hidden');
+    loadingText.classList.remove('hidden');
+
     try {
-        const response = await fetch(`/admin/complete-school/${schoolId}`, {
-            method: 'POST',
+        const response = await fetch('/admin/export-data', {
+            method: 'GET',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({})
+            credentials: 'include'
         });
 
-        if (response.ok) {
-            const completedTable = document.querySelector('#completed-schools tbody');
-            if (completedTable) {
-                const completedStatusCell = row.querySelector('td[data-column="isCompleted"]');
-                if (completedStatusCell) {
-                    completedStatusCell.textContent = 'Yes';
-                }
-                if (button) {
-                    button.remove();
-                }
-                completedTable.appendChild(row);
-                applyFilters('completed-schools');
-                console.log(`School ${schoolId} marked as completed`);
-            }
-        } else {
-            const errorData = await response.json();
-            console.error('Failed to mark school as completed:', errorData.error);
-            alert(`Failed to mark school as completed: ${errorData.error}`);
-        }
-    } catch (err) {
-        console.error('Error marking school:', err);
-        alert('Error marking school. Please check your connection and try again.');
-    }
-}
-
-// Filter media cards
-function filterMedia() {
-    const uploaderFilter = document.getElementById('uploaderFilter');
-    const seenFilter = document.getElementById('seenFilter');
-    if (!uploaderFilter || !seenFilter) {
-        console.warn('uploaderFilter or seenFilter not found');
-        return;
-    }
-    const uploaderValue = uploaderFilter.value;
-    const seenValue = seenFilter.value;
-    const mediaCards = document.querySelectorAll('#mediaSection .media-card');
-
-    mediaCards.forEach(card => {
-        const uploader = card.dataset.uploaderType;
-        const seen = card.dataset.seen === 'true';
-        let show = true;
-
-        if (uploaderValue !== 'All' && uploader !== uploaderValue) {
-            show = false;
-        }
-
-        if (seenValue === 'Seen' && !seen) {
-            show = false;
-        } else if (seenValue === 'Unseen' && seen) {
-            show = false;
-        }
-
-        card.style.display = show ? '' : 'none';
-    });
-}
-
-// Mark media as seen
-async function markMediaSeen(mediaId, checkbox, cardElement) {
-    const isSeen = checkbox.checked;
-    try {
-        const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ seen: isSeen })
-        });
-
-        if (response.ok) {
-            cardElement.dataset.seen = isSeen;
-            checkbox.classList.toggle('bg-green-500', isSeen);
-            checkbox.classList.toggle('border-green-500', isSeen);
-            filterMedia();
-            console.log(`Media ${mediaId} marked as ${isSeen ? 'seen' : 'unseen'}`);
-        } else {
-            console.error('Failed to update seen status:', await response.text());
-            checkbox.checked = !isSeen;
-            alert('Failed to update seen status. Please try again.');
-        }
-    } catch (err) {
-        console.error('Error marking media:', err);
-        checkbox.checked = !isSeen;
-        alert('Error marking media. Please check your connection and try again.');
-    }
-}
-
-// Open media modal
-function openMediaModal(mediaId, mediaUrl, mediaType) {
-    const modal = document.getElementById('mediaModal');
-    const content = document.getElementById('mediaContent');
-    if (!modal || !content) {
-        console.warn('mediaModal or mediaContent not found');
-        return;
-    }
-
-    content.innerHTML = '';
-    if (mediaType === 'image') {
-        content.innerHTML = `<img src="${mediaUrl}" alt="Media" class="w-full rounded shadow">`;
-    } else if (mediaType === 'video') {
-        content.innerHTML = `
-            <video controls class="w-full rounded shadow">
-                <source src="${mediaUrl}" type="video/mp4">
-                Your browser does not support the video tag.
-            </video>
-        `;
-    }
-    modal.classList.remove('hidden');
-}
-
-// Toggle description edit
-function toggleDescriptionEdit(button) {
-    const parentDiv = button.closest(".text-gray-700");
-    if (!parentDiv) return;
-    const span = parentDiv.querySelector(".description-text");
-    const input = parentDiv.querySelector(".edit-description-input");
-    const saveBtn = parentDiv.querySelector(".save-description-btn");
-    if (span && input && saveBtn) {
-        span.classList.add("hidden");
-        input.classList.remove("hidden");
-        button.classList.add("hidden");
-        saveBtn.classList.remove("hidden");
-    }
-}
-
-// Save description
-async function saveDescription(button) {
-    const parentDiv = button.closest(".text-gray-700");
-    if (!parentDiv) return;
-    const span = parentDiv.querySelector(".description-text");
-    const input = parentDiv.querySelector(".edit-description-input");
-    const editBtn = parentDiv.querySelector(".edit-description-btn");
-    if (!span || !input || !editBtn) return;
-    const mediaId = input.dataset.mediaId;
-    const newDescription = input.value.trim();
-
-    try {
-        const response = await fetch(`/update-description/${mediaId}`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ description: newDescription })
-        });
-
-        if (response.ok) {
-            span.textContent = newDescription || 'No description provided';
-            span.classList.remove("hidden");
-            input.classList.add("hidden");
-            button.classList.add("hidden");
-            editBtn.classList.remove("hidden");
-        } else {
-            alert("Failed to update description.");
-        }
-    } catch (error) {
-        console.error("Error:", error);
-        alert("An error occurred while updating description.");
-    }
-}
-
-// Download media
-async function downloadMedia(mediaId, type) {
-    try {
-        const response = await fetch(`/download-media/${mediaId}`);
         if (!response.ok) {
-            throw new Error(`Failed to fetch media: ${response.statusText}`);
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
         }
+
         const blob = await response.blob();
+        if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+            throw new Error('Invalid response type: Expected Excel file');
+        }
+
         const blobUrl = window.URL.createObjectURL(blob);
-        const extension = type === 'video' ? 'mp4' : 'jpg';
-        const filename = `${mediaId}.${extension}`;
+        const filename = `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
 
         const anchor = document.createElement('a');
         anchor.href = blobUrl;
@@ -395,435 +1383,43 @@ async function downloadMedia(mediaId, type) {
         document.body.removeChild(anchor);
         window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
-        console.error('Error downloading media:', err);
-        alert('Failed to download media. Please check your connection or try again.');
+        console.error('Error downloading Excel:', err);
+        alert(`Failed to download Excel file: ${err.message}`);
+    } finally {
+        button.disabled = false;
+        buttonText.classList.remove('hidden');
+        loadingText.classList.add('hidden');
+    }
+
+})
+function openTab(tabName) {
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.add('hidden'));
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        tab.classList.remove('bg-blue-600', 'text-white');
+        tab.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    const targetTab = document.getElementById(tabName);
+    if (targetTab) {
+        targetTab.classList.remove('hidden');
+    }
+    const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
+    if (activeTab) {
+        activeTab.classList.remove('bg-gray-200', 'text-gray-700');
+        activeTab.classList.add('bg-blue-600', 'text-white');
+    }
+    if (tabName === 'workshop-form') {
+        fetchWorkshopSummaries();
+    } else if (tabName === 'login-log') {
+        renderLoginLogTable();
+    } else if (tabName === 'student-feedback') {
+        renderFeedbackTable();
     }
 }
 
-// Event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Coordinator form submission
-    const coordinatorForm = document.getElementById('coordinatorForm');
-    if (coordinatorForm) {
-        coordinatorForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            const form = event.target;
-            const messageDiv = document.getElementById('coordinatorMessage');
-            const submitButton = document.getElementById('submitButton');
-            const buttonText = document.getElementById('buttonText');
-            const loadingText = document.getElementById('loadingText');
-
-            // Client-side validation
-            const name = form.querySelector('#name')?.value.trim();
-            const email = form.querySelector('#email')?.value.trim();
-            const number = form.querySelector('#number')?.value.trim();
-            const password = form.querySelector('#password')?.value.trim();
-            const organization = form.querySelector('#organization')?.value.trim();
-
-            const nameRegex = /^[a-zA-Z\s]+$/;
-            if (!nameRegex.test(name)) {
-                showMessage('Name can only contain letters and spaces', 'error', messageDiv);
-                return;
-            }
-
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(email)) {
-                showMessage('Please enter a valid email address', 'error', messageDiv);
-                return;
-            }
-
-            const phoneRegex = /^[0-9]{10}$/;
-            if (!phoneRegex.test(number)) {
-                showMessage('Phone number must be 10 digits', 'error', messageDiv);
-                return;
-            }
-
-            if (password.length < 6) {
-                showMessage('Password must be at least 6 characters', 'error', messageDiv);
-                return;
-            }
-
-            const orgRegex = /^[a-zA-Z0-9\s]+$/;
-            if (!orgRegex.test(organization)) {
-                showMessage('Organization can only contain letters, numbers, and spaces', 'error', messageDiv);
-                return;
-            }
-
-            submitButton.disabled = true;
-            buttonText.classList.add('hidden');
-            loadingText.classList.remove('hidden');
-
-            const formData = new FormData(form);
-
-            try {
-                const response = await fetch(form.action, {
-                    method: form.method,
-                    body: formData
-                });
-
-                let result;
-                if (response.headers.get('content-type')?.includes('application/json')) {
-                    result = await response.json();
-                } else {
-                    result = { message: await response.text() };
-                }
-
-                showMessage(result.message, response.ok ? 'success' : 'error', messageDiv);
-                if (response.ok) {
-                    form.reset();
-                    location.reload();
-                }
-            } catch (error) {
-                showMessage('Error registering coordinator. Please try again.', 'error', messageDiv);
-                console.error('Submission error:', error);
-            } finally {
-                submitButton.disabled = false;
-                buttonText.classList.remove('hidden');
-                loadingText.classList.add('hidden');
-            }
-        });
-    } else {
-        console.warn('coordinatorForm not found');
-    }
-
-    // Call Log form submission
-    const callLogForm = document.getElementById('callLogForm');
-    if (callLogForm) {
-        callLogForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            const form = event.target;
-            const messageDiv = document.getElementById('callLogMessage');
-            const submitButton = document.getElementById('submitCallLogButton');
-            const buttonText = document.getElementById('callLogButtonText');
-            const loadingText = document.getElementById('callLogLoadingText');
-
-            const callDate = form.querySelector('#callDate')?.value.trim();
-            const caller = form.querySelector('#caller')?.value.trim();
-            const recipient = form.querySelector('#recipient')?.value.trim();
-            const notes = form.querySelector('#notes')?.value.trim();
-
-            if (!callDate || !caller || !recipient || !notes) {
-                showMessage('All required fields must be filled', 'error', messageDiv);
-                return;
-            }
-
-            submitButton.disabled = true;
-            buttonText.classList.add('hidden');
-            loadingText.classList.remove('hidden');
-
-            const formData = new FormData(form);
-
-            try {
-                const response = await fetch(form.action, {
-                    method: form.method,
-                    body: formData
-                });
-
-                let result;
-                if (response.headers.get('content-type')?.includes('application/json')) {
-                    result = await response.json();
-                } else {
-                    result = { message: await response.text() };
-                }
-
-                showMessage(result.message, response.ok ? 'success' : 'error', messageDiv);
-                if (response.ok) {
-                    form.reset();
-                    location.reload();
-                }
-            } catch (error) {
-                showMessage('Error adding call log. Please try again.', 'error', messageDiv);
-                console.error('Submission error:', error);
-            } finally {
-                submitButton.disabled = false;
-                buttonText.classList.remove('hidden');
-                loadingText.classList.add('hidden');
-            }
-        });
-    } else {
-        console.warn('callLogForm not found');
-    }
-
-    // Post to social media
-    const postButtons = document.querySelectorAll('.post-to-fb-btn');
-    postButtons.forEach(button => {
-        button.addEventListener('click', async (event) => {
-            event.stopPropagation();
-            const id = button.dataset.id;
-            const url = decodeURI(button.dataset.url);
-            const type = button.dataset.type;
-            const caption = decodeURI(button.dataset.caption || '');
-
-            const postText = button.querySelector('.post-text');
-            const postingText = button.querySelector('.posting-text');
-            if (postText && postingText) {
-                postText.classList.add('hidden');
-                postingText.classList.remove('hidden');
-                button.disabled = true;
-            }
-
-            try {
-                const res = await fetch('/post-to-socials', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id, url, type, caption })
-                });
-
-                let data;
-                if (res.headers.get('content-type')?.includes('application/json')) {
-                    data = await res.json();
-                } else {
-                    data = { message: await res.text() };
-                }
-
-                if (res.ok) {
-                    alert(`✅ ${data.message}`);
-                } else {
-                    console.error('Server error:', data);
-                    alert(`❌ Failed: ${data.message || 'Unknown error'}`);
-                }
-            } catch (err) {
-                console.error('Fetch error:', err);
-                alert('❌ Error posting to social platforms. Please check your connection or try again later.');
-            } finally {
-                if (postText && postingText) {
-                    button.disabled = false;
-                    postText.classList.remove('hidden');
-                    postingText.classList.add('hidden');
-                }
-            }
-        });
-    });
-
-    // Upload photo form submission
-    const uploadForm = document.getElementById('upload-form');
-    if (uploadForm) {
-        uploadForm.addEventListener('submit', async function(event) {
-            event.preventDefault();
-            const form = event.target;
-            const formData = new FormData(form);
-            const successMessageDiv = document.getElementById('success-message');
-
-            try {
-                const response = await fetch(form.action, {
-                    method: form.method,
-                    body: formData
-                });
-
-                let result;
-                if (response.headers.get('content-type')?.includes('application/json')) {
-                    result = await response.json();
-                } else {
-                    result = { message: await response.text() };
-                }
-
-                if (successMessageDiv) {
-                    successMessageDiv.textContent = result.message;
-                    successMessageDiv.classList.remove('hidden');
-                    if (!response.ok) {
-                        successMessageDiv.classList.add('bg-red-100', 'text-red-700');
-                    }
-                    form.reset();
-                    setTimeout(() => {
-                        successMessageDiv.classList.add('hidden');
-                        successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
-                    }, 5000);
-                }
-            } catch (error) {
-                if (successMessageDiv) {
-                    successMessageDiv.textContent = 'Error uploading files. Please try again.';
-                    successMessageDiv.classList.remove('hidden');
-                    successMessageDiv.classList.add('bg-red-100', 'text-red-700');
-                    setTimeout(() => {
-                        successMessageDiv.classList.add('hidden');
-                        successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
-                    }, 5000);
-                }
-                console.error('Upload error:', error);
-            }
-        });
-    } else {
-        console.warn('upload-form not found');
-    }
-
-    // Media upload form
-    const mediaUploadForm = document.getElementById('mediaUploadForm');
-    if (mediaUploadForm) {
-        mediaUploadForm.addEventListener('submit', async function(e) {
-            e.preventDefault();
-            const uploadStatus = document.getElementById('uploadStatus');
-            const file = document.getElementById('mediaFile')?.files[0];
-            const formData = new FormData();
-            formData.append('mediaFile', file);
-            const button = document.getElementById('uploadButton');
-
-            if (uploadStatus) {
-                uploadStatus.innerHTML = 'Uploading...';
-            }
-            if (button) {
-                button.disabled = true;
-            }
-
-            try {
-                const res = await fetch('/upload-image', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                let result;
-                if (res.headers.get('content-type')?.includes('application/json')) {
-                    result = await res.json();
-                } else {
-                    result = { error: await res.text() };
-                }
-
-                if (res.ok && uploadStatus) {
-                    uploadStatus.innerHTML = `✅ Upload successful! <a href="${result.files[0].downloadUrl}" target="_blank">View</a>`;
-                } else if (uploadStatus) {
-                    uploadStatus.innerHTML = `❌ Upload failed: ${result.error}`;
-                }
-            } catch (err) {
-                if (uploadStatus) {
-                    uploadStatus.innerHTML = '❌ Upload error.';
-                }
-                console.error('Media upload error:', err);
-            } finally {
-                if (button) {
-                    button.disabled = false;
-                }
-            }
-        });
-    } else {
-        console.warn('mediaUploadForm not found');
-    }
-
-    // Initialize media filters and checkboxes
-    const uploaderFilter = document.getElementById('uploaderFilter');
-    const seenFilter = document.getElementById('seenFilter');
-    if (uploaderFilter && seenFilter) {
-        uploaderFilter.addEventListener('change', filterMedia);
-        seenFilter.addEventListener('change', filterMedia);
-        filterMedia();
-    } else {
-        console.warn('uploaderFilter or seenFilter not found');
-    }
-
-    const markSeenCheckboxes = document.querySelectorAll('.mark-seen-checkbox');
-    markSeenCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', (event) => {
-            event.stopPropagation();
-            const mediaId = checkbox.dataset.mediaId;
-            const cardElement = checkbox.closest('.media-card');
-            if (mediaId && cardElement) {
-                markMediaSeen(mediaId, checkbox, cardElement);
-            }
-        });
-        checkbox.addEventListener('click', (event) => {
-            event.stopPropagation();
-        });
-    });
-
-    const closeModal = document.getElementById('closeModal');
-    if (closeModal) {
-        closeModal.addEventListener('click', () => {
-            const mediaModal = document.getElementById('mediaModal');
-            if (mediaModal) {
-                mediaModal.classList.add('hidden');
-            }
-        });
-    }
-
-    // Complete school buttons
-    const completeSchoolButtons = document.querySelectorAll('.complete-school-btn');
-    completeSchoolButtons.forEach(button => {
-        button.addEventListener('click', (event) => {
-            event.preventDefault();
-            const schoolId = button.dataset.schoolId;
-            const row = button.closest('tr');
-            if (!row) return;
-            const isApproved = row.querySelector('[data-column="isApproved"]')?.textContent.trim() === 'Yes';
-            const eventDate = row.querySelector('[data-column="eventDate"]')?.textContent.trim();
-            const isCompleted = row.querySelector('[data-column="isCompleted"]')?.textContent.trim() === 'Yes';
-
-            if (!isApproved) {
-                alert('Cannot complete: School is not approved.');
-                return;
-            }
-            if (eventDate === 'Not assigned') {
-                alert('Cannot complete: Event date is not assigned.');
-                return;
-            }
-            if (isCompleted) {
-                alert('School is already marked as completed.');
-                return;
-            }
-
-            markSchoolCompleted(schoolId, button, row);
-        });
-    });
-});
-
-// Window onload for initialization
-window.onload = function () {
-    openTab('visualization');
-    renderCallLogTable();
-    updateCallLogFilters();
-
-    const tableIds = ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students', 'call-logs'];
-    tableIds.forEach(tableId => {
-        const table = document.getElementById(tableId);
-        if (table) {
-            initializeFilters(tableId);
-        } else {
-            console.warn(`Table with ID ${tableId} not found`);
-        }
-    });
-
-    // Chart data
-    const districtData = <%- JSON.stringify(
-        schools ? schools.reduce((acc, school) => {
-            acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
-            acc[school.district].schools += 1;
-            acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
-            acc[school.district].trainers += (school.trainerId1 || school.trainerId2 ? (school.trainerId1 && school.trainerId2 ? 2 : 1) : 0);
-            return acc;
-        }, {}) : {}
-    ) %>;
-    const districtChartCanvas = document.getElementById('districtChart');
-    if (districtChartCanvas) {
-        const districtChart = new Chart(districtChartCanvas, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(districtData),
-                datasets: [
-                    { label: 'Schools', data: Object.values(districtData).map(d => d.schools), backgroundColor: 'rgba(54, 162, 235, 0.5)' },
-                    { label: 'Students', data: Object.values(districtData).map(d => d.students), backgroundColor: 'rgba(75, 192, 192, 0.5)' },
-                    { label: 'Trainers', data: Object.values(districtData).map(d => d.trainers), backgroundColor: 'rgba(255, 99, 132, 0.5)' }
-                ]
-            },
-            options: { scales: { y: { beginAtZero: true }, x: { stacked: false } } }
-        });
-    }
-
-    const professionData = <%- JSON.stringify(
-        trainers ? trainers.reduce((acc, trainer) => {
-            acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
-            return acc;
-        }, {}) : {}
-    ) %>;
-    const professionChartCanvas = document.getElementById('professionChart');
-    if (professionChartCanvas) {
-        const professionChart = new Chart(professionChartCanvas, {
-            type: 'pie',
-            data: {
-                labels: Object.keys(professionData),
-                datasets: [{ data: Object.values(professionData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
-            },
-            options: { responsive: true, plugins: { legend: { position: 'top' } } }
-        });
-    }
 };
-</script>
+    </script>
     <style>
         .mark-seen-checkbox:checked {
             background-color: #10B981;
@@ -858,8 +1454,13 @@ window.onload = function () {
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="container mx-auto p-6">
-        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">Admin Dashboard</h1>
-
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">Admin Dashboard</h1>
+            <button id="exportExcelButton" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500">
+                <span id="exportButtonText">Export to Excel</span>
+                <span id="exportLoadingText" class="hidden">Exporting...</span>
+            </button>
+        </div>
         <% if (error) { %>
             <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4" role="alert">
                 <strong class="font-bold">Error:</strong>
@@ -887,6 +1488,10 @@ window.onload = function () {
              <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('add-coordinator')">Add Coordinator</button>
              <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('call-log')">Call Log</button>
              <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('workshop-form')">Workshop Form</button>
+                   <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('login-log')">Login Log</button>
+                   <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('student-feedback')">Student Feedback</button>
+                   
+                  
         </div>
 
         <div id="visualization" class="tab-content">
@@ -1051,119 +1656,124 @@ window.onload = function () {
             <% } %>
         </div>
 
-    <div id="event-date-assign" class="tab-content hidden">
-    <h2 class="text-2xl font-bold mb-4 text-gray-700">Assign Event Dates</h2>
-    <% if (schools && schools.length > 0) { %>
-        <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved, No Event Date</h3>
-        <div class="overflow-x-auto mb-6">
-            <table id="approved-no-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-                <thead class="bg-gray-100 sticky top-0">
-                    <tr>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Workshop Time</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="coordinator">Coordinator<br><select class="filter-select text-sm w-full" data-column="coordinator"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% schools.filter(school => school.isApproved && !school.eventDate).forEach(school => { %>
-                        <tr class="hover:bg-gray-50">
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName || 'N/A' %></td>
-                             <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
-                                            timeZone: 'Asia/Kolkata',
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        }) : 'N/A' %>
-                                    </td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">Not assigned</td>
-                            <td class="py-2 px-4 border-b text-gray-700">
-                                <% if (school.workshopStartTime && school.workshopEndTime) { %>
-                                    <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
-                                <% } else { %>
-                                    Not Assigned
-                                <% } %>
-                            </td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="coordinator">
-                                <%= school.coordinator ? `${school.coordinator.name} (${school.coordinator.email})` : 'Not Assigned' %>
-                            </td>
-                            <td class="py-2 px-4 border-b">
-                                <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                                    <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="inline">
-                                        <select name="eventDate" required class="border rounded py-1 px-2 mr-2 text-gray-700">
-                                            <option value="">Select Event Date</option>
-                                            <% if (school.eventDates && school.eventDates.length > 0) { %>
-                                                <% school.eventDates.forEach(date => { %>
-                                                    <% let validDate = new Date(date); %>
-                                                    <% if (!isNaN(validDate.getTime())) { %>
-                                                        <% let eventDateStr = school.eventDate ? school.eventDate.toISOString().split('T')[0] : null; %>
-                                                        <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>>
-                                                            <%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
-                                                        </option>
-                                                    <% } %>
-                                                <% }) %>
-                                            <% } else { %>
-                                                <option value="" disabled>No dates available</option>
-                                            <% } %>
-                                        </select>
-                                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
-                                    </form>
-                                    <form action="/admin/assign-coordinator/<%= school.id %>" method="POST" class="inline">
-                                        <select name="coordinatorId" class="border rounded py-1 px-2 mr-2 text-gray-700">
-                                            <option value="">Select Coordinator</option>
-                                            <% coordinators.forEach(coord => { %>
-                                                <option value="<%= coord.id %>" <%= school.coordinatorId === coord.id ? 'selected' : '' %>>
-                                                    <%= coord.name %> (<%= coord.email %>)
-                                                </option>
-                                            <% }) %>
-                                        </select>
-                                        <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Coordinator</button>
-                                    </form>
-                                </div>
-                            </td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
+<div id="event-date-assign" class="tab-content p-6">
+        <h2 class="text-2xl font-bold mb-4 text-gray-700">Assign Event Dates</h2>
+        <% if (schools && schools.length > 0) { %>
+            <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved, No Event Date</h3>
+            <div class="overflow-x-auto mb-6">
+                <table id="approved-no-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                    <thead class="bg-gray-100 sticky top-0">
+                        <tr>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Workshop Time</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="coordinator">Coordinator<br><select class="filter-select text-sm w-full" data-column="coordinator"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
                         </tr>
-                    <% }) %>
-                </tbody>
-            </table>
-        </div>
-    <% } else { %>
-        <p class="text-gray-700">No schools awaiting event date assignment.</p>
-    <% } %>
-</div>
+                    </thead>
+                    <tbody>
+                        <% schools.filter(school => school.isApproved && !school.eventDate).forEach(school => { %>
+                            <tr class="hover:bg-gray-50">
+                                <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
+                                <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700">
+                                    <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+                                        timeZone: 'Asia/Kolkata',
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    }) : 'N/A' %>
+                                </td>
+                                <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">Not assigned</td>
+                                <td class="py-2 px-4 border-b text-gray-700">
+                                    <% if (school.workshopStartTime && school.workshopEndTime) { %>
+                                        <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
+                                    <% } else { %>
+                                        Not Assigned
+                                    <% } %>
+                                </td>
+                                <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
+                                <td class="py-2 px-4 border-b text-gray-700" data-column="coordinator">
+                                    <%= school.coordinator ? `${school.coordinator.name} (${school.coordinator.email})` : 'Not Assigned' %>
+                                </td>
+                                <td class="py-2 px-4 border-b">
+                                    <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+                                       <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="inline" onsubmit="return validateEventDateForm(this, '<%= school.id %>')">
+    <select name="eventDate" class="border rounded py-1 px-2 mr-2 text-gray-700" onchange="toggleCustomDateInput(this, '<%= school.id %>')">
+        <option value="">Select Event Date</option>
+        <% if (school.eventDates && school.eventDates.length > 0) { %>
+            <% school.eventDates.forEach(date => { %>
+                <% let validDate = new Date(date); %>
+                <% if (!isNaN(validDate.getTime())) { %>
+                    <% let eventDateStr = school.eventDate ? school.eventDate.toISOString().split('T')[0] : null; %>
+                    <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>>
+                        <%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
+                    </option>
+                <% } %>
+            <% }) %>
+        <% } %>
+        <option value="other">Other</option>
+    </select>
+    
+    <input type="date" name="customEventDate" id="custom-date-<%= school.id %>" class="border rounded py-1 px-2 mr-2 text-gray-700 hidden" placeholder="YYYY-MM-DD">
+    
+    <!-- Hidden input for server to receive custom date -->
+    <input type="hidden" name="eventDateFinal" id="eventDateFinal-<%= school.id %>" value="">
+    
+    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
+</form>
+                                        <form action="/admin/assign-coordinator/<%= school.id %>" method="POST" class="inline">
+                                            <select name="coordinatorId" class="border rounded py-1 px-2 mr-2 text-gray-700">
+                                                <option value="">Select Coordinator</option>
+                                                <% coordinators.forEach(coord => { %>
+                                                    <option value="<%= coord.id %>" <%= school.coordinatorId === coord.id ? 'selected' : '' %>>
+                                                        <%= coord.name %> (<%= coord.email %>)
+                                                    </option>
+                                                <% }) %>
+                                            </select>
+                                            <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Coordinator</button>
+                                        </form>
+                                    </div>
+                                </td>
+                                <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail || 'N/A' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
+                                <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <p class="text-gray-700">No schools awaiting event date assignment.</p>
+        <% } %>
+    </div>
 
 <div id="approved-with-date" class="tab-content hidden">
     <h2 class="text-2xl font-bold mb-4 text-gray-700">Schools Approved and Event Date Assigned</h2>
@@ -1195,6 +1805,8 @@ window.onload = function () {
                         <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">MCQ Completed Students</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Champions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -1202,17 +1814,17 @@ window.onload = function () {
                         <tr class="hover:bg-gray-50">
                             <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
                             <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName || 'N/A' %></td>
-                       <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
-                                            timeZone: 'Asia/Kolkata',
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        }) : 'N/A' %>
-                                    </td>
+                             <td class="py-2 px-4 border-b text-gray-700">
+                                    <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+                                        timeZone: 'Asia/Kolkata',
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    }) : 'N/A' %>
+                                </td>
                             <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail || 'N/A' %></td>
                             <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city || 'N/A' %></td>
                             <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district || 'N/A' %></td>
@@ -1235,7 +1847,7 @@ window.onload = function () {
                                     Not Assigned
                                 <% } %>
                             </td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
+                            <td class="py-2 px-4 border-b text-gray-700 status-yes" data-column="isApproved">Yes</td>
                             <td class="py-2 px-4 border-b text-gray-700" data-column="trainer1">
                                 <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
                                 <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city}) ${school.trainerApproved === false ? '- Pending' : school.trainerApproved === true ? '- Approved' : ''}` : 'Not Assigned' %>
@@ -1247,7 +1859,7 @@ window.onload = function () {
                             <td class="py-2 px-4 border-b text-gray-700" data-column="coordinator">
                                 <%= school.coordinator ? `${school.coordinator.name} (${school.coordinator.email})` : 'Not Assigned' %>
                             </td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="isCompleted">No</td>
+                            <td class="py-2 px-4 border-b text-gray-700 status-no" data-column="isCompleted">No</td>
                             <td class="py-2 px-4 border-b">
                                 <div class="flex flex-col space-y-2">
                                     <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="flex items-center space-x-2">
@@ -1334,14 +1946,22 @@ window.onload = function () {
                             <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber || 'N/A' %></td>
                             <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail || 'N/A' %></td>
                             <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700 <%= school.resourcesConfirmed ? 'status-yes' : 'status-no' %>">
+                                <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
+                            </td>
                             <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
                             <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <%= participants.filter(p => p.schoolNameDropdown === school.schoolName && p.hasCompletedMCQ).length %>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <%= participants.filter(p => p.schoolNameDropdown === school.schoolName && p.isChampion).length %>
+                            </td>
                         </tr>
                     <% }) %>
                     <% if (schools.filter(school => school.isApproved && school.eventDate && !school.isCompleted).length === 0) { %>
                         <tr>
-                            <td colspan="23" class="py-2 px-4 border-b text-gray-700 text-center">No schools are approved with event dates assigned.</td>
+                            <td colspan="25" class="py-2 px-4 border-b text-gray-700 text-center">No schools are approved with event dates assigned.</td>
                         </tr>
                     <% } %>
                 </tbody>
@@ -1388,16 +2008,16 @@ window.onload = function () {
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
                                     <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
-                                            timeZone: 'Asia/Kolkata',
-                                            weekday: 'long',
-                                            year: 'numeric',
-                                            month: 'long',
-                                            day: 'numeric',
-                                            hour: '2-digit',
-                                            minute: '2-digit'
-                                        }) : 'N/A' %>
-                                    </td>
+                                    <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+                                        timeZone: 'Asia/Kolkata',
+                                        weekday: 'long',
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                    }) : 'N/A' %>
+                                </td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
@@ -1431,7 +2051,7 @@ window.onload = function () {
                                     <td class="py-2 px-4 border-b text-gray-700">
                                         <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                                     </td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
                                 </tr>
                             <% }) %>
@@ -1617,7 +2237,7 @@ window.onload = function () {
                                 N/A
                             </td> -->
                             <!-- <td class="px-3 py-2 border-b text-gray-700">
-                                <%= school.selectedResources.join(', ') || school.spot || 'None' %>
+                              <%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %>
                             </td> -->
                         </tr>
                     <% }) %>
@@ -1798,100 +2418,217 @@ window.onload = function () {
         </div>
 
 <!-- Add Coordinator Tab Content -->
-
-<div id="add-coordinator" class="tab-content hidden">
-    <h2 class="text-2xl font-bold mb-4 text-gray-700">Add Coordinator</h2>
+<div id="add-coordinator" class="tab-content">
+    <h2 class="text-2xl font-bold mb-4 text-gray-700 text-center">Add Coordinator</h2>
     <div class="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
         <form id="coordinatorForm" action="/co-ordinator-register" method="POST" class="space-y-4">
+            
+            <!-- Name -->
             <div>
                 <label for="name" class="block text-sm font-medium text-gray-700">Coordinator Name</label>
-                <input type="text" id="name" name="name" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter coordinator name">
+                <input type="text" id="name" name="name" required
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm 
+                           focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Enter coordinator name">
             </div>
+
+            <!-- Email -->
             <div>
                 <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                <input type="email" id="email" name="email" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter email">
+                <input type="email" id="email" name="email" required
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm 
+                           focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Enter email">
             </div>
+
+            <!-- Mobile Number -->
             <div>
                 <label for="number" class="block text-sm font-medium text-gray-700">Mobile Number</label>
-                <input type="text" id="number" name="number" required pattern="[0-9]{10}" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter 10-digit mobile number">
+                <input type="tel" id="number" name="number" required pattern="[0-9]{10}"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm 
+                           focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Enter 10-digit mobile number">
+                <p class="mt-1 text-xs text-gray-500">Format: 10 digits only</p>
             </div>
+
+            <!-- Password -->
             <div>
                 <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                <input type="password" id="password" name="password" required minlength="6" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter password">
+                <input type="password" id="password" name="password" required minlength="6"
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm 
+                           focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Enter password">
+                <p class="mt-1 text-xs text-gray-500">At least 6 characters</p>
             </div>
+
+            <!-- Organization -->
             <div>
                 <label for="organization" class="block text-sm font-medium text-gray-700">District/Organization</label>
-                <input type="text" id="organization" name="organization" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter district or organization">
+                <input type="text" id="organization" name="organization" required
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm 
+                           focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    placeholder="Enter district or organization">
             </div>
+
+            <!-- Submit Button -->
             <div>
-                <button type="submit" id="submitButton" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed">
+                <button type="submit" id="submitButton"
+                    class="w-full flex items-center justify-center gap-2 bg-blue-600 text-white font-semibold py-2 px-4 
+                           rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 
+                           disabled:bg-blue-400 disabled:cursor-not-allowed transition">
+                    <svg id="loadingSpinner" class="hidden animate-spin h-5 w-5 text-white"
+                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                         <path class="opacity-75" fill="currentColor"
+                               d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                    </svg>
                     <span id="buttonText">Register Coordinator</span>
-                    <span id="loadingText" class="hidden">Registering...</span>
                 </button>
             </div>
         </form>
+
+        <!-- Success/Error Message -->
         <div id="coordinatorMessage" class="hidden mt-4 p-4 rounded-md text-center"></div>
     </div>
 </div>
-  <div id="call-log" class="tab-content container mx-auto p-6">
-        <h2 class="text-2xl font-bold mb-4 text-gray-700">Call Logs</h2>
-        
-        <!-- Button to Open Dialog -->
-        <div class="mb-8">
-            <button id="openCallLogDialog" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                Add Call
-            </button>
-        </div>
 
-        <!-- Dialog for Call Log Form -->
-        <dialog id="callLogDialog" class="bg-white p-6 rounded-lg shadow-md max-w-lg w-full">
-            <form id="callLogForm" class="space-y-4">
-                <div>
-                    <label for="callDate" class="block text-sm font-medium text-gray-700">Call Date</label>
-                    <input type="date" id="callDate" name="callDate" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" value="2025-08-11">
-                </div>
-                <div>
-                    <label for="caller" class="block text-sm font-medium text-gray-700">School Name (Caller)</label>
-                    <input type="text" id="caller" name="caller" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter school name (e.g., Springfield High)">
-                </div>
-                <div>
-                    <label for="recipient" class="block text-sm font-medium text-gray-700">Recipient Name</label>
-                    <input type="text" id="recipient" name="recipient" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter recipient name (e.g., Admin)">
-                </div>
-                <div>
-                    <label for="notes" class="block text-sm font-medium text-gray-700">Description</label>
-                    <textarea id="notes" name="notes" rows="4" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter call details or notes"></textarea>
-                </div>
-                <div class="flex justify-end space-x-4">
-                    <button type="button" id="cancelCallLogButton" class="bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
-                        Cancel
-                    </button>
-                    <button type="submit" id="submitCallLogButton" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed">
-                        <span id="callLogButtonText">Add Call Log</span>
-                        <span id="callLogLoadingText" class="hidden">Adding...</span>
-                    </button>
-                </div>
-            </form>
-            <div id="callLogMessage" class="hidden mt-4 p-4 rounded-md text-center"></div>
-        </dialog>
-
-        <!-- Table for Call Logs -->
-        <div class="overflow-x-auto">
-            <table id="call-logs" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-                <thead class="bg-gray-100 sticky top-0">
+    </div>
+    <div id="workshop-form" class="tab-content hidden p-4 bg-white rounded-b-lg">
+    <h2 class="text-lg font-bold mb-4">Workshop Summaries</h2>
+    
+    <table class="min-w-full border-collapse border border-gray-300" id="workshopTable">
+        <thead class="bg-gray-100">
+            <tr>
+                <th class="border border-gray-300 px-4 py-2">School Name</th>
+                <th class="border border-gray-300 px-4 py-2">Trainer 1</th>
+                <th class="border border-gray-300 px-4 py-2">Trainer 2</th>
+                <th class="border border-gray-300 px-4 py-2">Coordinator</th>
+                <th class="border border-gray-300 px-4 py-2">Workshop Date</th>
+                <th class="border border-gray-300 px-4 py-2">Financial Status</th>
+            </tr>
+        </thead>
+        <tbody id="workshopTableBody">
+            <tr>
+                <td colspan="6" class="text-center py-4 text-gray-500">Loading...</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+    <div id="call-log" class="tab-content container mx-auto p-6">
+    <h2 class="text-2xl font-bold mb-4 text-gray-700">Call Logs</h2>
+    <div class="mb-8">
+        <button id="openCallLogDialog" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            Add Call
+        </button>
+    </div>
+    <dialog id="callLogDialog" class="bg-white p-6 rounded-lg shadow-md max-w-lg w-full">
+        <form id="callLogForm" action="/add-call-log" method="POST" class="space-y-4">
+            <div>
+                <label for="callDate" class="block text-sm font-medium text-gray-700">Call Date</label>
+                <input type="date" id="callDate" name="callDate" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" value="2025-08-12">
+            </div>
+            <div>
+                <label for="caller" class="block text-sm font-medium text-gray-700">School Name (Caller)</label>
+                <input type="text" id="caller" name="caller" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter school name (e.g., Springfield High)">
+            </div>
+            <div>
+                <label for="recipient" class="block text-sm font-medium text-gray-700">Recipient Name</label>
+                <input type="text" id="recipient" name="recipient" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter recipient name (e.g., Admin)">
+            </div>
+            <div>
+                <label for="notes" class="block text-sm font-medium text-gray-700">Description</label>
+                <textarea id="notes" name="notes" rows="4" required class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Enter call details or notes"></textarea>
+            </div>
+            <div class="flex justify-end space-x-4">
+                <button type="button" id="cancelCallLogButton" class="bg-gray-300 text-gray-700 font-semibold py-2 px-4 rounded-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-500">
+                    Cancel
+                </button>
+                <button type="submit" id="submitCallLogButton" class="bg-blue-600 text-white font-semibold py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-blue-400 disabled:cursor-not-allowed">
+                    <span id="callLogButtonText">Add Call Log</span>
+                    <span id="callLogLoadingText" class="hidden">Adding...</span>
+                </button>
+            </div>
+        </form>
+        <div id="callLogMessage" class="hidden mt-4 p-4 rounded-md text-center"></div>
+    </dialog>
+    <div class="overflow-x-auto">
+        <table id="call-logs" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+           <thead class="bg-gray-100 sticky top-0">
                     <tr>
                         <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
                         <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="callDate">Date<br><select class="filter-select text-sm w-full" data-column="callDate"></select></th>
                         <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="caller">School Name<br><select class="filter-select text-sm w-full" data-column="caller"></select></th>
                         <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="recipient">Recipient<br><select class="filter-select text-sm w-full" data-column="recipient"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Duration</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Description</th>
                     </tr>
                 </thead>
-                <tbody id="call-logs-body">
-                    <!-- Call logs will be populated here -->
+           <tbody id="call-logs-body">
+                    <% if (callLogs.length > 0) { %>
+                        <% callLogs.forEach(log => { %>
+                            <tr>
+                                <td><%= log.id %></td>
+                                <td><%= log.callDate %></td>
+                                <td><%= log.caller %></td>
+                                <td><%= log.recipient %></td>
+                                <td><%= log.duration %></td>
+                                <td><%= log.notes %></td>
+                            </tr>
+                        <% }) %>
+                    <% } else { %>
+                        <tr>
+                            <td colspan="6">No call logs found</td>
+                        </tr>
+                    <% } %>
                 </tbody>
-            </table>
+        </table>
+    </div>
+    </div>
+</div>
+
+     
+<!-- Login Log Tab Content -->
+<div id="login-log" class="tab-content hidden">
+    <h2 class="text-2xl font-bold mb-4 text-gray-700">Login Log</h2>
+    <p class="text-gray-600 mb-4">Showing real-time login activity</p>
+    <div class="overflow-x-auto mb-6">
+        <table id="login-logs" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+            <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="userEmail">User Email<br><select class="filter-select text-sm w-full" data-column="userEmail"></select></th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="ipAddress">IP Address<br><select class="filter-select text-sm w-full" data-column="ipAddress"></select></th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="loginTime">Login Time (IST)<br><select class="filter-select text-sm w-full" data-column="loginTime"></select></th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">User Role</th>
+                </tr>
+            </thead>
+            <tbody id="login-logs-body"></tbody>
+        </table>
+    </div>
+</div>
+        
+<div id="student-feedback" class="tab-content">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Student Feedback</h2>
+            <p class="text-gray-600 mb-4">Showing student feedback submissions</p>
+            <div class="overflow-x-auto mb-6">
+                <table id="student-feedback" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                    <thead class="bg-gray-100 sticky top-0">
+                        <tr>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">Student Name<br><select class="filter-select text-sm w-full" data-column="studentName"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="className">Class<br><select class="filter-select text-sm w-full" data-column="className"></select></th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 1</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 2</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 3</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 4</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600">Question 5</th>
+                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="createdAt">Submission Date (IST)<br><select class="filter-select text-sm w-full" data-column="createdAt"></select></th>
+                        </tr>
+                    </thead>
+                    <tbody id="student-feedback-body"></tbody>
+                </table>
+            </div>
         </div>
+ </div>
 
 </body>
 </html>

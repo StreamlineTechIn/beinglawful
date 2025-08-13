@@ -1838,6 +1838,8 @@ function openTab(tabName) {
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
+                                   <th class="py-2 px-4 border-b text-left text-gray-600">MCQ Completed Students</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Champions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1891,6 +1893,12 @@ function openTab(tabName) {
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
+                                      <td class="py-2 px-4 border-b text-gray-700">
+                                <%= participants.filter(p => p.schoolNameDropdown === school.schoolName && p.hasCompletedMCQ).length %>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <%= participants.filter(p => p.schoolNameDropdown === school.schoolName && p.isChampion).length %>
+                            </td>
                                 </tr>
                             <% }) %>
                         </tbody>

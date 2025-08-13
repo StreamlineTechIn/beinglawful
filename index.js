@@ -4961,22 +4961,30 @@ app.get('/coordinator-dashboard', isAuthenticated, async (req, res) => {
     });
 
     // Download Excel Template
-  const fs = require('fs');
 app.get('/download-template', (req, res) => {
-    const filePath = path.join(__dirname, 'public', 'school-template.xlsx');
-    
-    if (!fs.existsSync(filePath)) {
-        console.error('Template file not found at:', filePath);
-        return res.status(404).redirect('/coordinator-dashboard?error=' + encodeURIComponent('Excel template file not found'));
-    }
+    try {
+        const workbook = xlsx.utils.book_new();
 
-    res.download(filePath, 'school-template.xlsx', (err) => {
-        if (err) {
-            console.error('Error downloading template:', err.message, err.stack);
-            res.status(500).redirect('/coordinator-dashboard?error=' + encodeURIComponent('Error downloading template'));
-        }
-    });
+        // Excel headers
+        const worksheetData = [
+            ['School Name', 'Personal Number', 'Principal Number', 'Email', 'Status']
+        ];
+
+        const worksheet = xlsx.utils.aoa_to_sheet(worksheetData);
+        xlsx.utils.book_append_sheet(workbook, worksheet, 'School Template');
+
+        const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        // Send the file as a download
+        res.setHeader('Content-Disposition', 'attachment; filename=school-template.xlsx');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.send(buffer);
+    } catch (error) {
+        console.error('Error generating school template:', error.message, error.stack);
+        res.status(500).redirect('/coordinator-dashboard?error=' + encodeURIComponent('Error generating school template'));
+    }
 });
+
 
    
    // POST: Upload Excel File
@@ -5059,8 +5067,6 @@ app.post('/upload-excel', isAuthenticated, uploadExcel, async (req, res) => {
         res.status(500).json({ error: `Failed to upload Excel file: ${error.message}` });
     }
 });
-
-
 
 
  // GET: Download Feedback Excel Template

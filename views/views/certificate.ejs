@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+    .sidebar {
+    width: 250px;
+    background: linear-gradient(180deg, #1e7e34, #145a32); /* Dark Green Gradient */
+    color: #fff;
+    height: 100vh;
+    position: fixed;
+    padding-top: 20px;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar h2 {
+    text-align: center;
+    margin-bottom: 30px;
+    font-size: 1.5em;
+}
+
+.sidebar a {
+    display: block;
+    color: #fff;
+    padding: 15px 20px;
+    text-decoration: none;
+    font-size: 1.1em;
+    transition: background 0.3s;
+}
+
+.sidebar a:hover {
+    background: #51ca6d; /* Light Green Hover */
+}
+
+.sidebar a.active {
+    background: #51ca6d; /* Active Tab Highlight */
+}
+;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+            width: calc(100% - 250px);
+        }
+        .certificate {
+            max-width: 600px; /* Adjust based on your image size */
+            margin: 0 auto;
+            position: relative;
+            text-align: center;
+        }
+        .certificate img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        .certificate-content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: #000;
+            pointer-events: none; /* Ensure content doesn't interfere   with download */
+        }
+        .certificate-content p {
+            margin: 5px 0;
+            font-size: 1.5em;
+        }
+        .certificate-content .name {
+            font-weight: bold;
+            font-size: 1.5em;
+        }
+        .certificate-content .marks {
+
+            font-size: 1em;
+        }
+        .download-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background: #3498db;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 5px;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .download-btn:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <h2>Student Portal</h2>
+        <a href="/dashboard/<%= parentMobile1 %>">Dashboard</a>
+        <a href="/gamezone/<%= parentMobile1 %>">Game Zone</a>
+        <a href="#" class="active">Certificate</a>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <div class="main-content">
+        <div id="certificate-container">
+            <div class="certificate">
+                <img src="../Assets/Certificate.png" alt="Certificate Image">
+                <div class="certificate-content">
+                    <br><br><br><br><br>
+                    <p class="name"><strong><%= studentName %></strong></p>
+                    <br>
+                    <p class="marks"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  <%= percentage %> % </p>
+                </div>
+            </div>
+            <a class="download-btn" onclick="downloadCertificate()">Download Certificate</a>
+        </div>
+    </div>
+
+    <script>
+        function downloadCertificate() {
+            const element = document.querySelector('.certificate');
+            html2canvas(element, { 
+                scale: 2,
+                useCORS: true,
+                backgroundColor: null // Remove white background
+            }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Certificate_${'<%= studentName %>'}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+    </script>
+</body>
+</html>

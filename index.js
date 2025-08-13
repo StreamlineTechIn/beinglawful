@@ -122,8 +122,6 @@ if (missingEnvVars.length > 0) {
     console.error(`Missing environment variables: ${missingEnvVars.join(', ')}`);
     process.exit(1);
 }
-
-// Initialize Firebase Admin SDK
 let db, bucket;
 try {
     const serviceAccount = {
@@ -150,7 +148,6 @@ try {
 } catch (error) {
     console.error('Failed to initialize Firebase:', error.message, error.stack);
     process.exit(1);
-
 }
 
 // Set up Express app
@@ -936,108 +933,107 @@ app.get('/gamezone/:parentMobile1', requireStudentAuth, checkEventDate, async (r
     }
 });
     //student dashboard upload media
-   app.post('/student-dashboard/upload-media', upload, async (req, res) => {
-    try {
-        const { parentMobile1, mediaDescription, mediaLink } = req.body;
-        const photos = req.files['photos'] || [];
-        const videos = req.files['videos'] || [];
+ app.post('/student-dashboard/upload-media', uploadSchoolMedia, async (req, res) => {
+  try {
+    const { parentMobile1, mediaDescription, mediaLink } = req.body;
+    const photos = req.files['photos'] || [];
+    const videos = req.files['videos'] || [];
 
-        if (!parentMobile1) {
-            return res.status(400).send('Parent Mobile Number is required.');
-        }
-
-        const participantSnapshot = await db.collection('participants')
-            .where('parentMobile1', '==', parentMobile1)
-            .get();
-
-        if (participantSnapshot.empty) {
-            return res.status(404).send('Student not found.');
-        }
-
-        const participantId = participantSnapshot.docs[0].id;
-        const participantData = participantSnapshot.docs[0].data();
-
-        if (mediaDescription && mediaDescription.length > 1000) {
-            return res.status(400).send('Media description cannot exceed 1000 words.');
-        }
-
-        const bucket = admin.storage().bucket('beinglawful-ee5a4.appspot.com');
-        const mediaUploads = [];
-
-        for (const file of photos) {
-            const fileName = `studentMedia/${participantId}/photos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
-
-            await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
-            const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-
-            mediaUploads.push({
-                url,
-                type: 'image',
-                path: fileName,
-                description: mediaDescription || '',
-                link: mediaLink || '',
-                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-        }
-
-        for (const file of videos) {
-            const fileName = `studentMedia/${participantId}/videos/${Date.now()}_${file.originalname}`;
-            const fileUpload = bucket.file(fileName);
-
-            await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
-            const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
-
-            mediaUploads.push({
-                url,
-                type: 'video',
-                path: fileName,
-                description: mediaDescription || '',
-                link: mediaLink || '',
-                uploadedAt: admin.firestore.FieldValue.serverTimestamp()
-            });
-        }
-
-        if (mediaUploads.length > 0) {
-            const batch = db.batch();
-            mediaUploads.forEach(upload => {
-                const mediaRef = db.collection('participants').doc(participantId).collection('mediaUploads').doc();
-                batch.set(mediaRef, upload);
-            });
-            await batch.commit();
-        }
-
-        const uploadedMediaSnapshot = await db.collection('participants').doc(participantId).collection('mediaUploads').orderBy('uploadedAt', 'desc').get();
-        const allUploadedMedia = uploadedMediaSnapshot.docs.map(doc => doc.data());
-
-        const updatedUser = (await db.collection('participants').doc(participantId).get()).data();
-        const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
-
-        res.render('dashboard', {
-            studentName: updatedUser.studentName || 'Unknown Student',
-            parentMobile1,
-            hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
-            hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
-            hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
-            mcqs: updatedUser.currentMcqs || [],
-            trial1: trialTests.trial1,
-            trial2: trialTests.trial2,
-            isEventDate,
-            isOnOrAfterEventDate,
-            eventDateMissing,
-            eventDate,
-            showResults: updatedUser.hasCompletedMCQ || false,
-            score: updatedUser.score || 0,
-            totalQuestions: updatedUser.totalQuestions || 30,
-            percentage: updatedUser.percentage || 0,
-            mediaUploads: allUploadedMedia,
-            error: null
-        });
-
-    } catch (error) {
-        console.error('Error uploading media:', error);
-        res.status(500).send(`Error uploading media: ${error.message}`);
+    if (!parentMobile1) {
+      return res.status(400).send('Parent Mobile Number is required.');
     }
+
+    const participantSnapshot = await db.collection('participants')
+      .where('parentMobile1', '==', parentMobile1)
+      .get();
+
+    if (participantSnapshot.empty) {
+      return res.status(404).send('Student not found.');
+    }
+
+    const participantId = participantSnapshot.docs[0].id;
+    const participantData = participantSnapshot.docs[0].data();
+
+    if (mediaDescription && mediaDescription.length > 1000) {
+      return res.status(400).send('Media description cannot exceed 1000 words.');
+    }
+
+    const bucket = admin.storage().bucket(); // Use default bucket from initialization
+    const mediaUploads = [];
+
+    for (const file of photos) {
+      const fileName = `studentMedia/${participantId}/photos/${Date.now()}_${file.originalname}`;
+      const fileUpload = bucket.file(fileName);
+
+      await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
+      const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
+
+      mediaUploads.push({
+        url,
+        type: 'image',
+        path: fileName,
+        description: mediaDescription || '',
+        link: mediaLink || '',
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    for (const file of videos) {
+      const fileName = `studentMedia/${participantId}/videos/${Date.now()}_${file.originalname}`;
+      const fileUpload = bucket.file(fileName);
+
+      await fileUpload.save(file.buffer, { metadata: { contentType: file.mimetype } });
+      const [url] = await fileUpload.getSignedUrl({ action: 'read', expires: '03-09-2491' });
+
+      mediaUploads.push({
+        url,
+        type: 'video',
+        path: fileName,
+        description: mediaDescription || '',
+        link: mediaLink || '',
+        uploadedAt: admin.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    if (mediaUploads.length > 0) {
+      const batch = db.batch();
+      mediaUploads.forEach(upload => {
+        const mediaRef = db.collection('participants').doc(participantId).collection('mediaUploads').doc();
+        batch.set(mediaRef, upload);
+      });
+      await batch.commit();
+    }
+
+    const uploadedMediaSnapshot = await db.collection('participants').doc(participantId).collection('mediaUploads').orderBy('uploadedAt', 'desc').get();
+    const allUploadedMedia = uploadedMediaSnapshot.docs.map(doc => doc.data());
+
+    const updatedUser = (await db.collection('participants').doc(participantId).get()).data();
+    const { isEventDate, isOnOrAfterEventDate, eventDateMissing, eventDate } = await getEventDateDetails(updatedUser.schoolNameDropdown || '');
+
+    res.render('dashboard', {
+      studentName: updatedUser.studentName || 'Unknown Student',
+      parentMobile1,
+      hasCompletedMCQ: updatedUser.hasCompletedMCQ || false,
+      hasCompletedTrial1: updatedUser.hasCompletedTrial1 || false,
+      hasCompletedTrial2: updatedUser.hasCompletedTrial2 || false,
+      mcqs: updatedUser.currentMcqs || [],
+      trial1: trialTests.trial1,
+      trial2: trialTests.trial2,
+      isEventDate,
+      isOnOrAfterEventDate,
+      eventDateMissing,
+      eventDate,
+      showResults: updatedUser.hasCompletedMCQ || false,
+      score: updatedUser.score || 0,
+      totalQuestions: updatedUser.totalQuestions || 30,
+      percentage: updatedUser.percentage || 0,
+      mediaUploads: allUploadedMedia,
+      error: null
+    });
+  } catch (error) {
+    console.error('Error uploading media:', error);
+    res.status(500).send(`Error uploading media: ${error.message}`);
+  }
 });
 
 app.get('/student-dashboard/media-upload/:parentMobile1', requireStudentAuth, async (req, res) => {
@@ -4969,7 +4965,6 @@ app.get('/coordinator-dashboard', isAuthenticated, async (req, res) => {
 app.get('/download-template', (req, res) => {
     const filePath = path.join(__dirname, 'public', 'school-template.xlsx');
     
-    // Check if file exists
     if (!fs.existsSync(filePath)) {
         console.error('Template file not found at:', filePath);
         return res.status(404).redirect('/coordinator-dashboard?error=' + encodeURIComponent('Excel template file not found'));
@@ -5001,11 +4996,10 @@ app.post('/upload-excel', isAuthenticated, uploadExcel, async (req, res) => {
         }
 
         const headers = Object.keys(data[0]).map(h => h.trim().toLowerCase());
-        const expectedHeaders = ['school name', 'number', 'email', 'contact person', 'personal number', 'principal number'];
-        const requiredHeaders = ['school name'];
-        const missingRequiredHeaders = requiredHeaders.filter(h => !headers.includes(h));
-        if (missingRequiredHeaders.length > 0) {
-            return res.status(400).json({ error: `Missing required headers: ${missingRequiredHeaders.join(', ')}` });
+        const expectedHeaders = ['school name', 'personal number', 'principal number', 'email'];
+        const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
+        if (missingHeaders.length > 0) {
+            return res.status(400).json({ error: `Missing required headers: ${missingHeaders.join(', ')}` });
         }
 
         const schools = data.map((row, index) => {
@@ -5021,11 +5015,9 @@ app.post('/upload-excel', isAuthenticated, uploadExcel, async (req, res) => {
 
             return {
                 schoolName,
-                number: String(rowKeys['number'] || rowKeys['personal number'] || 'N/A'),
-                email: rowKeys['email']?.toString().trim() || 'N/A',
-                contactPerson: rowKeys['contact person']?.toString().trim() || 'N/A',
-                personalNumber: String(rowKeys['personal number'] || 'N/A'),
+                number: String(rowKeys['personal number'] || 'N/A'),
                 principalNumber: String(rowKeys['principal number'] || 'N/A'),
+                email: rowKeys['email']?.toString().trim() || 'N/A',
                 coordinatorStatus: 'delivered',
                 isApproved: true,
                 isCompleted: false,
@@ -5050,10 +5042,8 @@ app.post('/upload-excel', isAuthenticated, uploadExcel, async (req, res) => {
                 const schoolRef = existingSchool.docs[0].ref;
                 batch.update(schoolRef, {
                     number: school.number,
-                    email: school.email,
-                    contactPerson: school.contactPerson,
-                    personalNumber: school.personalNumber,
                     principalNumber: school.principalNumber,
+                    email: school.email,
                     coordinatorStatus: school.coordinatorStatus,
                     isApproved: school.isApproved,
                     isCompleted: school.isCompleted,
@@ -5069,6 +5059,7 @@ app.post('/upload-excel', isAuthenticated, uploadExcel, async (req, res) => {
         res.status(500).json({ error: `Failed to upload Excel file: ${error.message}` });
     }
 });
+
 
 
 

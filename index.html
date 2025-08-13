@@ -133,7 +133,8 @@
   <meta name="preload" content="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" as="style">
   <meta name="preload" content="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" as="style">
   <meta name="preload" content="https://beinglawful.in/Assets/being_lawful.jpg" as="image">
-  <meta name="preload" content="./Assets/Activities/videoactivity_thumbnail.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/videoactivity.mp4_thumbnail.jpg" as="image">
+  <meta name="preload" content="./Assets/Activities/dharmadhikari_thumbnail.jpg" as="image">
   <meta name="preload" content="./Assets/Activities/Product Photoggraphy.jpg" as="image">
   <meta name="preload" content="./Assets/Activities/Product Photoggraphy2.jpg" as="image">
   <meta name="preload" content="./Assets/Activities/Product Photoggraphy3.jpg" as="image">
@@ -157,6 +158,7 @@
   <link rel="preload" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" as="style">
   <link rel="preload" href="./Assets/logo.png" as="image">
   <link rel="preload" href="./Assets/videoactivity.mp4_thumbnail.jpg" as="image">
+  <link rel="preload" href="./Assets/Activities/dharmadhikari_thumbnail.jpg" as="image">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet"/>
@@ -454,11 +456,19 @@
       flex-direction: column;
       align-items: center;
     }
-    .modal-content img {
+    .modal-content img, .modal-content video {
       width: 100%;
       height: auto;
       max-height: 80vh;
       object-fit: contain;
+    }
+    .video-modal-content {
+      max-width: 90%;
+      max-height: 90vh;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
     .close-modal {
       position: absolute;
@@ -513,14 +523,14 @@
       border-radius: 8px;
       aspect-ratio: 16 / 9;
     }
-    .gallery-item img {
+    .gallery-item img, .gallery-item video {
       width: 100%;
       height: 100%;
       object-fit: cover;
       transition: transform 0.3s ease;
       cursor: pointer;
     }
-    .gallery-item:hover img {
+    .gallery-item:hover img, .gallery-item:hover video {
       transform: scale(1.1);
     }
     .gallery-overlay {
@@ -570,10 +580,11 @@
       border: 2px solid #1e40af;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
-      padding: 0.75rem 3rem; /* Increased padding for larger width and height */
+      padding: 1rem 3rem; /* Increased padding for taller button */
       width: auto;
-      min-width: 180px; /* Increased min-width for wider button */
-      line-height: 1.5; /* Adjusted for better text alignment */
+      min-width: 180px;
+      min-height: 48px; /* Added min-height for taller button */
+      line-height: 1.5;
     }
     .blink-button:hover {
       transform: scale(1.1);
@@ -646,26 +657,6 @@
       font-size: 24px;
       cursor: pointer;
       z-index: 1002;
-    }
-    .gallery-item video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      transition: transform 0.3s ease;
-      cursor: pointer;
-    }
-    .gallery-item:hover video {
-      transform: scale(1.1);
-    }
-    #videoModal .modal-content {
-      max-width: 90%;
-      max-height: 90vh;
-    }
-    #videoModal video {
-      width: 100%;
-      height: auto;
-      max-height: 90vh;
-      object-fit: contain;
     }
     @media (min-width: 320px) {
       .hero-section {
@@ -998,8 +989,22 @@
     <div class="modal-content">
       <img id="modalImage" src="" alt="Modal Image">
       <div id="modalCaption" class="modal-caption"></div>
-      <button class="prev" onclick="changeImage(-1)" aria-label="Previous Image">&#10094;</button>
-      <button class="next" onclick="changeImage(1)" aria-label="Next Image">&#10095;</button>
+      <button class="prev" onclick="changeMedia(-1)" aria-label="Previous Media">&#10094;</button>
+      <button class="next" onclick="changeMedia(1)" aria-label="Next Media">&#10095;</button>
+    </div>
+  </div>
+
+  <!-- Video Modal -->
+  <div id="videoModal" class="modal" onclick="closeVideoModal(event)">
+    <span class="close-modal" onclick="closeVideoModal(event)" aria-label="Close Video Modal">×</span>
+    <div class="video-modal-content">
+      <video id="modalVideo" controls>
+        <source id="modalVideoSource" src="" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+      <div id="videoModalCaption" class="modal-caption"></div>
+      <button class="prev" onclick="changeMedia(-1)" aria-label="Previous Media">&#10094;</button>
+      <button class="next" onclick="changeMedia(1)" aria-label="Next Media">&#10095;</button>
     </div>
   </div>
 
@@ -1157,11 +1162,21 @@
           <span class="gallery-title">Adv. S.K Jain addressed the trainers</span>
         </div>
       </div>
-    </div>
-    <div class="mt-6">
+  
+      <div class="mt-6">
       <a href="./gallery.html" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transform hover:-translate-y-1 transition-all duration-300 text-sm" data-aos="zoom-in" data-aos-delay="1100">View More</a>
     </div>
+
   </section>
+<div style="display: flex; justify-content: center; align-items: center; height: 80vh;">
+  <video controls autoplay muted style="max-width:50%; max-height:50%;" id="myVideo">
+    <source src="./Assets/dharmadhikari.mp4" type="video/mp4">
+    Your browser does not support the video tag.
+  </video>
+</div>
+
+  <!-- <button onclick="closeVideoModal()">Close</button> -->
+</div>
 
   <!-- Workshop Kit Section -->
   <section class="bg-white min-h-screen flex flex-col items-center justify-center py-8 px-4" id="workshop-kit" data-aos="fade-up">
@@ -1296,53 +1311,84 @@
   <!-- JavaScript -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
-  <script>
-    AOS.init({
-      duration: 300,
-      easing: 'ease-in-out',
-      once: true,
-      mirror: false,
-      disable: window.innerWidth < 320
-    });
+<script>
 
-    window.addEventListener('scroll', function() {
-      const navbar = document.querySelector('.navbar');
-      if (window.scrollY > 50) {
-        navbar.classList.add('scrolled');
-      } else {
-        navbar.classList.remove('scrolled');
-      }
-    });
+AOS.init({
+  duration: 300, // Animation duration in milliseconds
+  easing: 'ease-in-out', // Easing function for animations
+  once: true, // Animations occur only once
+  mirror: false, // Animations don't replay when scrolling back
+  disable: window.innerWidth < 320, // Disable animations on screens smaller than 320px
+});
 
-    function openModal(imgElement) {
-      const modal = document.getElementById('imageModal');
-      const modalImg = document.getElementById('modalImage');
-      modalImg.src = imgElement.src;
-      modalImg.alt = imgElement.alt;
-      modal.classList.add('active');
-      modalImg.onload = function() {
-        modal.style.display = 'flex';
-      };
-      modalImg.onerror = function() {
-        console.error('Failed to load image:', modalImg.src);
-      };
-    }
+// Navbar scroll effect
+window.addEventListener('scroll', () => {
+  const navbar = document.querySelector('.navbar');
+  if (window.scrollY > 50) {
+    navbar.classList.add('scrolled'); // Add 'scrolled' class when scrolled past 50px
+  } else {
+    navbar.classList.remove('scrolled'); // Remove 'scrolled' class when at top
+  }
+});
 
-    function closeModal(event) {
-      const modal = document.getElementById('imageModal');
-      if (event.target.classList.contains('modal') || event.target.classList.contains('close-modal')) {
-        modal.style.display = 'none';
-        modal.classList.remove('active');
-      }
-    }
+// Media modal handling
+let currentMediaIndex = 0;
+const mediaItems = document.querySelectorAll('.gallery-item');
 
-    document.addEventListener('DOMContentLoaded', function() {
-      document.querySelectorAll('.gallery-item img').forEach(img => {
-        img.addEventListener('click', function() {
-          openModal(this);
-        });
-      });
-    });
-  </script>
+// Open image modal
+function openModal(imgElement) {
+  const modal = document.getElementById('imageModal');
+  const modalImg = document.getElementById('modalImage');
+  const modalCaption = document.getElementById('modalCaption');
+
+  modalImg.src = imgElement.src;
+  modalImg.alt = imgElement.alt;
+  modalCaption.textContent = imgElement.alt;
+
+  modal.classList.add('active');
+  modal.style.display = 'flex';
+
+  // Hide video modal if open
+ 
+  videoModal.classList.remove('active');
+  videoModal.style.display = 'none';
+
+  currentMediaIndex = Array.from(mediaItems).indexOf(imgElement.parentElement);
+
+  // Handle image load error
+  modalImg.onerror = () => {
+    console.error('Failed to load image:', modalImg.src);
+    modalCaption.textContent = 'Error loading image';
+  };
+}
+
+
+// Close image modal
+function closeModal(event) {
+  if (event.target.classList.contains('modal') || event.target.classList.contains('close-modal')) {
+    const modal = document.getElementById('imageModal');
+    modal.classList.remove('active');
+    modal.style.display = 'none';
+  }
+}
+
+
+function openVideoModal() {
+  const modal = document.getElementById('videoModal');
+  const video = document.getElementById('myVideo');
+  video.src = 'Assets/dharmadhikari.mp4'; // set dynamically
+  modal.style.display = 'flex';
+  video.play();
+}
+
+function closeVideoModal() {
+  const modal = document.getElementById('videoModal');
+  const video = document.getElementById('myVideo');
+  video.pause();
+  video.currentTime = 0;
+  modal.style.display = 'none';
+}
+</script>
+
 </body>
 </html>

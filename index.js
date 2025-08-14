@@ -2634,216 +2634,280 @@ function createWorksheet(data, columns) {
 
   return XLSX.utils.aoa_to_sheet(rows);
 }
+
+
+// Function to format timestamps consistently with frontend (Asia/Kolkata timezone)
+function formatTimestamp(date) {
+    if (!date) return 'N/A';
+    return new Date(date).toLocaleString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
+
+// Function to create a worksheet from data and columns
+function createWorksheet(data, columns) {
+    const ws = XLSX.utils.json_to_sheet(
+        data.map(item =>
+            columns.reduce((acc, col) => {
+                let value = item[col.key];
+                if (col.transform) {
+                    value = col.transform(value, item);
+                }
+                acc[col.header] = value ?? 'N/A';
+                return acc;
+            }, {})
+        )
+    );
+    return ws;
+}
+
 app.get('/admin/export-data', requireAdmin, async (req, res) => {
     try {
         console.log('Starting export-data endpoint');
-        
-        // Fetch Schools
-        console.log('Fetching schools...');
-        const schoolsSnapshot = await db.collection('schools').get();
-        const schools = [];
-        for (const doc of schoolsSnapshot.docs) {
-            const schoolData = doc.data();
-            console.log(`Processing school: ${doc.id}`);
-            const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
-            // const workshopStartTime = formatTime(schoolData.workshopStartTime);
-            // const workshopEndTime = formatTime(schoolData.workshopEndTime);
-            let trainer1 = null, trainer2 = null, coordinator = null;
-            if (schoolData.trainerId1) {
-                const t1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
-                if (t1Doc.exists) trainer1 = { id: t1Doc.id, ...t1Doc.data() };
-            }
-            if (schoolData.trainerId2) {
-                const t2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
-                if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
-            }
-            if (schoolData.coordinatorId) {
-                const coordDoc = await db.collection('coordinators').doc(schoolData.coordinatorId).get();
-                if (coordDoc.exists) coordinator = { id: coordDoc.id, ...coordDoc.data() };
-            }
-            schools.push({
-                id: doc.id,
-                ...schoolData,
-                eventDate,
-                // workshopStartTime,
-                // workshopEndTime,
-                trainer1Name: trainer1 ? trainer1.trainerName : 'N/A',
-                trainer2Name: trainer2 ? trainer2.trainerName : 'N/A',
-                coordinatorName: coordinator ? coordinator.name : 'N/A'
-            });
-        }
-        console.log(`Fetched ${schools.length} schools`);
-
-        // Fetch Trainers
-        console.log('Fetching trainers...');
-        const trainersSnapshot = await db.collection('trainers').get();
-        const trainers = trainersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            registeredAt: doc.data().registeredAt?.toDate ? doc.data().registeredAt.toDate() : (doc.data().registeredAt ? new Date(doc.data().registeredAt) : null),
-            isApproved: typeof doc.data().isApproved === 'boolean' ? doc.data().isApproved : false
-        }));
-        console.log(`Fetched ${trainers.length} trainers`);
-
-        // Fetch Coordinators
-        console.log('Fetching coordinators...');
-        const coordinatorsSnapshot = await db.collection('coordinators').get();
-        const coordinators = coordinatorsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            createdAt: doc.data().createdAt?.toDate() || null
-        }));
-        console.log(`Fetched ${coordinators.length} coordinators`);
-
-        // Fetch Participants
-        console.log('Fetching participants...');
-        const participantsSnapshot = await db.collection('participants').get();
-        const participants = participantsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            const score = Number(data.score) || null;
-            const totalQuestions = Number(data.totalQuestions) || null;
-            return {
-                id: doc.id,
-                ...data,
-                birthdate: data.birthdate?.toDate ? data.birthdate.toDate() : (data.birthdate ? new Date(data.birthdate) : null),
-                completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : (data.completedAt ? new Date(data.completedAt) : null),
-                score,
-                totalQuestions,
-                percentage: score && totalQuestions ? ((score / totalQuestions) * 100).toFixed(2) : null
-            };
-        });
-        console.log(`Fetched ${participants.length} participants`);
-
-        // Fetch Call Logs
-        console.log('Fetching call logs...');
-        const callLogsSnapshot = await db.collection('callLogs').get();
-        const callLogs = callLogsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            callDate: doc.data().callDate?.toDate ? doc.data().callDate.toDate() : (doc.data().callDate ? new Date(doc.data().callDate) : null)
-        }));
-        console.log(`Fetched ${callLogs.length} call logs`);
-
-        // Fetch Media Uploads
-        console.log('Fetching media uploads...');
-        const schoolMediaPromises = schoolsSnapshot.docs.map(doc =>
-            db.collection('schools').doc(doc.id).collection('mediaUploads').get()
-                .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
-                    ...mediaDoc.data(),
-                    uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                    uploadedBy: doc.data().schoolName || 'Unknown School'
-                })))
-        );
-        const trainerMediaPromises = trainersSnapshot.docs.map(doc =>
-            db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
-                .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
-                    ...mediaDoc.data(),
-                    uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                    uploadedBy: doc.data().trainerName || 'Unknown Trainer'
-                })))
-        );
-        const mediaUploads = [...(await Promise.all(schoolMediaPromises)).flat(), ...(await Promise.all(trainerMediaPromises)).flat()];
-        console.log(`Fetched ${mediaUploads.length} media uploads`);
-
-        // Define columns for each sheet
-        const schoolColumns = [
-            { header: 'Doc ID', key: 'id' },
-            { header: 'School Name', key: 'schoolName' },
-            { header: 'Registered At', key: 'registeredAt', transform: formatTimestamp },
-            { header: 'Email', key: 'schoolEmail' },
-            { header: 'City', key: 'city' },
-            { header: 'District', key: 'district' },
-            { header: 'Pincode', key: 'pincode' },
-            { header: 'Event Date', key: 'eventDate', transform: formatTimestamp },
-            // { header: 'Workshop Time', key: 'workshopStartTime', transform: (val, item) => `${val || 'N/A'} - ${item.workshopEndTime || 'N/A'}` },
-            { header: 'Approved', key: 'isApproved', transform: (val) => val ? 'Yes' : 'No' },
-            { header: 'Completed', key: 'isCompleted', transform: (val) => val ? 'Yes' : 'No' },
-            { header: 'Trainer 1', key: 'trainer1Name' },
-            { header: 'Trainer 2', key: 'trainer2Name' },
-            { header: 'Coordinator', key: 'coordinatorName' },
-            { header: 'Principal Phone', key: 'principalNumber' },
-            { header: 'Civics Teacher Phone', key: 'civicsTeacherNumber' },
-            { header: 'School Phone', key: 'schoolPhoneNumber' },
-            { header: 'Principal Email', key: 'principalEmail' },
-            { header: 'Civics Teacher Email', key: 'civicsTeacherEmail' },
-            { header: 'Resources Confirmed', key: 'resourcesConfirmed', transform: (val) => val ? 'Yes' : 'No' },
-            { header: 'Selected Resources', key: 'selectedResources', transform: (val) => Array.isArray(val) ? val.join(', ') : 'None' },
-            { header: 'Spot', key: 'spot' },
-            { header: 'Reference Name', key: 'referenceName' }
-        ];
-
-        const trainerColumns = [
-            { header: 'Doc ID', key: 'id' },
-            { header: 'Name', key: 'trainerName' },
-            { header: 'Email', key: 'trainerEmail' },
-            { header: 'City', key: 'city' },
-            { header: 'Profession', key: 'profession' },
-            { header: 'Approved', key: 'isApproved', transform: (val) => val ? 'Yes' : 'No' },
-            { header: 'Registered At', key: 'registeredAt', transform: formatTimestamp }
-        ];
-
-        const coordinatorColumns = [
-            { header: 'Doc ID', key: 'id' },
-            { header: 'Name', key: 'name' },
-            { header: 'Email', key: 'email' },
-            { header: 'Number', key: 'number' },
-            { header: 'Organization', key: 'organization' },
-            { header: 'Created At', key: 'createdAt', transform: formatTimestamp }
-        ];
-
-        const participantColumns = [
-            { header: 'Doc ID', key: 'id' },
-            { header: 'Name', key: 'name' },
-            { header: 'School Name', key: 'schoolNameDropdown' },
-            { header: 'City', key: 'city' },
-            { header: 'Birthdate', key: 'birthdate', transform: formatTimestamp },
-            { header: 'Completed MCQ', key: 'hasCompletedMCQ', transform: (val) => val ? 'Yes' : 'No' },
-            { header: 'Score', key: 'score' },
-            { header: 'Total Questions', key: 'totalQuestions' },
-            { header: 'Percentage', key: 'percentage' },
-            { header: 'Completed At', key: 'completedAt', transform: formatTimestamp }
-        ];
-
-        const callLogColumns = [
-            { header: 'Doc ID', key: 'id' },
-            { header: 'Call Date', key: 'callDate', transform: formatTimestamp },
-            { header: 'Caller', key: 'caller' },
-            { header: 'Recipient', key: 'recipient' },
-            { header: 'Duration', key: 'duration' },
-            { header: 'Notes', key: 'notes' }
-        ];
-
-        const mediaColumns = [
-            { header: 'Media ID', key: 'mediaId' },
-            { header: 'Uploaded By', key: 'uploadedBy' },
-            { header: 'Uploaded At', key: 'uploadedAt', transform: formatTimestamp },
-            { header: 'Description', key: 'description' },
-            { header: 'Type', key: 'type' },
-            { header: 'Seen', key: 'seen', transform: (val) => val ? 'Yes' : 'No' }
-        ];
-
-        console.log('Creating worksheets...');
-        const schoolWorksheet = createWorksheet(schools, schoolColumns);
-        const trainerWorksheet = createWorksheet(trainers, trainerColumns);
-        const coordinatorWorksheet = createWorksheet(coordinators, coordinatorColumns);
-        const participantWorksheet = createWorksheet(participants, participantColumns);
-        const callLogWorksheet = createWorksheet(callLogs, callLogColumns);
-        const mediaWorksheet = createWorksheet(mediaUploads, mediaColumns);
-
-        console.log('Creating workbook...');
+        const type = req.query.type || 'all';
         const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, schoolWorksheet, 'Schools');
-        XLSX.utils.book_append_sheet(workbook, trainerWorksheet, 'Trainers');
-        XLSX.utils.book_append_sheet(workbook, coordinatorWorksheet, 'Coordinators');
-        XLSX.utils.book_append_sheet(workbook, participantWorksheet, 'Participants');
-        XLSX.utils.book_append_sheet(workbook, callLogWorksheet, 'Call Logs');
-        XLSX.utils.book_append_sheet(workbook, mediaWorksheet, 'Media Uploads');
+
+        let schoolsSnapshot = null; // Initialize to avoid undefined errors
+        let trainersSnapshot = null; // Initialize to avoid undefined errors
+
+        if (type === 'schools' || type === 'all') {
+            // Fetch Schools
+            console.log('Fetching schools...');
+            schoolsSnapshot = await db.collection('schools').get();
+            const schools = [];
+            for (const doc of schoolsSnapshot.docs) {
+                const schoolData = doc.data();
+                console.log(`Processing school: ${doc.id}`);
+                const eventDate = schoolData.eventDate?.toDate ? schoolData.eventDate.toDate() : (schoolData.eventDate ? new Date(schoolData.eventDate) : null);
+                let trainer1 = null, trainer2 = null, coordinator = null;
+                if (schoolData.trainerId1) {
+                    const t1Doc = await db.collection('trainers').doc(schoolData.trainerId1).get();
+                    if (t1Doc.exists) trainer1 = { id: t1Doc.id, ...t1Doc.data() };
+                }
+                if (schoolData.trainerId2) {
+                    const t2Doc = await db.collection('trainers').doc(schoolData.trainerId2).get();
+                    if (t2Doc.exists) trainer2 = { id: t2Doc.id, ...t2Doc.data() };
+                }
+                if (schoolData.coordinatorId) {
+                    const coordDoc = await db.collection('coordinators').doc(schoolData.coordinatorId).get();
+                    if (coordDoc.exists) coordinator = { id: coordDoc.id, ...coordDoc.data() };
+                }
+                schools.push({
+                    id: doc.id,
+                    ...schoolData,
+                    eventDate,
+                    trainer1Name: trainer1 ? trainer1.trainerName : 'N/A',
+                    trainer2Name: trainer2 ? trainer2.trainerName : 'N/A',
+                    coordinatorName: coordinator ? coordinator.name : 'N/A'
+                });
+            }
+            console.log(`Fetched ${schools.length} schools`);
+
+            const schoolColumns = [
+                { header: 'Doc ID', key: 'id' },
+                { header: 'School Name', key: 'schoolName' },
+                { header: 'Registered At', key: 'registeredAt', transform: formatTimestamp },
+                { header: 'Email', key: 'schoolEmail' },
+                { header: 'City', key: 'city' },
+                { header: 'District', key: 'district' },
+                { header: 'Pincode', key: 'pincode' },
+                { header: 'Event Date', key: 'eventDate', transform: formatTimestamp },
+                { header: 'Approved', key: 'isApproved', transform: (val) => val ? 'Yes' : 'No' },
+                { header: 'Completed', key: 'isCompleted', transform: (val) => val ? 'Yes' : 'No' },
+                { header: 'Trainer 1', key: 'trainer1Name' },
+                { header: 'Trainer 2', key: 'trainer2Name' },
+                { header: 'Coordinator', key: 'coordinatorName' },
+                { header: 'Principal Phone', key: 'principalNumber' },
+                { header: 'Civics Teacher Phone', key: 'civicsTeacherNumber' },
+                { header: 'School Phone', key: 'schoolPhoneNumber' },
+                { header: 'Principal Email', key: 'principalEmail' },
+                { header: 'Civics Teacher Email', key: 'civicsTeacherEmail' },
+                { header: 'Resources Confirmed', key: 'resourcesConfirmed', transform: (val) => val ? 'Yes' : 'No' },
+                { header: 'Selected Resources', key: 'selectedResources', transform: (val) => Array.isArray(val) ? val.join(', ') : 'None' },
+                { header: 'Spot', key: 'spot' },
+                { header: 'Reference Name', key: 'referenceName' }
+            ];
+
+            const schoolWorksheet = createWorksheet(schools, schoolColumns);
+            XLSX.utils.book_append_sheet(workbook, schoolWorksheet, 'Schools');
+        }
+
+        if (type === 'trainers' || type === 'all') {
+            // Fetch Trainers
+            console.log('Fetching trainers...');
+            trainersSnapshot = await db.collection('trainers').get();
+            const trainers = trainersSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                registeredAt: doc.data().registeredAt?.toDate ? doc.data().registeredAt.toDate() : (doc.data().registeredAt ? new Date(doc.data().registeredAt) : null),
+                isApproved: typeof doc.data().isApproved === 'boolean' ? doc.data().isApproved : false
+            }));
+            console.log(`Fetched ${trainers.length} trainers`);
+
+            const trainerColumns = [
+                { header: 'Doc ID', key: 'id' },
+                { header: 'Name', key: 'trainerName' },
+                { header: 'Email', key: 'trainerEmail' },
+                { header: 'City', key: 'city' },
+                { header: 'Profession', key: 'profession' },
+                { header: 'Approved', key: 'isApproved', transform: (val) => val ? 'Yes' : 'No' },
+                { header: 'Registered At', key: 'registeredAt', transform: formatTimestamp }
+            ];
+
+            const trainerWorksheet = createWorksheet(trainers, trainerColumns);
+            XLSX.utils.book_append_sheet(workbook, trainerWorksheet, 'Trainers');
+        }
+
+        if (type === 'students' || type === 'all') {
+            // Fetch Participants
+            console.log('Fetching participants...');
+            const participantsSnapshot = await db.collection('participants').get();
+            const participants = participantsSnapshot.docs.map(doc => {
+                const data = doc.data();
+                const score = Number(data.score) || null;
+                const totalQuestions = Number(data.totalQuestions) || null;
+                return {
+                    id: doc.id,
+                    studentName: data.studentName || 'N/A',
+                    schoolNameDropdown: data.schoolNameDropdown || 'N/A',
+                    studentClass: data.studentClass || 'N/A',
+                    parentEmail: data.parentEmail || 'N/A',
+                    parentMobile1: data.parentMobile1 || 'N/A',
+                    parentMobile2: data.parentMobile2 || 'N/A',
+                    address: data.address || 'N/A',
+                    city: data.city || 'N/A',
+                    pincode: data.pincode || 'N/A',
+                    birthdate: data.birthdate?.toDate ? data.birthdate.toDate() : (data.birthdate ? new Date(data.birthdate) : null),
+                    hasCompletedMCQ: data.hasCompletedMCQ || false,
+                    score,
+                    totalQuestions,
+                    percentage: score && totalQuestions ? ((score / totalQuestions) * 100).toFixed(2) : null,
+                    completedAt: data.completedAt?.toDate ? data.completedAt.toDate() : (data.completedAt ? new Date(data.completedAt) : null)
+                };
+            });
+            console.log(`Fetched ${participants.length} participants`);
+
+            const participantColumns = [
+                { header: 'Doc ID', key: 'id' },
+                { header: 'Name', key: 'studentName' },
+                { header: 'School Name', key: 'schoolNameDropdown' },
+                { header: 'Class', key: 'studentClass' },
+                { header: 'Parent Email', key: 'parentEmail' },
+                { header: 'Parent Mobile 1', key: 'parentMobile1' },
+                { header: 'Parent Mobile 2', key: 'parentMobile2' },
+                { header: 'Address', key: 'address' },
+                { header: 'City', key: 'city' },
+                { header: 'Pincode', key: 'pincode' },
+                { header: 'Birthdate', key: 'birthdate', transform: formatTimestamp },
+                { header: 'MCQ Completed', key: 'hasCompletedMCQ', transform: (val) => val ? 'Yes' : 'No' },
+                { header: 'Score', key: 'score' },
+                { header: 'Total Questions', key: 'totalQuestions' },
+                { header: 'Percentage', key: 'percentage' },
+                { header: 'Completed At', key: 'completedAt', transform: formatTimestamp }
+            ];
+
+            const participantWorksheet = createWorksheet(participants, participantColumns);
+            XLSX.utils.book_append_sheet(workbook, participantWorksheet, 'Participants');
+        }
+
+        if (type === 'all') {
+            // Fetch Coordinators
+            console.log('Fetching coordinators...');
+            const coordinatorsSnapshot = await db.collection('coordinators').get();
+            const coordinators = coordinatorsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: doc.data().createdAt?.toDate() || null
+            }));
+            console.log(`Fetched ${coordinators.length} coordinators`);
+
+            const coordinatorColumns = [
+                { header: 'Doc ID', key: 'id' },
+                { header: 'Name', key: 'name' },
+                { header: 'Email', key: 'email' },
+                { header: 'Number', key: 'number' },
+                { header: 'Organization', key: 'organization' },
+                { header: 'Created At', key: 'createdAt', transform: formatTimestamp }
+            ];
+
+            // Fetch Call Logs
+            console.log('Fetching call logs...');
+            const callLogsSnapshot = await db.collection('callLogs').get();
+            const callLogs = callLogsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                callDate: doc.data().callDate?.toDate ? doc.data().callDate.toDate() : (doc.data().callDate ? new Date(doc.data().callDate) : null)
+            }));
+            console.log(`Fetched ${callLogs.length} call logs`);
+
+            const callLogColumns = [
+                { header: 'Doc ID', key: 'id' },
+                { header: 'Call Date', key: 'callDate', transform: formatTimestamp },
+                { header: 'Caller', key: 'caller' },
+                { header: 'Recipient', key: 'recipient' },
+                { header: 'Duration', key: 'duration' },
+                { header: 'Notes', key: 'notes' }
+            ];
+
+            // Fetch Media Uploads
+            console.log('Fetching media uploads...');
+            // Use schoolsSnapshot if it exists, otherwise fetch schools
+            if (!schoolsSnapshot) {
+                schoolsSnapshot = await db.collection('schools').get();
+            }
+            if (!trainersSnapshot) {
+                trainersSnapshot = await db.collection('trainers').get();
+            }
+
+            const schoolMediaPromises = schoolsSnapshot.docs.map(doc =>
+                db.collection('schools').doc(doc.id).collection('mediaUploads').get()
+                    .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                        ...mediaDoc.data(),
+                        uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                        uploadedBy: doc.data().schoolName || 'Unknown School'
+                    })))
+            );
+            const trainerMediaPromises = trainersSnapshot.docs.map(doc =>
+                db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
+                    .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                        ...mediaDoc.data(),
+                        uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                        uploadedBy: doc.data().trainerName || 'Unknown Trainer'
+                    })))
+            );
+            const mediaUploads = [...(await Promise.all(schoolMediaPromises)).flat(), ...(await Promise.all(trainerMediaPromises)).flat()];
+            console.log(`Fetched ${mediaUploads.length} media uploads`);
+
+            const mediaColumns = [
+                { header: 'Media ID', key: 'mediaId' },
+                { header: 'Uploaded By', key: 'uploadedBy' },
+                { header: 'Uploaded At', key: 'uploadedAt', transform: formatTimestamp },
+                { header: 'Description', key: 'description' },
+                { header: 'Type', key: 'type' },
+                { header: 'Seen', key: 'seen', transform: (val) => val ? 'Yes' : 'No' }
+            ];
+
+            const coordinatorWorksheet = createWorksheet(coordinators, coordinatorColumns);
+            const callLogWorksheet = createWorksheet(callLogs, callLogColumns);
+            const mediaWorksheet = createWorksheet(mediaUploads, mediaColumns);
+
+            XLSX.utils.book_append_sheet(workbook, coordinatorWorksheet, 'Coordinators');
+            XLSX.utils.book_append_sheet(workbook, callLogWorksheet, 'Call Logs');
+            XLSX.utils.book_append_sheet(workbook, mediaWorksheet, 'Media Uploads');
+        }
 
         console.log('Generating buffer...');
         const buffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'buffer' });
 
         console.log('Sending response...');
-        res.setHeader('Content-Disposition', `attachment; filename=admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`);
+        res.setHeader('Content-Disposition', `attachment; filename=${type === 'all' ? 'admin_dashboard' : type}_data_${new Date().toISOString().split('T')[0]}.xlsx`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.send(buffer);
     } catch (error) {
@@ -2895,11 +2959,16 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             const workshopEndTime = formatTime(schoolData.workshopEndTime);
 
             schoolMediaPromises.push(
-                db.collection('schools').doc(doc.id).collection('mediaUploads').get()
+                db.collection('schools').doc(doc.id).collection('mediaUploads')
+                    .where('type', '==', 'image')
+                    .get()
                     .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                        id: mediaDoc.id,
                         ...mediaDoc.data(),
                         uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                        uploadedBy: schoolData.schoolName || 'Unknown School'
+                        uploadedBy: schoolData.schoolName || 'Unknown School',
+                        uploaderType: 'School',
+                        source: 'school'
                     })))
             );
 
@@ -2941,11 +3010,16 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
         for (const doc of trainersSnapshot.docs) {
             const data = doc.data();
             trainerMediaPromises.push(
-                db.collection('trainers').doc(doc.id).collection('mediaUploads').get()
+                db.collection('trainers').doc(doc.id).collection('mediaUploads')
+                    .where('type', '==', 'image')
+                    .get()
                     .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                        id: mediaDoc.id,
                         ...mediaDoc.data(),
                         uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
-                        uploadedBy: data.trainerName || 'Unknown Trainer'
+                        uploadedBy: data.trainerName || 'Unknown Trainer',
+                        uploaderType: 'Trainer',
+                        source: 'trainer'
                     })))
             );
 
@@ -2965,14 +3039,31 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             createdAt: doc.data().createdAt?.toDate() || null
         }));
 
-        // Fetch Participants
+        // Fetch Participants + Student Media
         let participantsQuery = db.collection('participants');
         if (filters.studentCompleted) participantsQuery = participantsQuery.where('hasCompletedMCQ', '==', filters.studentCompleted === 'true');
         if (filters.studentCity) participantsQuery = participantsQuery.where('city', '==', filters.studentCity);
 
         const participantsSnapshot = await participantsQuery.get();
-        const participants = participantsSnapshot.docs.map(doc => {
+        const participants = [];
+        const studentMediaPromises = [];
+
+        for (const doc of participantsSnapshot.docs) {
             const data = doc.data();
+            studentMediaPromises.push(
+                db.collection('participants').doc(doc.id).collection('mediaUploads')
+                    .where('type', '==', 'image')
+                    .get()
+                    .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
+                        id: mediaDoc.id,
+                        ...mediaDoc.data(),
+                        uploadedAt: mediaDoc.data().uploadedAt?.toDate() || null,
+                        uploadedBy: data.studentName || 'Unknown Student',
+                        uploaderType: 'Student',
+                        source: 'student'
+                    })))
+            );
+
             const score = Number(data.score) || null;
             const totalQuestions = Number(data.totalQuestions) || null;
             const trial1Score = Number(data.trial1Score) || null;
@@ -2980,7 +3071,7 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             const trial2Score = Number(data.trial2Score) || null;
             const trial2TotalQuestions = Number(data.trial2TotalQuestions) || null;
 
-            return {
+            participants.push({
                 id: doc.id,
                 ...data,
                 birthdate: data.birthdate?.toDate ? data.birthdate.toDate() : (data.birthdate ? new Date(data.birthdate) : null),
@@ -2998,24 +3089,38 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
                 trial1WrongAnswers: Number(data.trial1WrongAnswers) || null,
                 trial2CorrectAnswers: Number(data.trial2CorrectAnswers) || null,
                 trial2WrongAnswers: Number(data.trial2WrongAnswers) || null
-            };
-        });
+            });
+        }
 
         // Fetch Call Logs
-        const callLogsSnapshot = await db.collection('callLogs').get();
+        const callLogsSnapshot = await db.collection('callLogs')
+            .orderBy('createdAt', 'desc')
+            .get();
+
         const callLogs = callLogsSnapshot.docs.map(doc => {
             const data = doc.data();
             return {
                 id: doc.id,
                 ...data,
-                callDate: data.callDate?.toDate ? data.callDate.toDate() : (data.callDate ? new Date(data.callDate) : null)
+                callDate: data.callDate?.toDate ? data.callDate.toDate() : (data.callDate ? new Date(data.callDate) : null),
+                createdAt: data.createdAt?.toDate ? data.createdAt.toDate() : (data.createdAt ? new Date(data.createdAt) : null)
             };
         });
 
-        // Fetch Media Uploads
+        // Combine Image Uploads
         const schoolMedia = (await Promise.all(schoolMediaPromises)).flat();
         const trainerMedia = (await Promise.all(trainerMediaPromises)).flat();
-        const mediaUploads = [...schoolMedia, ...trainerMedia].sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+        const studentMedia = (await Promise.all(studentMediaPromises)).flat();
+
+        // Create imageUploads object
+        const imageUploads = {
+            school: schoolMedia.filter(media => media.type === 'image'),
+            trainer: trainerMedia.filter(media => media.type === 'image'),
+            student: studentMedia.filter(media => media.type === 'image'),
+            all: [...schoolMedia, ...trainerMedia, ...studentMedia]
+                .filter(media => media.type === 'image')
+                .sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0))
+        };
 
         // Calculate Students Today and Average Score
         const today = new Date();
@@ -3051,14 +3156,15 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
         res.render('adminDashboard', {
             schools,
             trainers,
-            coordinators, // Add coordinators
+            coordinators, // Ensure coordinators is passed
             participants,
             callLogs,
             filters,
             studentsTodayCount,
             averageScore,
             zips,
-            mediaUploads,
+            mediaUploads: imageUploads.all, // For compatibility with any existing template code
+            imageUploads, // Pass categorized image uploads
             error: null,
             success: req.query.success || null,
             showRegister: false
@@ -3069,7 +3175,7 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
         res.render('adminDashboard', {
             schools: [],
             trainers: [],
-            coordinators: [], // Fallback for coordinators
+            coordinators: [], // Ensure coordinators is defined in error case
             participants: [],
             callLogs: [],
             filters: {},
@@ -3077,6 +3183,7 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             averageScore: 0,
             zips: [],
             mediaUploads: [],
+            imageUploads: { school: [], trainer: [], student: [], all: [] }, // Provide default empty object
             error: 'Failed to load dashboard data.',
             success: null,
             showRegister: false
@@ -3545,6 +3652,69 @@ app.post('/admin-dashboard/delete-trainer/:id', async (req, res) => {
     res.redirect('/admin-login');
     });
     });
+
+//admin-dashboard/media-uploads
+    app.get('/admin-dashboard/media-uploads', requireAdmin, async (req, res) => {
+    try {
+        const allMedia = [];
+
+        // --- Fetch Student uploads ---
+        const studentsSnapshot = await db.collection('participants').get();
+        for (const studentDoc of studentsSnapshot.docs) {
+            const mediaSnapshot = await studentDoc.ref.collection('mediaUploads').get();
+            mediaSnapshot.forEach(doc => {
+                allMedia.push({
+                    id: doc.id,
+                    ...doc.data(),
+                    uploadedBy: studentDoc.data().studentName || 'Unknown Student',
+                    uploaderType: 'Student'
+                });
+            });
+        }
+
+        // --- Fetch School uploads ---
+        const schoolsSnapshot = await db.collection('schools').get();
+        for (const schoolDoc of schoolsSnapshot.docs) {
+            const mediaSnapshot = await schoolDoc.ref.collection('mediaUploads').get();
+            mediaSnapshot.forEach(doc => {
+                allMedia.push({
+                    id: doc.id,
+                    ...doc.data(),
+                    uploadedBy: schoolDoc.data().schoolName || 'Unknown School',
+                    uploaderType: 'School'
+                });
+            });
+        }
+
+        // --- Fetch Trainer uploads ---
+        const trainersSnapshot = await db.collection('trainers').get();
+        for (const trainerDoc of trainersSnapshot.docs) {
+            const mediaSnapshot = await trainerDoc.ref.collection('mediaUploads').get();
+            mediaSnapshot.forEach(doc => {
+                allMedia.push({
+                    id: doc.id,
+                    ...doc.data(),
+                    uploadedBy: trainerDoc.data().trainerName || 'Unknown Trainer',
+                    uploaderType: 'Trainer'
+                });
+            });
+        }
+
+        // Sort by uploadedAt (newest first)
+        allMedia.sort((a, b) => {
+            const dateA = a.uploadedAt?.toDate ? a.uploadedAt.toDate() : new Date(0);
+            const dateB = b.uploadedAt?.toDate ? b.uploadedAt.toDate() : new Date(0);
+            return dateB - dateA;
+        });
+
+        res.render('adminMediaDashboard', { mediaUploads: allMedia });
+
+    } catch (error) {
+        console.error('Error fetching all media uploads:', error);
+        res.status(500).send('Error loading media uploads');
+    }
+});
+
     //traniner game zone
 app.get('/trainer-gamezone', async (req, res) => {
     try {
@@ -4842,7 +5012,7 @@ app.get('/coordinator-dashboard', isAuthenticated, async (req, res) => {
             completedSchools,
             trainers,
             trainerId,
-            feedbackData, // Add feedbackData to the render context
+            feedbackData,
             error: req.query.error || null,
             success: req.query.success || null
         });
@@ -4855,216 +5025,40 @@ app.get('/coordinator-dashboard', isAuthenticated, async (req, res) => {
             completedSchools: [],
             trainers: [],
             trainerId: null,
-            feedbackData: [], // Add feedbackData to the error case
+            feedbackData: [],
             error: 'Failed to load dashboard data',
             success: null
         });
     }
 });
 
-
-    // POST: Update Visited School Status (Coordinator-specific, using coordinatorStatus)
-    app.post('/update-status-visited', isAuthenticated, async (req, res) => {
-        try {
-            const { id, status } = req.body;
-            const coordinatorId = req.session.coordinator.id;
-
-            if (!id || !status) {
-                return res.status(400).json({ error: 'School ID and status are required' });
-            }
-
-            const validStatuses = ['inprogress', 'register', 'done', 'notinterested'];
-            if (!validStatuses.includes(status)) {
-                return res.status(400).json({ error: 'Invalid status value' });
-            }
-
-            const schoolRef = db.collection('schools').doc(id);
-            const schoolDoc = await schoolRef.get();
-
-            if (!schoolDoc.exists) {
-                return res.status(404).json({ error: 'School not found' });
-            }
-            if (schoolDoc.data().coordinatorId !== coordinatorId) {
-                return res.status(403).json({ error: 'Unauthorized: School not assigned to this coordinator' });
-            }
-
-            await schoolRef.update({ coordinatorStatus: status });
-
-            res.json({ message: `Coordinator status updated to ${status} for school ID ${id}` });
-        } catch (error) {
-            console.error('Error updating coordinator status:', error.message, error.stack);
-            res.status(500).json({ error: 'Failed to update coordinator status' });
-        }
-    });
-
-    // GET: Visited Schools (for compatibility with previous logic)
-    app.get('/visited-schools', isAuthenticated, async (req, res) => {
-        try {
-            console.log('---- Visited Schools Route Triggered ----');
-            const coordinatorId = req.session.coordinator.id; // Get coordinator ID from session
-            const { page = 1, limit = 10, status, schoolName } = req.query; // Query params for filtering and pagination
-
-            // Build Firestore query for the 'schools' collection
-            let query = db.collection('schools').where('coordinatorId', '==', coordinatorId);
-
-            // Optional filtering by status (using coordinatorStatus)
-            if (status) {
-                query = query.where('coordinatorStatus', '==', status);
-            }
-
-            // Optional filtering by schoolName (case-insensitive partial match)
-            if (schoolName) {
-                query = query.where('schoolName', '>=', schoolName.toLowerCase())
-                            .where('schoolName', '<=', schoolName.toLowerCase() + '\uf8ff');
-            }
-
-            // Apply pagination
-            const parsedLimit = parseInt(limit, 10);
-            const parsedPage = parseInt(page, 10);
-            const startAt = (parsedPage - 1) * parsedLimit;
-
-            // Fetch total count for pagination metadata
-            const totalSnapshot = await query.get();
-            const totalItems = totalSnapshot.size;
-
-            // Fetch paginated data
-            const snapshot = await query
-                .orderBy('schoolName') // Sort by schoolName for consistent ordering
-                .limit(parsedLimit)
-                .offset(startAt)
-                .get();
-
-            // Map Firestore documents to response data
-            const visitedSchools = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data(),
-                registeredAt: doc.data().registeredAt?.toDate().toISOString() || 'N/A',
-                updatedAt: doc.data().updatedAt?.toDate().toISOString() || 'N/A',
-                status: doc.data().coordinatorStatus || 'inprogress'
-            }));
-
-            // Render dashboard with schools and pagination metadata
-            res.render('dashboard', {
-                visitedSchools,
-                isVisitedSchools: true,
-                pagination: {
-                    currentPage: parsedPage,
-                    itemsPerPage: parsedLimit,
-                    totalItems,
-                    totalPages: Math.ceil(totalItems / parsedLimit)
-                }
-            });
-        } catch (error) {
-            console.error('Error fetching visited schools:', error.message, error.stack);
-            res.status(500).render('error', { error: 'Error fetching visited schools' });
-        }
-    });
-
-    // Download Excel Template
-app.get('/download-template', (req, res) => {
+// Save visited school to Firestore
+app.post('/submit-visited-school', async (req, res) => {
     try {
-        const workbook = xlsx.utils.book_new();
+        const {
+            visitedSchoolName,
+            visitDate,
+            schoolAddress,
+            contactPerson,
+            contactNumber,
+            visitNotes
+        } = req.body;
 
-        // Excel headers
-        const worksheetData = [
-            ['School Name', 'Personal Number', 'Principal Number', 'Email', 'Status']
-        ];
-
-        const worksheet = xlsx.utils.aoa_to_sheet(worksheetData);
-        xlsx.utils.book_append_sheet(workbook, worksheet, 'School Template');
-
-        const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-        // Send the file as a download
-        res.setHeader('Content-Disposition', 'attachment; filename=school-template.xlsx');
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.send(buffer);
-    } catch (error) {
-        console.error('Error generating school template:', error.message, error.stack);
-        res.status(500).redirect('/coordinator-dashboard?error=' + encodeURIComponent('Error generating school template'));
-    }
-});
-
-
-   
-   // POST: Upload Excel File
-app.post('/upload-excel', isAuthenticated, uploadExcel, async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ error: 'No file uploaded' });
-        }
-
-        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-        const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const data = xlsx.utils.sheet_to_json(sheet, { defval: '' });
-
-        if (data.length === 0) {
-            return res.status(400).json({ error: 'Excel file is empty' });
-        }
-
-        const headers = Object.keys(data[0]).map(h => h.trim().toLowerCase());
-        const expectedHeaders = ['school name', 'personal number', 'principal number', 'email'];
-        const missingHeaders = expectedHeaders.filter(h => !headers.includes(h));
-        if (missingHeaders.length > 0) {
-            return res.status(400).json({ error: `Missing required headers: ${missingHeaders.join(', ')}` });
-        }
-
-        const schools = data.map((row, index) => {
-            const rowKeys = Object.keys(row).reduce((acc, key) => {
-                acc[key.trim().toLowerCase()] = row[key];
-                return acc;
-            }, {});
-
-            const schoolName = rowKeys['school name']?.toString().trim();
-            if (!schoolName) {
-                throw new Error(`Row ${index + 2}: School Name is required`);
-            }
-
-            return {
-                schoolName,
-                number: String(rowKeys['personal number'] || 'N/A'),
-                principalNumber: String(rowKeys['principal number'] || 'N/A'),
-                email: rowKeys['email']?.toString().trim() || 'N/A',
-                coordinatorStatus: 'delivered',
-                isApproved: true,
-                isCompleted: false,
-                registeredAt: admin.firestore.FieldValue.serverTimestamp(),
-                updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                coordinatorId: req.session.coordinator.id,
-            };
+        await db.collection('visitedSchools').add({
+            name: visitedSchoolName,
+            visitDate,
+            schoolAddress,
+            contactPerson,
+            contactNumber,
+            visitNotes,
+            createdAt: new Date()
         });
 
-        const batch = db.batch();
-        for (const school of schools) {
-            const existingSchool = await db.collection('schools')
-                .where('schoolName', '==', school.schoolName)
-                .where('coordinatorId', '==', school.coordinatorId)
-                .limit(1)
-                .get();
-
-            if (existingSchool.empty) {
-                const schoolRef = db.collection('schools').doc();
-                batch.set(schoolRef, school);
-            } else {
-                const schoolRef = existingSchool.docs[0].ref;
-                batch.update(schoolRef, {
-                    number: school.number,
-                    principalNumber: school.principalNumber,
-                    email: school.email,
-                    coordinatorStatus: school.coordinatorStatus,
-                    isApproved: school.isApproved,
-                    isCompleted: school.isCompleted,
-                    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-                });
-            }
-        }
-
-        await batch.commit();
-        res.json({ message: 'Excel file uploaded successfully! Visited Schools table updated.' });
+        console.log(`✅ Visited school added: ${visitedSchoolName}`);
+        res.redirect('/admin-dashboard');
     } catch (error) {
-        console.error('Error uploading Excel file:', error.message, error.stack);
-        res.status(500).json({ error: `Failed to upload Excel file: ${error.message}` });
+        console.error('❌ Error adding visited school:', error);
+        res.status(500).send('Internal Server Error');
     }
 });
 
@@ -5263,37 +5257,62 @@ app.get('/logout', (req, res) => {
     });
 });
 
-const callLogs = [];
+
 // Route for adding call log
 // Add call log
-app.post('/add-call-log', (req, res) => {
+app.post('/add-call-log', async (req, res) => {
     if (!req.body) {
         return res.status(400).json({ error: 'Request body is missing' });
     }
-    const { callDate, caller, recipient, notes } = req.body;
 
-    if (!callDate || !caller || !recipient || !notes) {
-        return res.status(400).json({ error: 'All fields (callDate, caller, recipient, notes) are required' });
+    const { callDate, caller, recipient, notes, schoolName, contactPerson } = req.body;
+
+    // Check required fields
+    if (!callDate || !caller || !recipient || !notes || !schoolName || !contactPerson) {
+        return res.status(400).json({
+            error: 'All fields (callDate, caller, recipient, notes, schoolName, contactPerson) are required'
+        });
     }
 
-    const newLog = {
-        id: `log-${Date.now()}`,
-        callDate,
-        caller,
-        recipient,
-        notes,
-        duration: 'N/A'
-    };
+    try {
+        // Create new log object
+        const newLog = {
+            callDate,
+            caller,
+            recipient,
+            notes,
+            schoolName,
+            contactPerson,
+            duration: 'N/A',
+            createdAt: new Date()
+        };
 
-    callLogs.push(newLog); // Add new log to array
+        // Save to Firestore
+        const docRef = await db.collection('callLogs').add(newLog);
 
-    console.log('New Call Log:', newLog);
-    res.json({ message: 'Call log added successfully', id: newLog.id });
+        console.log('New Call Log Added:', newLog);
+        res.json({ message: 'Call log added successfully', id: docRef.id });
+    } catch (error) {
+        console.error('Error adding call log:', error);
+        res.status(500).json({ error: 'Failed to add call log' });
+    }
 });
 
 // Fetch all call logs
-app.get('/call-logs', (req, res) => {
-    res.json(callLogs);
+app.get('/call-logs', async (req, res) => {
+    try {
+        const snapshot = await db.collection('callLogs').orderBy('callDate', 'desc').get();
+
+        const logs = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+
+        res.json(logs);
+    } catch (err) {
+        console.error('❌ Error fetching call logs:', err);
+        res.status(500).json({ error: 'Failed to fetch call logs' });
+    }
 });
 
  

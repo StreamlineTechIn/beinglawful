@@ -43,7 +43,6 @@
             <li><a href="#coordinator-summary" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium active">Coordinator Summary</a></li>
             <li><a href="#sop" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">SOP</a></li>
             <li><a href="#workshop-summary" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Workshop Summary</a></li>
-            <li><a href="#upload-media" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Upload Media</a></li>
             <li><a href="#student-feedback" class="tab-link block px-4 py-2 hover:bg-gray-700 rounded text-white font-medium">Student Feedback Form</a></li>
             <li><a href="/logout" class="block px-4 py-2 bg-red-500 hover:bg-red-600 rounded text-white font-medium">Logout</a></li>
         </ul>
@@ -101,48 +100,97 @@
         </div>
 
         <!-- Visited Schools Tab -->
-        <div id="visited-school" class="tab-content">
-            <h3 class="text-xl font-semibold mb-4">Visited Schools</h3>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white shadow-md rounded-lg">
-                    <thead class="bg-gray-700 text-white">
-                        <tr>
-                            <th class="py-3 px-4 text-left">School Name</th>
-                            <th class="py-3 px-4 text-left">Personal Number</th>
-                            <th class="py-3 px-4 text-left">Principal Number</th>
-                            <th class="py-3 px-4 text-left">Email</th>
-                            <th class="py-3 px-4 text-left">Status</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% if (!visitedSchools || visitedSchools.length === 0) { %>
-                            <tr><td colspan="5" class="py-3 px-4 text-center">No visited schools found.</td></tr>
-                        <% } else { %>
-                            <% visitedSchools.forEach(school => { %>
-                                <tr class="border-b">
-                                    <td class="py-3 px-4"><%= school.name || 'N/A' %></td>
-                                    <td class="py-3 px-4"><%= school.number || 'N/A' %></td>
-                                    <td class="py-3 px-4"><%= school.principalNumber || 'N/A' %></td>
-                                    <td class="py-3 px-4"><%= school.email || 'N/A' %></td>
-                                    <td class="py-3 px-4">
-                                        <form method="POST" action="/update-status-visited" class="update-status-form flex space-x-2" data-id="<%= school.id %>">
-                                            <input type="hidden" name="id" value="<%= school.id %>">
-                                            <select name="status" class="border rounded px-2 py-1 filter-select">
-                                                <option value="inprogress" <%= school.status === 'inprogress' ? 'selected' : '' %>>In Progress</option>
-                                                <option value="register" <%= school.status === 'register' ? 'selected' : '' %>>Register</option>
-                                                <option value="done" <%= school.status === 'done' ? 'selected' : '' %>>Done</option>
-                                                <option value="notinterested" <%= school.status === 'notinterested' ? 'selected' : '' %>>Not Interested</option>
-                                            </select>
-                                            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Update</button>
-                                        </form>
-                                    </td>
-                                </tr>
-                            <% }); %>
-                        <% } %>
-                    </tbody>
-                </table>
-            </div>
+   <div id="visited-school" class="tab-content">
+    <h3 class="text-xl font-semibold mb-4">Visited Schools</h3>
+    <div class="space-y-4">
+       
+        <!-- Table -->
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white shadow-md rounded-lg">
+                <thead class="bg-gray-700 text-white">
+                    <tr>
+                        <th class="py-3 px-4 text-left">School Name</th> 
+                        <th class="py-3 px-4 text-left">Visit Date</th>
+                        <th class="py-3 px-4 text-left">Contact Person</th>
+                        <th class="py-3 px-4 text-left">Contact Number</th>
+                        <th class="py-3 px-4 text-left">Visit Notes</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (!visitedSchools || visitedSchools.length === 0) { %>
+                        <tr><td colspan="5" class="py-3 px-4 text-center">No visited schools found.</td></tr>
+                    <% } else { %>
+                        <% visitedSchools.forEach(school => { %>
+                            <tr class="border-b">
+                                <td class="py-3 px-4"><%= school.name || 'N/A' %></td>
+                                <td class="py-3 px-4"><%= school.visitDate || school.eventDate || 'Not set' %></td>
+                                <td class="py-3 px-4"><%= school.contactPerson || 'N/A' %></td>
+                                <td class="py-3 px-4"><%= school.contactNumber || 'N/A' %></td>
+                                <td class="py-3 px-4"><%= school.visitNotes || 'N/A' %></td>
+                            </tr>
+                        <% }); %>
+                    <% } %>
+                </tbody>
+            </table>
         </div>
+
+        <!-- Success/Error messages -->
+        <div id="visitedSchoolSuccess" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"></div>
+        <div id="visitedSchoolError" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
+
+        <!-- Add Visit Button -->
+        <button id="addVisitBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+            + Add Visit
+        </button>
+
+        <!-- Hidden Form -->
+        <form method="POST" action="/submit-visited-school" id="visitedSchoolForm" 
+              class="space-y-6 bg-white p-6 rounded-lg shadow-md hidden">
+            <p class="text-sm text-gray-600 italic">To be filled by Coordinator for Visited Schools</p>
+            <div>
+                <h4 class="text-lg font-medium mb-2">School Visit Details</h4>
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label for="visitedSchoolName" class="block text-sm font-medium text-gray-700">School Name</label>
+                        <input type="text" id="visitedSchoolName" name="visitedSchoolName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        <span id="visitedSchoolNameError" class="field-error hidden"></span>
+                    </div>
+                    <div>
+                        <label for="visitDate" class="block text-sm font-medium text-gray-700">Visit Date</label>
+                        <input type="date" id="visitDate" name="visitDate" max="<%= new Date().toISOString().split('T')[0] %>" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        <span id="visitDateError" class="field-error hidden"></span>
+                    </div>
+                    <div>
+                        <label for="schoolAddress" class="block text-sm font-medium text-gray-700">School Address</label>
+                        <textarea id="schoolAddress" name="schoolAddress" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required></textarea>
+                        <span id="schoolAddressError" class="field-error hidden"></span>
+                    </div>
+                    <div>
+                        <label for="contactPerson" class="block text-sm font-medium text-gray-700">Contact Person Name</label>
+                        <input type="text" id="contactPerson" name="contactPerson" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        <span id="contactPersonError" class="field-error hidden"></span>
+                    </div>
+                    <div>
+                        <label for="contactNumber" class="block text-sm font-medium text-gray-700">Contact Person Number</label>
+                        <input type="tel" id="contactNumber" name="contactNumber" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                        <span id="contactNumberError" class="field-error hidden"></span>
+                    </div>
+                    <div>
+                        <label for="visitNotes" class="block text-sm font-medium text-gray-700">Visit Notes</label>
+                        <textarea id="visitNotes" name="visitNotes" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2"></textarea>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
+                <span id="visitedSchoolSubmitText">Submit Form</span>
+                <svg id="visitedSchoolLoadingSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+            </button>
+        </form>
+    </div>
+</div>
 
         <!-- Complete Schools Tab -->
         <div id="complete-school" class="tab-content">
@@ -305,180 +353,154 @@
         </div>
 
         <!-- Workshop Summary Tab -->
-   <!-- Workshop Summary Tab -->
-<div id="workshop-summary" class="tab-content">
-    <h3 class="text-xl font-semibold mb-4">Being Lawful Workshop Summary Form</h3>
-    <div id="successMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"></div>
-    <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
-    <form method="POST" action="/submit-workshop-summary" id="workshopSummaryForm" class="space-y-6 bg-white p-6 rounded-lg shadow-md">
-        <p class="text-sm text-gray-600 italic">To be filled by Coordinator</p>
+        <div id="workshop-summary" class="tab-content">
+            <h3 class="text-xl font-semibold mb-4">Being Lawful Workshop Summary Form</h3>
+            <div id="successMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"></div>
+            <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
+            <form method="POST" action="/submit-workshop-summary" id="workshopSummaryForm" class="space-y-6 bg-white p-6 rounded-lg shadow-md">
+                <p class="text-sm text-gray-600 italic">To be filled by Coordinator</p>
 
-        <!-- School Details -->
-        <div>
-            <h4 class="text-lg font-medium mb-2">School Details</h4>
-            <div class="grid grid-cols-1 gap-4">
+                <!-- School Details -->
                 <div>
-                    <label for="schoolName" class="block text-sm font-medium text-gray-700">School Name</label>
-                    <select id="schoolName" name="schoolName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                        <option value="">Select a School</option>
-                        <% allSchools.forEach(school => { %>
-                            <option value="<%= school.name %>"><%= school.name %></option>
-                        <% }) %>
-                    </select>
-                    <span id="schoolNameError" class="field-error hidden"></span>
-                </div>
-                <div>
-                    <label for="schoolAddress" class="block text-sm font-medium text-gray-700">School Address</label>
-                    <textarea id="schoolAddress" name="schoolAddress" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required></textarea>
-                    <span id="schoolAddressError" class="field-error hidden"></span>
-                </div>
-                <div>
-                    <label for="workshopDate" class="block text-sm font-medium text-gray-700">Workshop Date</label>
-                    <input type="date" id="workshopDate" name="workshopDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="workshopDateError" class="field-error hidden"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Team Details -->
-        <div>
-            <h4 class="text-lg font-medium mb-2">Team Details</h4>
-            <div class="grid grid-cols-1 gap-4">
-                <div>
-                    <label for="trainer1" class="block text-sm font-medium text-gray-700">Trainer 1</label>
-                    <input type="text" id="trainer1" name="trainer1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="trainer1Error" class="field-error hidden"></span>
-                </div>
-                <div>
-                    <label for="trainer2" class="block text-sm font-medium text-gray-700">Trainer 2 (if any)</label>
-                    <input type="text" id="trainer2" name="trainer2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                </div>
-                <div>
-                    <label for="coordinatorName" class="block text-sm font-medium text-gray-700">Coordinator Name</label>
-                    <input type="text" id="coordinatorName" name="coordinatorName" value="<%= coordinator?.name || '' %>" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="coordinatorNameError" class="field-error hidden"></span>
-                </div>
-                <div>
-                    <label for="techSupport" class="block text-sm font-medium text-gray-700">Tech Support (if assigned)</label>
-                    <input type="text" id="techSupport" name="techSupport" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                </div>
-                <div>
-                    <label for="principalName" class="block text-sm font-medium text-gray-700">School Principal Name</label>
-                    <input type="text" id="principalName" name="principalName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="principalNameError" class="field-error hidden"></span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Financial Details -->
-        <div>
-            <h4 class="text-lg font-medium mb-2">Financial Details</h4>
-            <div class="grid grid-cols-1 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Financial Status</label>
-                    <div class="mt-2 space-x-4">
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="financialStatus" value="Done" class="form-radio" required>
-                            <span class="ml-2">Done</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="financialStatus" value="Partial Done" class="form-radio">
-                            <span class="ml-2">Partial Done</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="financialStatus" value="Partial Pending" class="form-radio">
-                            <span class="ml-2">Partial Pending</span>
-                        </label>
-                        <label class="inline-flex items-center">
-                            <input type="radio" name="financialStatus" value="Pending" class="form-radio">
-                            <span class="ml-2">Pending</span>
-                        </label>
+                    <h4 class="text-lg font-medium mb-2">School Details</h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label for="schoolName" class="block text-sm font-medium text-gray-700">School Name</label>
+                            <select id="schoolName" name="schoolName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                                <option value="">Select a School</option>
+                                <% allSchools.forEach(school => { %>
+                                    <option value="<%= school.name %>"><%= school.name %></option>
+                                <% }) %>
+                            </select>
+                            <span id="schoolNameError" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="schoolAddress" class="block text-sm font-medium text-gray-700">School Address</label>
+                            <textarea id="schoolAddress" name="schoolAddress" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required></textarea>
+                            <span id="schoolAddressError" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="workshopDate" class="block text-sm font-medium text-gray-700">Workshop Date</label>
+                            <input type="date" id="workshopDate" name="workshopDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="workshopDateError" class="field-error hidden"></span>
+                        </div>
                     </div>
-                    <span id="financialStatusError" class="field-error hidden"></span>
                 </div>
-                <div>
-                    <label for="kitPaymentStatus" class="block text-sm font-medium text-gray-700">Kit Payment Status</label>
-                    <input type="text" id="kitPaymentStatus" name="kitPaymentStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="kitPaymentStatusError" class="field-error hidden"></span>
-                </div>
-                <div>
-                    <label for="trainerRemunerationStatus" class="block text-sm font-medium text-gray-700">Trainer Remuneration Status</label>
-                    <input type="text" id="trainerRemunerationStatus" name="trainerRemunerationStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="trainerRemunerationStatusError" class="field-error hidden"></span>
-                </div>
-                <div>
-                    <label for="paymentMode" class="block text-sm font-medium text-gray-700">Payment Mode</label>
-                    <input type="text" id="paymentMode" name="paymentMode" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="paymentModeError" class="field-error hidden"></span>
-                </div>
-                <div>
-                    <label for="transactionId" class="block text-sm font-medium text-gray-700">Cheque/UPI Transaction ID</label>
-                    <input type="text" id="transactionId" name="transactionId" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="transactionIdError" class="field-error hidden"></span>
-                </div>
-            </div>
-        </div>
 
-        <!-- Coordinator Declaration -->
-        <div>
-            <h4 class="text-lg font-medium mb-2">Coordinator Declaration</h4>
-            <div class="flex items-center">
-                <input type="checkbox" id="coordinatorDeclaration" name="coordinatorDeclaration" class="form-checkbox" required>
-                <label for="coordinatorDeclaration" class="ml-2 text-sm text-gray-700">I confirm that all workshop responsibilities were completed and documents collected.</label>
-            </div>
-            <span id="coordinatorDeclarationError" class="field-error hidden"></span>
-            <div class="grid grid-cols-1 gap-4 mt-4">
+                <!-- Team Details -->
                 <div>
-                    <label for="coordinatorSignature" class="block text-sm font-medium text-gray-700">Signature (Coordinator)</label>
-                    <input type="text" id="coordinatorSignature" name="coordinatorSignature" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="coordinatorSignatureError" class="field-error hidden"></span>
-                </div>
-                <div>
-                    <label for="coordinatorDate" class="block text-sm font-medium text-gray-700">Date</label>
-                    <input type="date" id="coordinatorDate" name="coordinatorDate" max="<%= new Date().toISOString().split('T')[0] %>" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="coordinatorDateError" class="field-error hidden"></span>
-                </div>
-                <div>
-                    <label for="coordinatorPlace" class="block text-sm font-medium text-gray-700">Place</label>
-                    <input type="text" id="coordinatorPlace" name="coordinatorPlace" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                    <span id="coordinatorPlaceError" class="field-error hidden"></span>
-                </div>
-            </div>
-        </div>
-
-        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
-            <span id="submitText">Submit Form</span>
-            <svg id="loadingSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
-        </button>
-    </form>
-</div>
-        <!-- Upload Media Tab -->
-        <div id="upload-media" class="tab-content">
-            <h3 class="text-xl font-semibold mb-4">Upload Media</h3>
-            <div class="space-y-4">
-                <div>
-                    <a href="/download-template" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-block">Download Excel Template</a>
-                </div>
-                <div id="uploadMediaError" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
-                <div id="uploadMediaSuccess" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"></div>
-                <form method="POST" action="/upload-excel" enctype="multipart/form-data" class="space-y-4" id="uploadMediaForm">
-                    <div>
-                        <label for="excelFile" class="block text-sm font-medium text-gray-700">Upload Excel File</label>
-                        <input type="file" id="excelFile" name="excelFile" accept=".xlsx,.xls" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                        <span id="excelFileError" class="field-error hidden"></span>
+                    <h4 class="text-lg font-medium mb-2">Team Details</h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label for="trainer1" class="block text-sm font-medium text-gray-700">Trainer 1</label>
+                            <input type="text" id="trainer1" name="trainer1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="trainer1Error" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="trainer2" class="block text-sm font-medium text-gray-700">Trainer 2 (if any)</label>
+                            <input type="text" id="trainer2" name="trainer2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="coordinatorName" class="block text-sm font-medium text-gray-700">Coordinator Name</label>
+                            <input type="text" id="coordinatorName" name="coordinatorName" value="<%= coordinator?.name || '' %>" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="coordinatorNameError" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="techSupport" class="block text-sm font-medium text-gray-700">Tech Support (if assigned)</label>
+                            <input type="text" id="techSupport" name="techSupport" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        </div>
+                        <div>
+                            <label for="principalName" class="block text-sm font-medium text-gray-700">School Principal Name</label>
+                            <input type="text" id="principalName" name="principalName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="principalNameError" class="field-error hidden"></span>
+                        </div>
                     </div>
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
-                        <span id="uploadMediaSubmitText">Upload</span>
-                        <svg id="uploadMediaLoadingSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                        </svg>
-                    </button>
-                </form>
-            </div>
+                </div>
+
+                <!-- Financial Details -->
+                <div>
+                    <h4 class="text-lg font-medium mb-2">Financial Details</h4>
+                    <div class="grid grid-cols-1 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Financial Status</label>
+                            <div class="mt-2 space-x-4">
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="financialStatus" value="Done" class="form-radio" required>
+                                    <span class="ml-2">Done</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="financialStatus" value="Partial Done" class="form-radio">
+                                    <span class="ml-2">Partial Done</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="financialStatus" value="Partial Pending" class="form-radio">
+                                    <span class="ml-2">Partial Pending</span>
+                                </label>
+                                <label class="inline-flex items-center">
+                                    <input type="radio" name="financialStatus" value="Pending" class="form-radio">
+                                    <span class="ml-2">Pending</span>
+                                </label>
+                            </div>
+                            <span id="financialStatusError" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="kitPaymentStatus" class="block text-sm font-medium text-gray-700">Kit Payment Status</label>
+                            <input type="text" id="kitPaymentStatus" name="kitPaymentStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="kitPaymentStatusError" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="trainerRemunerationStatus" class="block text-sm font-medium text-gray-700">Trainer Remuneration Status</label>
+                            <input type="text" id="trainerRemunerationStatus" name="trainerRemunerationStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="trainerRemunerationStatusError" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="paymentMode" class="block text-sm font-medium text-gray-700">Payment Mode</label>
+                            <input type="text" id="paymentMode" name="paymentMode" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="paymentModeError" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="transactionId" class="block text-sm font-medium text-gray-700">Cheque/UPI Transaction ID</label>
+                            <input type="text" id="transactionId" name="transactionId" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="transactionIdError" class="field-error hidden"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Coordinator Declaration -->
+                <div>
+                    <h4 class="text-lg font-medium mb-2">Coordinator Declaration</h4>
+                    <div class="flex items-center">
+                        <input type="checkbox" id="coordinatorDeclaration" name="coordinatorDeclaration" class="form-checkbox" required>
+                        <label for="coordinatorDeclaration" class="ml-2 text-sm text-gray-700">I confirm that all workshop responsibilities were completed and documents collected.</label>
+                    </div>
+                    <span id="coordinatorDeclarationError" class="field-error hidden"></span>
+                    <div class="grid grid-cols-1 gap-4 mt-4">
+                        <div>
+                            <label for="coordinatorSignature" class="block text-sm font-medium text-gray-700">Signature (Coordinator)</label>
+                            <input type="text" id="coordinatorSignature" name="coordinatorSignature" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="coordinatorSignatureError" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="coordinatorDate" class="block text-sm font-medium text-gray-700">Date</label>
+                            <input type="date" id="coordinatorDate" name="coordinatorDate" max="<%= new Date().toISOString().split('T')[0] %>" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="coordinatorDateError" class="field-error hidden"></span>
+                        </div>
+                        <div>
+                            <label for="coordinatorPlace" class="block text-sm font-medium text-gray-700">Place</label>
+                            <input type="text" id="coordinatorPlace" name="coordinatorPlace" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
+                            <span id="coordinatorPlaceError" class="field-error hidden"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
+                    <span id="submitText">Submit Form</span>
+                    <svg id="loadingSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                    </svg>
+                </button>
+            </form>
         </div>
 
         <!-- Student Feedback Form Tab -->
@@ -510,14 +532,18 @@
 
     <script>
         // Tab switching logic
+        function switchTab(targetTab) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
+            document.querySelector(`#${targetTab}`).classList.add('active');
+            document.querySelector(`.tab-link[href="#${targetTab}"]`).classList.add('active');
+        }
+
         document.querySelectorAll('.tab-link').forEach(link => {
             link.addEventListener('click', function (e) {
                 e.preventDefault();
                 const targetTab = this.getAttribute('href').substring(1);
-                document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-                document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
-                document.querySelector(`#${targetTab}`).classList.add('active');
-                this.classList.add('active');
+                switchTab(targetTab);
             });
         });
 
@@ -621,10 +647,82 @@
             return isValid;
         }
 
+        // Validate Visited School form
+        function validateVisitedSchoolForm(form) {
+            const requiredFields = form.querySelectorAll('input[required], textarea[required]');
+            let isValid = true;
+
+            form.querySelectorAll('.error-border').forEach(field => field.classList.remove('error-border'));
+            form.querySelectorAll('.field-error').forEach(error => {
+                error.classList.add('hidden');
+                error.textContent = '';
+            });
+
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    isValid = false;
+                    field.classList.add('error-border');
+                    const errorSpan = document.getElementById(`${field.id}Error`);
+                    if (errorSpan) {
+                        errorSpan.textContent = `Please fill in the ${field.name} field.`;
+                        errorSpan.classList.remove('hidden');
+                    }
+                }
+            });
+
+            return isValid;
+        }
+
+        // Handle form submission with error handling
+        async function handleFormSubmission(form, url, successDiv, errorDiv, submitButton, submitText, loadingSpinner) {
+            const formData = new FormData(form);
+            submitButton.disabled = true;
+            submitText.textContent = 'Submitting...';
+            loadingSpinner.classList.remove('hidden');
+            errorDiv.classList.add('hidden');
+            successDiv.classList.add('hidden');
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                submitButton.disabled = false;
+                submitText.textContent = 'Submit Form';
+                loadingSpinner.classList.add('hidden');
+
+                if (response.ok) {
+                    successDiv.textContent = result.message || 'Submission successful!';
+                    successDiv.classList.remove('hidden');
+                    form.reset();
+                    setTimeout(() => successDiv.classList.add('hidden'), 5000);
+                } else {
+                    errorDiv.innerHTML = result.error || 'Failed to submit form.';
+                    if (result.details) {
+                        errorDiv.innerHTML += '<ul class="list-disc pl-5 mt-2">' +
+                            (Array.isArray(result.details) ? result.details.map(d => `<li>${d}</li>`).join('') : `<li>${result.details}</li>`) +
+                            '</ul>';
+                    }
+                    errorDiv.classList.remove('hidden');
+                    setTimeout(() => errorDiv.classList.add('hidden'), 10000);
+                }
+            } catch (err) {
+                console.error(`Error submitting ${form.id}:`, err);
+                errorDiv.textContent = `Error submitting form: ${err.message}`;
+                errorDiv.classList.remove('hidden');
+                submitButton.disabled = false;
+                submitText.textContent = 'Submit Form';
+                loadingSpinner.classList.add('hidden');
+                setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+            }
+        }
+
         // Window onload for initialization
         window.onload = function () {
             // Open the default tab
-            document.querySelector('.tab-link[href="#coordinator-summary"]').click();
+            switchTab('coordinator-summary');
             initializeFilters('coordinatorSummaryTable');
 
             // Clear query param messages after display
@@ -638,127 +736,34 @@
             if (workshopForm) {
                 workshopForm.addEventListener('submit', async function (e) {
                     e.preventDefault();
-                    const form = this;
-                    const submitButton = form.querySelector('button[type="submit"]');
-                    const submitText = form.querySelector('#submitText');
-                    const loadingSpinner = form.querySelector('#loadingSpinner');
-                    const errorDiv = document.getElementById('errorMessage');
-                    const successDiv = document.getElementById('successMessage');
-
-                    if (!validateWorkshopForm(form)) return;
-
-                    submitButton.disabled = true;
-                    submitText.textContent = 'Submitting...';
-                    loadingSpinner.classList.remove('hidden');
-                    errorDiv.classList.add('hidden');
-                    successDiv.classList.add('hidden');
-
-                    try {
-                        const formData = new FormData(form);
-                        const response = await fetch('/submit-workshop-summary', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        const result = await response.json();
-
-                        submitButton.disabled = false;
-                        submitText.textContent = 'Submit Form';
-                        loadingSpinner.classList.add('hidden');
-
-                        if (response.ok) {
-                            successDiv.textContent = result.message || 'Workshop Summary submitted successfully!';
-                            successDiv.classList.remove('hidden');
-                            form.reset();
-                            setTimeout(() => successDiv.classList.add('hidden'), 5000);
-                        } else {
-                            errorDiv.innerHTML = result.error || 'Failed to submit Workshop Summary form.';
-                            if (result.details) {
-                                errorDiv.innerHTML += '<ul class="list-disc pl-5 mt-2">' + 
-                                    (Array.isArray(result.details) ? result.details.map(d => `<li>${d}</li>`).join('') : `<li>${result.details}</li>`) + 
-                                    '</ul>';
-                            }
-                            errorDiv.classList.remove('hidden');
-                            setTimeout(() => errorDiv.classList.add('hidden'), 10000);
-                        }
-                    } catch (err) {
-                        console.error('Error submitting form:', err);
-                        errorDiv.textContent = `Error submitting form: ${err.message}`;
-                        errorDiv.classList.remove('hidden');
-                        submitButton.disabled = false;
-                        submitText.textContent = 'Submit Form';
-                        loadingSpinner.classList.add('hidden');
-                        setTimeout(() => errorDiv.classList.add('hidden'), 5000);
-                    }
+                    if (!validateWorkshopForm(this)) return;
+                    handleFormSubmission(
+                        this,
+                        '/submit-workshop-summary',
+                        document.getElementById('successMessage'),
+                        document.getElementById('errorMessage'),
+                        this.querySelector('button[type="submit"]'),
+                        this.querySelector('#submitText'),
+                        this.querySelector('#loadingSpinner')
+                    );
                 });
             }
 
-            // Handle Media Excel upload
-            const mediaUploadForm = document.querySelector('#uploadMediaForm');
-            if (mediaUploadForm) {
-                mediaUploadForm.addEventListener('submit', async function (e) {
+            // Handle Visited School form submission
+            const visitedSchoolForm = document.querySelector('#visitedSchoolForm');
+            if (visitedSchoolForm) {
+                visitedSchoolForm.addEventListener('submit', async function (e) {
                     e.preventDefault();
-                    const form = this;
-                    const fileInput = form.querySelector('#excelFile');
-                    const errorSpan = document.getElementById('excelFileError');
-                    const errorDiv = document.getElementById('uploadMediaError');
-                    const successDiv = document.getElementById('uploadMediaSuccess');
-                    const submitButton = form.querySelector('button[type="submit"]');
-                    const submitText = form.querySelector('#uploadMediaSubmitText');
-                    const loadingSpinner = form.querySelector('#uploadMediaLoadingSpinner');
-
-                    if (!fileInput.files.length) {
-                        errorSpan.textContent = 'Please select an Excel file to upload.';
-                        errorSpan.classList.remove('hidden');
-                        fileInput.classList.add('error-border');
-                        return;
-                    }
-                    if (!fileInput.files[0].name.match(/\.(xlsx|xls)$/)) {
-                        errorSpan.textContent = 'Only .xlsx or .xls files are allowed.';
-                        errorSpan.classList.remove('hidden');
-                        fileInput.classList.add('error-border');
-                        return;
-                    }
-
-                    fileInput.classList.remove('error-border');
-                    errorSpan.classList.add('hidden');
-                    errorDiv.classList.add('hidden');
-                    successDiv.classList.add('hidden');
-                    submitButton.disabled = true;
-                    submitText.textContent = 'Uploading...';
-                    loadingSpinner.classList.remove('hidden');
-
-                    try {
-                        const formData = new FormData(form);
-                        const response = await fetch('/upload-excel', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        const result = await response.json();
-
-                        submitButton.disabled = false;
-                        submitText.textContent = 'Upload';
-                        loadingSpinner.classList.add('hidden');
-
-                        if (response.ok) {
-                            successDiv.textContent = result.message || 'Excel file uploaded successfully!';
-                            successDiv.classList.remove('hidden');
-                            form.reset();
-                            setTimeout(() => successDiv.classList.add('hidden'), 5000);
-                            document.querySelector('.tab-link[href="#visited-school"]').click();
-                        } else {
-                            errorDiv.textContent = result.error || 'Failed to upload Excel file.';
-                            errorDiv.classList.remove('hidden');
-                            setTimeout(() => errorDiv.classList.add('hidden'), 10000);
-                        }
-                    } catch (err) {
-                        console.error('Error uploading Excel file:', err);
-                        errorDiv.textContent = `Error uploading Excel file: ${err.message}`;
-                        errorDiv.classList.remove('hidden');
-                        submitButton.disabled = false;
-                        submitText.textContent = 'Upload';
-                        loadingSpinner.classList.add('hidden');
-                        setTimeout(() => errorDiv.classList.add('hidden'), 5000);
-                    }
+                    if (!validateVisitedSchoolForm(this)) return;
+                    handleFormSubmission(
+                        this,
+                        '/submit-visited-school',
+                        document.getElementById('visitedSchoolSuccess'),
+                        document.getElementById('visitedSchoolError'),
+                        this.querySelector('button[type="submit"]'),
+                        this.querySelector('#visitedSchoolSubmitText'),
+                        this.querySelector('#visitedSchoolLoadingSpinner')
+                    );
                 });
             }
 
@@ -767,15 +772,21 @@
             if (feedbackUploadForm) {
                 feedbackUploadForm.addEventListener('submit', async function (e) {
                     e.preventDefault();
-                    const form = this;
-                    const fileInput = form.querySelector('#feedbackExcelFile');
+                    const fileInput = this.querySelector('#feedbackExcelFile');
                     const errorSpan = document.getElementById('feedbackExcelFileError');
                     const errorDiv = document.getElementById('uploadFeedbackError');
                     const successDiv = document.getElementById('uploadFeedbackSuccess');
-                    const submitButton = form.querySelector('button[type="submit"]');
-                    const submitText = form.querySelector('#uploadFeedbackSubmitText');
-                    const loadingSpinner = form.querySelector('#uploadFeedbackLoadingSpinner');
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    const submitText = this.querySelector('#uploadFeedbackSubmitText');
+                    const loadingSpinner = this.querySelector('#uploadFeedbackLoadingSpinner');
 
+                    // Reset error states
+                    fileInput.classList.remove('error-border');
+                    errorSpan.classList.add('hidden');
+                    errorDiv.classList.add('hidden');
+                    successDiv.classList.add('hidden');
+
+                    // Validate file input
                     if (!fileInput.files.length) {
                         errorSpan.textContent = 'Please select an Excel file to upload.';
                         errorSpan.classList.remove('hidden');
@@ -789,77 +800,21 @@
                         return;
                     }
 
-                    fileInput.classList.remove('error-border');
-                    errorSpan.classList.add('hidden');
-                    errorDiv.classList.add('hidden');
-                    successDiv.classList.add('hidden');
-                    submitButton.disabled = true;
-                    submitText.textContent = 'Uploading...';
-                    loadingSpinner.classList.remove('hidden');
-
-                    try {
-                        const formData = new FormData(form);
-                        const response = await fetch('/upload-feedback-excel', {
-                            method: 'POST',
-                            body: formData
-                        });
-                        const result = await response.json();
-
-                        submitButton.disabled = false;
-                        submitText.textContent = 'Upload';
-                        loadingSpinner.classList.add('hidden');
-
-                        if (response.ok) {
-                            successDiv.textContent = result.message || 'Feedback Excel file uploaded successfully!';
-                            successDiv.classList.remove('hidden');
-                            form.reset();
-                            setTimeout(() => successDiv.classList.add('hidden'), 5000);
-                            document.querySelector('.tab-link[href="#student-feedback"]').click();
-                        } else {
-                            errorDiv.textContent = result.error || 'Failed to upload Feedback Excel file.';
-                            errorDiv.classList.remove('hidden');
-                            setTimeout(() => errorDiv.classList.add('hidden'), 10000);
-                        }
-                    } catch (err) {
-                        console.error('Error uploading Feedback Excel file:', err);
-                        errorDiv.textContent = `Error uploading Feedback Excel file: ${err.message}`;
-                        errorDiv.classList.remove('hidden');
-                        submitButton.disabled = false;
-                        submitText.textContent = 'Upload';
-                        loadingSpinner.classList.add('hidden');
-                        setTimeout(() => errorDiv.classList.add('hidden'), 5000);
-                    }
+                    handleFormSubmission(
+                        this,
+                        '/upload-feedback-excel',
+                        successDiv,
+                        errorDiv,
+                        submitButton,
+                        submitText,
+                        loadingSpinner
+                    );
                 });
             }
-
-            // Status update logic for visited schools
-            document.querySelectorAll('.update-status-form').forEach(form => {
-                form.addEventListener('submit', async function (e) {
-                    e.preventDefault();
-                    const id = this.getAttribute('data-id');
-                    const status = this.querySelector('select[name="status"]').value;
-                    const action = this.getAttribute('action');
-
-                    try {
-                        const response = await fetch(action, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: new URLSearchParams({ id, status })
-                        });
-                        const result = await response.json();
-
-                        if (response.ok) {
-                            alert(`Status updated to ${status.charAt(0).toUpperCase() + status.slice(1)} for school ID ${id}`);
-                            window.location.reload();
-                        } else {
-                            alert(result.error || 'Failed to update status.');
-                        }
-                    } catch (err) {
-                        console.error('Error updating status:', err);
-                        alert(`Error updating status: ${err.message}`);
-                    }
-                });
-            });
+            document.getElementById('addVisitBtn').addEventListener('click', function () {
+    const form = document.getElementById('visitedSchoolForm');
+    form.classList.toggle('hidden');
+});
         };
     </script>
 </body>

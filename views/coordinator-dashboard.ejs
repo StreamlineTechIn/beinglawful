@@ -99,53 +99,17 @@
             </div>
         </div>
 
-        <!-- Visited Schools Tab -->
-   <div id="visited-school" class="tab-content">
-    <h3 class="text-xl font-semibold mb-4">Visited Schools</h3>
-    <div class="space-y-4">
-       
-        <!-- Table -->
-        <div class="overflow-x-auto">
-            <table class="min-w-full bg-white shadow-md rounded-lg">
-                <thead class="bg-gray-700 text-white">
-                    <tr>
-                        <th class="py-3 px-4 text-left">School Name</th> 
-                        <th class="py-3 px-4 text-left">Visit Date</th>
-                        <th class="py-3 px-4 text-left">Contact Person</th>
-                        <th class="py-3 px-4 text-left">Contact Number</th>
-                        <th class="py-3 px-4 text-left">Visit Notes</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% if (!visitedSchools || visitedSchools.length === 0) { %>
-                        <tr><td colspan="5" class="py-3 px-4 text-center">No visited schools found.</td></tr>
-                    <% } else { %>
-                        <% visitedSchools.forEach(school => { %>
-                            <tr class="border-b">
-                                <td class="py-3 px-4"><%= school.name || 'N/A' %></td>
-                                <td class="py-3 px-4"><%= school.visitDate || school.eventDate || 'Not set' %></td>
-                                <td class="py-3 px-4"><%= school.contactPerson || 'N/A' %></td>
-                                <td class="py-3 px-4"><%= school.contactNumber || 'N/A' %></td>
-                                <td class="py-3 px-4"><%= school.visitNotes || 'N/A' %></td>
-                            </tr>
-                        <% }); %>
-                    <% } %>
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Success/Error messages -->
+<div id="visited-school" class="tab-content">
+      <button id="addVisitBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded m-4" >
+            + Add Visit
+        </button>
+        
         <div id="visitedSchoolSuccess" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"></div>
         <div id="visitedSchoolError" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
 
-        <!-- Add Visit Button -->
-        <button id="addVisitBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
-            + Add Visit
-        </button>
+      
 
-        <!-- Hidden Form -->
-        <form method="POST" action="/submit-visited-school" id="visitedSchoolForm" 
-              class="space-y-6 bg-white p-6 rounded-lg shadow-md hidden">
+        <form id="visitedSchoolForm" class="space-y-6 bg-white p-6 rounded-lg shadow-md hidden">
             <p class="text-sm text-gray-600 italic">To be filled by Coordinator for Visited Schools</p>
             <div>
                 <h4 class="text-lg font-medium mb-2">School Visit Details</h4>
@@ -153,27 +117,27 @@
                     <div>
                         <label for="visitedSchoolName" class="block text-sm font-medium text-gray-700">School Name</label>
                         <input type="text" id="visitedSchoolName" name="visitedSchoolName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                        <span id="visitedSchoolNameError" class="field-error hidden"></span>
+                        <span id="visitedSchoolNameError" class="field-error hidden text-red-600 text-sm"></span>
                     </div>
                     <div>
                         <label for="visitDate" class="block text-sm font-medium text-gray-700">Visit Date</label>
                         <input type="date" id="visitDate" name="visitDate" max="<%= new Date().toISOString().split('T')[0] %>" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                        <span id="visitDateError" class="field-error hidden"></span>
+                        <span id="visitDateError" class="field-error hidden text-red-600 text-sm"></span>
                     </div>
                     <div>
                         <label for="schoolAddress" class="block text-sm font-medium text-gray-700">School Address</label>
                         <textarea id="schoolAddress" name="schoolAddress" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required></textarea>
-                        <span id="schoolAddressError" class="field-error hidden"></span>
+                        <span id="schoolAddressError" class="field-error hidden text-red-600 text-sm"></span>
                     </div>
                     <div>
                         <label for="contactPerson" class="block text-sm font-medium text-gray-700">Contact Person Name</label>
-                        <input type="text" id="contactPerson" name="contactPerson" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                        <span id="contactPersonError" class="field-error hidden"></span>
+                        <input type="text" id="contactPerson" name="contactPerson" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        <span id="contactPersonError" class="field-error hidden text-red-600 text-sm"></span>
                     </div>
                     <div>
                         <label for="contactNumber" class="block text-sm font-medium text-gray-700">Contact Person Number</label>
-                        <input type="tel" id="contactNumber" name="contactNumber" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                        <span id="contactNumberError" class="field-error hidden"></span>
+                        <input type="tel" id="contactNumber" name="contactNumber" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
+                        <span id="contactNumberError" class="field-error hidden text-red-600 text-sm"></span>
                     </div>
                     <div>
                         <label for="visitNotes" class="block text-sm font-medium text-gray-700">Visit Notes</label>
@@ -189,24 +153,61 @@
                 </svg>
             </button>
         </form>
+    <h3 class="text-xl font-semibold mb-4">Visited Schools</h3>
+    
+    <% if (success) { %>
+        <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+            <%= success %>
+        </div>
+    <% } %>
+    <% if (error) { %>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            <%= error %>
+        </div>
+    <% } %>
+    <div class="space-y-4">
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white shadow-md rounded-lg">
+                <thead class="bg-gray-700 text-white">
+                    <tr>
+                        <th class="py-3 px-4 text-left">School Name</th>
+                        <th class="py-3 px-4 text-left">Visit Date</th>
+                        <th class="py-3 px-4 text-left">School Address</th>
+                        <th class="py-3 px-4 text-left">Contact Person</th>
+                        <th class="py-3 px-4 text-left">Contact Number</th>
+                        <th class="py-3 px-4 text-left">Visit Notes</th>
+                        <!-- <th class="py-3 px-4 text-left">Actions</th> -->
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (!visitedSchools || visitedSchools.length === 0) { %>
+                        <tr><td colspan="7" class="py-3 px-4 text-center">No visited schools found.</td></tr>
+                    <% } else { %>
+                        <% visitedSchools.forEach(school => { %>
+                            <tr class="border-b">
+                                <td class="py-3 px-4"><%= school.name || 'N/A' %></td>
+                                <td class="py-3 px-4"><%= school.visitDate || 'Not set' %></td>
+                                <td class="py-3 px-4"><%= school.schoolAddress || 'N/A' %></td>
+                                <td class="py-3 px-4"><%= school.contactPerson || 'N/A' %></td>
+                                <td class="py-3 px-4"><%= school.contactNumber || 'N/A' %></td>
+                                <td class="py-3 px-4"><%= school.visitNotes || 'N/A' %></td>
+                                <!-- <td class="py-3 px-4">
+                                    <button class="edit-visit-btn bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded" data-id="<%= school.id %>">Edit</button>
+                                    <button class="delete-visit-btn bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded" data-id="<%= school.id %>">Delete</button>
+                                </td> -->
+                            </tr>
+                        <% }); %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+
     </div>
 </div>
 
         <!-- Complete Schools Tab -->
         <div id="complete-school" class="tab-content">
             <h3 class="text-xl font-semibold mb-4">Completed Schools</h3>
-            <form method="GET" action="/coordinator-dashboard" class="mb-4">
-                <label for="trainerIdComplete" class="block text-sm font-medium text-gray-700">Filter by Trainer</label>
-                <select name="trainerId" id="trainerIdComplete" class="border rounded px-2 py-1 mr-2">
-                    <option value="">All Trainers</option>
-                    <% if (trainers && trainers.length > 0) { %>
-                        <% trainers.forEach(trainer => { %>
-                            <option value="<%= trainer.id %>" <%= trainerId === trainer.id ? 'selected' : '' %>><%= trainer.name || 'Unknown Trainer' %></option>
-                        <% }); %>
-                    <% } %>
-                </select>
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded">Filter</button>
-            </form>
             <div class="overflow-x-auto">
                 <table class="min-w-full bg-white shadow-md rounded-lg">
                     <thead class="bg-gray-700 text-white">
@@ -353,155 +354,155 @@
         </div>
 
         <!-- Workshop Summary Tab -->
-        <div id="workshop-summary" class="tab-content">
-            <h3 class="text-xl font-semibold mb-4">Being Lawful Workshop Summary Form</h3>
-            <div id="successMessage" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"></div>
-            <div id="errorMessage" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
-            <form method="POST" action="/submit-workshop-summary" id="workshopSummaryForm" class="space-y-6 bg-white p-6 rounded-lg shadow-md">
-                <p class="text-sm text-gray-600 italic">To be filled by Coordinator</p>
+   
+           <div id="workshop-summary" class="tab-content">
+    <h3 class="text-2xl font-bold text-gray-800 mb-6">Being Lawful Workshop Summary Form</h3>
+    <div id="successMessage" class="hidden bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded-lg mb-6"></div>
+    <div id="errorMessage" class="hidden bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg mb-6"></div>
+    <form method="POST" action="/submit-workshop-summary" id="workshopSummaryForm" class="space-y-8 bg-white p-8 rounded-xl shadow-lg">
+        <p class="text-sm text-gray-500 italic">To be filled by Coordinator</p>
 
-                <!-- School Details -->
+        <!-- School Details -->
+        <div class="border-b border-gray-200 pb-4">
+            <h4 class="text-lg font-semibold text-gray-700 mb-4">School Details</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <h4 class="text-lg font-medium mb-2">School Details</h4>
-                    <div class="grid grid-cols-1 gap-4">
-                        <div>
-                            <label for="schoolName" class="block text-sm font-medium text-gray-700">School Name</label>
-                            <select id="schoolName" name="schoolName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                                <option value="">Select a School</option>
-                                <% allSchools.forEach(school => { %>
-                                    <option value="<%= school.name %>"><%= school.name %></option>
-                                <% }) %>
-                            </select>
-                            <span id="schoolNameError" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="schoolAddress" class="block text-sm font-medium text-gray-700">School Address</label>
-                            <textarea id="schoolAddress" name="schoolAddress" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required></textarea>
-                            <span id="schoolAddressError" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="workshopDate" class="block text-sm font-medium text-gray-700">Workshop Date</label>
-                            <input type="date" id="workshopDate" name="workshopDate" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="workshopDateError" class="field-error hidden"></span>
-                        </div>
-                    </div>
+                    <label for="schoolName" class="block text-sm font-medium text-gray-700">School Name <span class="text-red-500">*</span></label>
+                    <select id="schoolName" name="schoolName" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                        <option value="">Select a School</option>
+                        <% allSchools.forEach(school => { %>
+                            <option value="<%= school.name %>"><%= school.name %></option>
+                        <% }) %>
+                    </select>
+                    <!-- <span id="schoolNameError" class="field-error text-red-600 text-sm mt-1 hidden"></span> -->
                 </div>
-
-                <!-- Team Details -->
                 <div>
-                    <h4 class="text-lg font-medium mb-2">Team Details</h4>
-                    <div class="grid grid-cols-1 gap-4">
-                        <div>
-                            <label for="trainer1" class="block text-sm font-medium text-gray-700">Trainer 1</label>
-                            <input type="text" id="trainer1" name="trainer1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="trainer1Error" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="trainer2" class="block text-sm font-medium text-gray-700">Trainer 2 (if any)</label>
-                            <input type="text" id="trainer2" name="trainer2" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="coordinatorName" class="block text-sm font-medium text-gray-700">Coordinator Name</label>
-                            <input type="text" id="coordinatorName" name="coordinatorName" value="<%= coordinator?.name || '' %>" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="coordinatorNameError" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="techSupport" class="block text-sm font-medium text-gray-700">Tech Support (if assigned)</label>
-                            <input type="text" id="techSupport" name="techSupport" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2">
-                        </div>
-                        <div>
-                            <label for="principalName" class="block text-sm font-medium text-gray-700">School Principal Name</label>
-                            <input type="text" id="principalName" name="principalName" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="principalNameError" class="field-error hidden"></span>
-                        </div>
-                    </div>
+                    <label for="schoolAddress" class="block text-sm font-medium text-gray-700">School Address <span class="text-red-500">*</span></label>
+                    <textarea id="schoolAddress" name="schoolAddress" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" rows="4" required></textarea>
+                    <span id="schoolAddressError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
                 </div>
-
-                <!-- Financial Details -->
                 <div>
-                    <h4 class="text-lg font-medium mb-2">Financial Details</h4>
-                    <div class="grid grid-cols-1 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Financial Status</label>
-                            <div class="mt-2 space-x-4">
-                                <label class="inline-flex items-center">
-                                    <input type="radio" name="financialStatus" value="Done" class="form-radio" required>
-                                    <span class="ml-2">Done</span>
-                                </label>
-                                <label class="inline-flex items-center">
-                                    <input type="radio" name="financialStatus" value="Partial Done" class="form-radio">
-                                    <span class="ml-2">Partial Done</span>
-                                </label>
-                                <label class="inline-flex items-center">
-                                    <input type="radio" name="financialStatus" value="Partial Pending" class="form-radio">
-                                    <span class="ml-2">Partial Pending</span>
-                                </label>
-                                <label class="inline-flex items-center">
-                                    <input type="radio" name="financialStatus" value="Pending" class="form-radio">
-                                    <span class="ml-2">Pending</span>
-                                </label>
-                            </div>
-                            <span id="financialStatusError" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="kitPaymentStatus" class="block text-sm font-medium text-gray-700">Kit Payment Status</label>
-                            <input type="text" id="kitPaymentStatus" name="kitPaymentStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="kitPaymentStatusError" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="trainerRemunerationStatus" class="block text-sm font-medium text-gray-700">Trainer Remuneration Status</label>
-                            <input type="text" id="trainerRemunerationStatus" name="trainerRemunerationStatus" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="trainerRemunerationStatusError" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="paymentMode" class="block text-sm font-medium text-gray-700">Payment Mode</label>
-                            <input type="text" id="paymentMode" name="paymentMode" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="paymentModeError" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="transactionId" class="block text-sm font-medium text-gray-700">Cheque/UPI Transaction ID</label>
-                            <input type="text" id="transactionId" name="transactionId" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="transactionIdError" class="field-error hidden"></span>
-                        </div>
-                    </div>
+                    <label for="workshopDate" class="block text-sm font-medium text-gray-700">Workshop Date <span class="text-red-500">*</span></label>
+                    <input type="date" id="workshopDate" name="workshopDate" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="workshopDateError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
                 </div>
-
-                <!-- Coordinator Declaration -->
-                <div>
-                    <h4 class="text-lg font-medium mb-2">Coordinator Declaration</h4>
-                    <div class="flex items-center">
-                        <input type="checkbox" id="coordinatorDeclaration" name="coordinatorDeclaration" class="form-checkbox" required>
-                        <label for="coordinatorDeclaration" class="ml-2 text-sm text-gray-700">I confirm that all workshop responsibilities were completed and documents collected.</label>
-                    </div>
-                    <span id="coordinatorDeclarationError" class="field-error hidden"></span>
-                    <div class="grid grid-cols-1 gap-4 mt-4">
-                        <div>
-                            <label for="coordinatorSignature" class="block text-sm font-medium text-gray-700">Signature (Coordinator)</label>
-                            <input type="text" id="coordinatorSignature" name="coordinatorSignature" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="coordinatorSignatureError" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="coordinatorDate" class="block text-sm font-medium text-gray-700">Date</label>
-                            <input type="date" id="coordinatorDate" name="coordinatorDate" max="<%= new Date().toISOString().split('T')[0] %>" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="coordinatorDateError" class="field-error hidden"></span>
-                        </div>
-                        <div>
-                            <label for="coordinatorPlace" class="block text-sm font-medium text-gray-700">Place</label>
-                            <input type="text" id="coordinatorPlace" name="coordinatorPlace" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm p-2" required>
-                            <span id="coordinatorPlaceError" class="field-error hidden"></span>
-                        </div>
-                    </div>
-                </div>
-
-                <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
-                    <span id="submitText">Submit Form</span>
-                    <svg id="loadingSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                    </svg>
-                </button>
-            </form>
+            </div>
         </div>
+
+        <!-- Team Details -->
+        <div class="border-b border-gray-200 pb-4">
+            <h4 class="text-lg font-semibold text-gray-700 mb-4">Team Details</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label for="trainer1" class="block text-sm font-medium text-gray-700">Trainer 1 <span class="text-red-500">*</span></label>
+                    <input type="text" id="trainer1" name="trainer1" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="trainer1Error" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+                <div>
+                    <label for="trainer2" class="block text-sm font-medium text-gray-700">Trainer 2 (Optional)</label>
+                    <input type="text" id="trainer2" name="trainer2" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <span class="text-xs text-gray-500 mt-1">Leave blank if no second trainer was involved.</span>
+                </div>
+                <div>
+                    <label for="coordinatorName" class="block text-sm font-medium text-gray-700">Coordinator Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="coordinatorName" name="coordinatorName" value="<%= coordinator?.name || '' %>" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="coordinatorNameError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+                <div>
+                    <label for="techSupport" class="block text-sm font-medium text-gray-700">Tech Support (Optional)</label>
+                    <input type="text" id="techSupport" name="techSupport" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    <span class="text-xs text-gray-500 mt-1">Leave blank if no tech support was assigned.</span>
+                </div>
+                <div>
+                    <label for="principalName" class="block text-sm font-medium text-gray-700">School Principal Name <span class="text-red-500">*</span></label>
+                    <input type="text" id="principalName" name="principalName" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="principalNameError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Financial Details -->
+        <div class="border-b border-gray-200 pb-4">
+            <h4 class="text-lg font-semibold text-gray-700 mb-4">Financial Details</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Financial Status <span class="text-red-500">*</span></label>
+                    <div class="mt-2 space-x-4 flex flex-wrap">
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="financialStatus" value="Done" class="form-radio text-blue-500" required>
+                            <span class="ml-2 text-gray-700">Done</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="financialStatus" value="Partial Done" class="form-radio text-blue-500">
+                            <span class="ml-2 text-gray-700">Partial Done</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="financialStatus" value="Partial Pending" class="form-radio text-blue-500">
+                            <span class="ml-2 text-gray-700">Partial Pending</span>
+                        </label>
+                        <label class="inline-flex items-center">
+                            <input type="radio" name="financialStatus" value="Pending" class="form-radio text-blue-500">
+                            <span class="ml-2 text-gray-700">Pending</span>
+                        </label>
+                    </div>
+                    <span id="financialStatusError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+                <div>
+                    <label for="kitPaymentStatus" class="block text-sm font-medium text-gray-700">Kit Payment Status <span class="text-red-500">*</span></label>
+                    <input type="text" id="kitPaymentStatus" name="kitPaymentStatus" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="kitPaymentStatusError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+                <div>
+                    <label for="trainerRemunerationStatus" class="block text-sm font-medium text-gray-700">Trainer Remuneration Status <span class="text-red-500">*</span></label>
+                    <input type="text" id="trainerRemunerationStatus" name="trainerRemunerationStatus" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="trainerRemunerationStatusError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+                <div>
+                    <label for="paymentMode" class="block text-sm font-medium text-gray-700">Payment Mode <span class="text-red-500">*</span></label>
+                    <input type="text" id="paymentMode" name="paymentMode" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="paymentModeError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+                <div>
+                    <label for="transactionId" class="block text-sm font-medium text-gray-700">Cheque/UPI Transaction ID <span class="text-red-500">*</span></label>
+                    <input type="text" id="transactionId" name="transactionId" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="transactionIdError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Coordinator Declaration -->
+        <div>
+            <h4 class="text-lg font-semibold text-gray-700 mb-4">Coordinator Declaration</h4>
+            <div class="flex items-center">
+                <input type="checkbox" id="coordinatorDeclaration" name="coordinatorDeclaration" class="form-checkbox h-5 w-5 text-blue-500" required>
+                <label for="coordinatorDeclaration" class="ml-2 text-sm text-gray-700">I confirm that all workshop responsibilities were completed and documents collected.</label>
+            </div>
+            <span id="coordinatorDeclarationError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div>
+                    <label for="coordinatorDate" class="block text-sm font-medium text-gray-700">Date <span class="text-red-500">*</span></label>
+                    <input type="date" id="coordinatorDate" name="coordinatorDate" max="<%= new Date().toISOString().split('T')[0] %>" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="coordinatorDateError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+                <div>
+                    <label for="coordinatorPlace" class="block text-sm font-medium text-gray-700">Place <span class="text-red-500">*</span></label>
+                    <input type="text" id="coordinatorPlace" name="coordinatorPlace" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                    <span id="coordinatorPlaceError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex justify-end">
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-medium px-6 py-3 rounded-lg flex items-center transition duration-200">
+                <span id="submitText">Submit Form</span>
+                <svg id="loadingSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+            </button>
+        </div>
+    </form>
+</div>
 
         <!-- Student Feedback Form Tab -->
         <div id="student-feedback" class="tab-content">
@@ -531,291 +532,436 @@
     </div>
 
     <script>
-        // Tab switching logic
-        function switchTab(targetTab) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
-            document.querySelector(`#${targetTab}`).classList.add('active');
-            document.querySelector(`.tab-link[href="#${targetTab}"]`).classList.add('active');
-        }
+       // Tab switching logic
+function switchTab(targetTab) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
+    document.querySelector(`#${targetTab}`).classList.add('active');
+    document.querySelector(`.tab-link[href="#${targetTab}"]`).classList.add('active');
+}
 
-        document.querySelectorAll('.tab-link').forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetTab = this.getAttribute('href').substring(1);
-                switchTab(targetTab);
-            });
+document.querySelectorAll('.tab-link').forEach(link => {
+    link.addEventListener('click', function (e) {
+        e.preventDefault();
+        const targetTab = this.getAttribute('href').substring(1);
+        switchTab(targetTab);
+    });
+});
+
+// Initialize filters for Coordinator Summary Table
+function initializeFilters(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const headers = table.querySelectorAll('th[data-filter]');
+    const rows = table.querySelectorAll('tbody tr');
+
+    headers.forEach(header => {
+        const column = header.dataset.filter;
+        const select = header.querySelector('.filter-select');
+        if (!select) return;
+
+        const values = new Set(['All']);
+        rows.forEach(row => {
+            const cell = row.querySelector(`td[data-column="${column}"]`);
+            if (cell && cell.textContent.trim()) values.add(cell.textContent.trim());
         });
 
-        // Initialize filters for Coordinator Summary Table
-        function initializeFilters(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) return;
-            const headers = table.querySelectorAll('th[data-filter]');
-            const rows = table.querySelectorAll('tbody tr');
+        select.innerHTML = '';
+        [...values].sort().forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            if (value === 'All') option.selected = true;
+            select.appendChild(option);
+        });
 
-            headers.forEach(header => {
-                const column = header.dataset.filter;
-                const select = header.querySelector('.filter-select');
-                if (!select) return;
+        select.addEventListener('change', () => applyFilters(tableId));
+    });
+}
 
-                const values = new Set(['All']);
-                rows.forEach(row => {
-                    const cell = row.querySelector(`td[data-column="${column}"]`);
-                    if (cell && cell.textContent.trim()) values.add(cell.textContent.trim());
-                });
+function applyFilters(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) return;
+    const rows = table.querySelectorAll('tbody tr');
+    const filters = {};
 
-                select.innerHTML = '';
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    if (value === 'All') option.selected = true;
-                    select.appendChild(option);
-                });
+    table.querySelectorAll('.filter-select').forEach(select => {
+        filters[select.dataset.column] = select.value.trim();
+    });
 
-                select.addEventListener('change', () => applyFilters(tableId));
-            });
-        }
-
-        function applyFilters(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) return;
-            const rows = table.querySelectorAll('tbody tr');
-            const filters = {};
-
-            table.querySelectorAll('.filter-select').forEach(select => {
-                filters[select.dataset.column] = select.value.trim();
-            });
-
-            rows.forEach(row => {
-                let show = true;
-                for (const [column, value] of Object.entries(filters)) {
-                    if (value && value !== 'All') {
-                        const cell = row.querySelector(`td[data-column="${column}"]`);
-                        if (cell && cell.textContent.trim() !== value) {
-                            show = false;
-                            break;
-                        }
-                    }
+    rows.forEach(row => {
+        let show = true;
+        for (const [column, value] of Object.entries(filters)) {
+            if (value && value !== 'All') {
+                const cell = row.querySelector(`td[data-column="${column}"]`);
+                if (cell && cell.textContent.trim() !== value) {
+                    show = false;
+                    break;
                 }
-                row.style.display = show ? '' : 'none';
-            });
-        }
-
-        // Validate Workshop Summary form
-        function validateWorkshopForm(form) {
-            const requiredFields = form.querySelectorAll('input[required], textarea[required], select[required]');
-            let isValid = true;
-
-            form.querySelectorAll('.error-border').forEach(field => field.classList.remove('error-border'));
-            form.querySelectorAll('.field-error').forEach(error => {
-                error.classList.add('hidden');
-                error.textContent = '';
-            });
-
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    isValid = false;
-                    field.classList.add('error-border');
-                    const errorSpan = document.getElementById(`${field.id}Error`);
-                    if (errorSpan) {
-                        errorSpan.textContent = `Please fill in the ${field.name} field.`;
-                        errorSpan.classList.remove('hidden');
-                    }
-                }
-            });
-
-            const financialStatus = form.querySelector('input[name="financialStatus"]:checked');
-            const financialStatusError = document.getElementById('financialStatusError');
-            if (!financialStatus) {
-                isValid = false;
-                form.querySelectorAll('input[name="financialStatus"]').forEach(radio => radio.classList.add('error-border'));
-                financialStatusError.textContent = 'Please select a Financial Status.';
-                financialStatusError.classList.remove('hidden');
             }
+        }
+        row.style.display = show ? '' : 'none';
+    });
+}
 
-            const coordinatorDeclaration = form.querySelector('#coordinatorDeclaration');
-            const coordinatorDeclarationError = document.getElementById('coordinatorDeclarationError');
-            if (!coordinatorDeclaration.checked) {
-                isValid = false;
-                coordinatorDeclaration.classList.add('error-border');
-                coordinatorDeclarationError.textContent = 'Please confirm the Coordinator Declaration.';
-                coordinatorDeclarationError.classList.remove('hidden');
+// Clear error messages
+function clearErrors(form) {
+    form.querySelectorAll('.error-border').forEach(field => field.classList.remove('error-border'));
+    form.querySelectorAll('.field-error').forEach(error => {
+        error.classList.add('hidden');
+        error.textContent = '';
+    });
+    document.getElementById('visitedSchoolError').classList.add('hidden');
+    document.getElementById('visitedSchoolSuccess').classList.add('hidden');
+}
+
+// Validate Visited School form
+function validateVisitedSchoolForm(form) {
+    const requiredFields = form.querySelectorAll('input[required], textarea[required]');
+    let isValid = true;
+
+    clearErrors(form);
+
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            isValid = false;
+            field.classList.add('error-border');
+            const errorSpan = document.getElementById(`${field.id}Error`);
+            if (errorSpan) {
+                errorSpan.textContent = `Please fill in the ${field.name} field.`;
+                errorSpan.classList.remove('hidden');
             }
-
-            return isValid;
         }
+    });
 
-        // Validate Visited School form
-        function validateVisitedSchoolForm(form) {
-            const requiredFields = form.querySelectorAll('input[required], textarea[required]');
-            let isValid = true;
+    const contactNumber = form.querySelector('#contactNumber');
+    if (contactNumber.value && !/^\+?\d{10,15}$/.test(contactNumber.value)) {
+        isValid = false;
+        contactNumber.classList.add('error-border');
+        document.getElementById('contactNumberError').textContent = 'Invalid phone number';
+        document.getElementById('contactNumberError').classList.remove('hidden');
+    }
 
-            form.querySelectorAll('.error-border').forEach(field => field.classList.remove('error-border'));
-            form.querySelectorAll('.field-error').forEach(error => {
-                error.classList.add('hidden');
-                error.textContent = '';
-            });
+    return isValid;
+}
 
-            requiredFields.forEach(field => {
-                if (!field.value.trim()) {
-                    isValid = false;
-                    field.classList.add('error-border');
-                    const errorSpan = document.getElementById(`${field.id}Error`);
-                    if (errorSpan) {
-                        errorSpan.textContent = `Please fill in the ${field.name} field.`;
-                        errorSpan.classList.remove('hidden');
-                    }
-                }
-            });
+// Handle form submission
+async function handleFormSubmission(form, url, successDiv, errorDiv, submitButton, submitText, loadingSpinner, isEdit = false) {
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
 
-            return isValid;
+    if (!validateVisitedSchoolForm(form)) {
+        return;
+    }
+
+    submitButton.disabled = true;
+    submitText.textContent = isEdit ? 'Updating...' : 'Submitting...';
+    loadingSpinner.classList.remove('hidden');
+    errorDiv.classList.add('hidden');
+    successDiv.classList.add('hidden');
+
+    try {
+        console.log('Sending data:', data); // Debug: Log data being sent
+        const response = await fetch(url, {
+            method: isEdit ? 'PUT' : 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        });
+
+        const result = await response.json();
+        console.log('Server response:', result); // Debug: Log server response
+
+        submitButton.disabled = false;
+        submitText.textContent = isEdit ? 'Update Form' : 'Submit Form';
+        loadingSpinner.classList.add('hidden');
+
+        if (response.ok) {
+            successDiv.textContent = result.message || 'Submission successful!';
+            successDiv.classList.remove('hidden');
+            form.reset();
+            form.classList.add('hidden');
+            await refreshVisitedSchools();
+            setTimeout(() => successDiv.classList.add('hidden'), 5000);
+            if (result.redirect) {
+                setTimeout(() => {
+                    window.location.href = result.redirect;
+                }, 1000);
+            }
+        } else {
+            errorDiv.innerHTML = result.error || 'Failed to submit form.';
+            if (result.details) {
+                errorDiv.innerHTML += '<ul class="list-disc pl-5 mt-2">' +
+                    (Array.isArray(result.details) ? result.details.map(d => `<li>${d}</li>`).join('') : `<li>${result.details}</li>`) +
+                    '</ul>';
+            }
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 10000);
         }
+    } catch (err) {
+        console.error(`Error submitting ${form.id}:`, err);
+        errorDiv.textContent = `Error submitting form: ${err.message}`;
+        errorDiv.classList.remove('hidden');
+        submitButton.disabled = false;
+        submitText.textContent = isEdit ? 'Update Form' : 'Submit Form';
+        loadingSpinner.classList.add('hidden');
+        setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+    }
+}
 
-        // Handle form submission with error handling
-        async function handleFormSubmission(form, url, successDiv, errorDiv, submitButton, submitText, loadingSpinner) {
-            const formData = new FormData(form);
-            submitButton.disabled = true;
-            submitText.textContent = 'Submitting...';
-            loadingSpinner.classList.remove('hidden');
-            errorDiv.classList.add('hidden');
-            successDiv.classList.add('hidden');
+// Refresh visited schools table
+async function refreshVisitedSchools() {
+    try {
+        const response = await fetch('/visited-schools');
+        const data = await response.json();
+        if (response.ok) {
+            const tbody = document.querySelector('#visited-school table tbody');
+            tbody.innerHTML = '';
+            if (data.visitedSchools.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="py-3 px-4 text-center">No visited schools found.</td></tr>';
+            } else {
+                data.visitedSchools.forEach(school => {
+                    tbody.innerHTML += `
+                        <tr class="border-b">
+                            <td class="py-3 px-4">${school.name || 'N/A'}</td>
+                            <td class="py-3 px-4">${school.visitDate || 'Not set'}</td>
+                            <td class="py-3 px-4">${school.schoolAddress || 'N/A'}</td>
+                            <td class="py-3 px-4">${school.contactPerson || 'N/A'}</td>
+                            <td class="py-3 px-4">${school.contactNumber || 'N/A'}</td>
+                            <td class="py-3 px-4">${school.visitNotes || 'N/A'}</td>
+                            <td class="py-3 px-4">
+                                <button class="edit-visit-btn bg-yellow-500 hover:bg-yellow-600 text-white px-2 py-1 rounded" data-id="${school.id}">Edit</button>
+                                <button class="delete-visit-btn bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded" data-id="${school.id}">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+        } else {
+            throw new Error(data.error || 'Failed to fetch visited schools');
+        }
+    } catch (err) {
+        console.error('Error refreshing visited schools:', err);
+        const errorDiv = document.getElementById('visitedSchoolError');
+        errorDiv.textContent = 'Failed to refresh visited schools: ' + err.message;
+        errorDiv.classList.remove('hidden');
+        setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+    }
+}
 
+// Handle edit button click
+function setupEditButtons() {
+    document.querySelectorAll('.edit-visit-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+            const id = button.dataset.id;
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    body: formData
+                const response = await fetch(`/visited-school/${id}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    const school = result.data;
+                    const form = document.getElementById('visitedSchoolForm');
+                    form.dataset.id = id;
+                    document.getElementById('visitedSchoolName').value = school.name || '';
+                    document.getElementById('visitDate').value = school.visitDate ? new Date(school.visitDate).toISOString().split('T')[0] : '';
+                    document.getElementById('schoolAddress').value = school.schoolAddress || '';
+                    document.getElementById('contactPerson').value = school.contactPerson || '';
+                    document.getElementById('contactNumber').value = school.contactNumber || '';
+                    document.getElementById('visitNotes').value = school.visitNotes || '';
+                    document.getElementById('visitedSchoolSubmitText').textContent = 'Update Form';
+                    form.classList.remove('hidden');
+                    clearErrors(form);
+                } else {
+                    document.getElementById('visitedSchoolError').textContent = result.error || 'Failed to load school data';
+                    document.getElementById('visitedSchoolError').classList.remove('hidden');
+                    setTimeout(() => document.getElementById('visitedSchoolError').classList.add('hidden'), 5000);
+                }
+            } catch (error) {
+                console.error('❌ Error fetching school data:', error);
+                document.getElementById('visitedSchoolError').textContent = 'Failed to load school data: ' + error.message;
+                document.getElementById('visitedSchoolError').classList.remove('hidden');
+                setTimeout(() => document.getElementById('visitedSchoolError').classList.add('hidden'), 5000);
+            }
+        });
+    });
+}
+
+// Handle delete button click
+function setupDeleteButtons() {
+    document.querySelectorAll('.delete-visit-btn').forEach(button => {
+        button.addEventListener('click', async () => {
+            if (!confirm('Are you sure you want to delete this school visit?')) return;
+
+            const id = button.dataset.id;
+            try {
+                const response = await fetch(`/visited-school/${id}`, {
+                    method: 'DELETE'
                 });
                 const result = await response.json();
 
-                submitButton.disabled = false;
-                submitText.textContent = 'Submit Form';
-                loadingSpinner.classList.add('hidden');
-
-                if (response.ok) {
-                    successDiv.textContent = result.message || 'Submission successful!';
-                    successDiv.classList.remove('hidden');
-                    form.reset();
-                    setTimeout(() => successDiv.classList.add('hidden'), 5000);
+                if (result.success) {
+                    document.getElementById('visitedSchoolSuccess').textContent = result.message;
+                    document.getElementById('visitedSchoolSuccess').classList.remove('hidden');
+                    await refreshVisitedSchools();
+                    setTimeout(() => document.getElementById('visitedSchoolSuccess').classList.add('hidden'), 5000);
                 } else {
-                    errorDiv.innerHTML = result.error || 'Failed to submit form.';
-                    if (result.details) {
-                        errorDiv.innerHTML += '<ul class="list-disc pl-5 mt-2">' +
-                            (Array.isArray(result.details) ? result.details.map(d => `<li>${d}</li>`).join('') : `<li>${result.details}</li>`) +
-                            '</ul>';
-                    }
-                    errorDiv.classList.remove('hidden');
-                    setTimeout(() => errorDiv.classList.add('hidden'), 10000);
+                    document.getElementById('visitedSchoolError').textContent = result.error || 'Failed to delete school';
+                    document.getElementById('visitedSchoolError').classList.remove('hidden');
+                    setTimeout(() => document.getElementById('visitedSchoolError').classList.add('hidden'), 5000);
                 }
-            } catch (err) {
-                console.error(`Error submitting ${form.id}:`, err);
-                errorDiv.textContent = `Error submitting form: ${err.message}`;
-                errorDiv.classList.remove('hidden');
-                submitButton.disabled = false;
-                submitText.textContent = 'Submit Form';
-                loadingSpinner.classList.add('hidden');
-                setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+            } catch (error) {
+                console.error('❌ Error deleting school:', error);
+                document.getElementById('visitedSchoolError').textContent = 'Failed to delete school: ' + error.message;
+                document.getElementById('visitedSchoolError').classList.remove('hidden');
+                setTimeout(() => document.getElementById('visitedSchoolError').classList.add('hidden'), 5000);
+            }
+        });
+    });
+}
+
+// Window onload for initialization
+window.onload = function () {
+    switchTab('coordinator-summary');
+    initializeFilters('coordinatorSummaryTable');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('success') || urlParams.has('error')) {
+        history.replaceState(null, '', window.location.pathname);
+    }
+
+    const visitedSchoolForm = document.querySelector('#visitedSchoolForm');
+    if (visitedSchoolForm) {
+        visitedSchoolForm.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const isEdit = !!this.dataset.id;
+            const url = isEdit ? `/update-visited-school/${this.dataset.id}` : '/submit-visited-school';
+            await handleFormSubmission(
+                this,
+                url,
+                document.getElementById('visitedSchoolSuccess'),
+                document.getElementById('visitedSchoolError'),
+                this.querySelector('button[type="submit"]'),
+                this.querySelector('#visitedSchoolSubmitText'),
+                this.querySelector('#visitedSchoolLoadingSpinner'),
+                isEdit
+            );
+        });
+    }
+
+    document.getElementById('addVisitBtn').addEventListener('click', function () {
+        const form = document.getElementById('visitedSchoolForm');
+        form.classList.toggle('hidden');
+        form.reset();
+        form.dataset.id = '';
+        document.getElementById('visitedSchoolSubmitText').textContent = 'Submit Form';
+        clearErrors(form);
+    });
+
+    // Initial setup of edit and delete buttons
+    setupEditButtons();
+    setupDeleteButtons();
+
+    // Refresh table on load
+    // refreshVisitedSchools();
+
+function clearWorkshopSummaryErrors(form) {
+    form.querySelectorAll('.error-border').forEach(f => f.classList.remove('error-border'));
+    form.querySelectorAll('.field-error').forEach(e => {
+        e.classList.add('hidden');
+        e.textContent = '';
+    });
+}
+
+// Validate form fields before submit
+function validateWorkshopSummaryForm(form) {
+    let isValid = true;
+    clearWorkshopSummaryErrors(form);
+
+    const requiredFields = form.querySelectorAll('[required]');
+    requiredFields.forEach(field => {
+        if (!field.value.trim()) {
+            isValid = false;
+            field.classList.add('error-border');
+            const errorSpan = document.getElementById(`${field.id}Error`);
+            if (errorSpan) {
+                errorSpan.textContent = `Please fill in the ${field.name || field.id} field.`;
+                errorSpan.classList.remove('hidden');
             }
         }
+    });
 
-        // Window onload for initialization
-        window.onload = function () {
-            // Open the default tab
-            switchTab('coordinator-summary');
-            initializeFilters('coordinatorSummaryTable');
+    return isValid;
+}
 
-            // Clear query param messages after display
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('success') || urlParams.has('error')) {
-                history.replaceState(null, '', window.location.pathname);
-            }
+document.getElementById('workshopSummaryForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
 
-            // Handle Workshop Summary form submission
-            const workshopForm = document.querySelector('#workshopSummaryForm');
-            if (workshopForm) {
-                workshopForm.addEventListener('submit', async function (e) {
-                    e.preventDefault();
-                    if (!validateWorkshopForm(this)) return;
-                    handleFormSubmission(
-                        this,
-                        '/submit-workshop-summary',
-                        document.getElementById('successMessage'),
-                        document.getElementById('errorMessage'),
-                        this.querySelector('button[type="submit"]'),
-                        this.querySelector('#submitText'),
-                        this.querySelector('#loadingSpinner')
-                    );
-                });
-            }
+    const form = e.target;
+    const submitButton = form.querySelector('button[type="submit"]');
+    const submitText = form.querySelector('#submitText');
+    const loadingSpinner = form.querySelector('#loadingSpinner');
+    const successMessage = document.getElementById('successMessage');
+    const errorMessage = document.getElementById('errorMessage');
 
-            // Handle Visited School form submission
-            const visitedSchoolForm = document.querySelector('#visitedSchoolForm');
-            if (visitedSchoolForm) {
-                visitedSchoolForm.addEventListener('submit', async function (e) {
-                    e.preventDefault();
-                    if (!validateVisitedSchoolForm(this)) return;
-                    handleFormSubmission(
-                        this,
-                        '/submit-visited-school',
-                        document.getElementById('visitedSchoolSuccess'),
-                        document.getElementById('visitedSchoolError'),
-                        this.querySelector('button[type="submit"]'),
-                        this.querySelector('#visitedSchoolSubmitText'),
-                        this.querySelector('#visitedSchoolLoadingSpinner')
-                    );
-                });
-            }
+    // Validate before sending
+    if (!validateWorkshopSummaryForm(form)) {
+        return;
+    }
 
-            // Handle Feedback Excel upload
-            const feedbackUploadForm = document.querySelector('#uploadFeedbackForm');
-            if (feedbackUploadForm) {
-                feedbackUploadForm.addEventListener('submit', async function (e) {
-                    e.preventDefault();
-                    const fileInput = this.querySelector('#feedbackExcelFile');
-                    const errorSpan = document.getElementById('feedbackExcelFileError');
-                    const errorDiv = document.getElementById('uploadFeedbackError');
-                    const successDiv = document.getElementById('uploadFeedbackSuccess');
-                    const submitButton = this.querySelector('button[type="submit"]');
-                    const submitText = this.querySelector('#uploadFeedbackSubmitText');
-                    const loadingSpinner = this.querySelector('#uploadFeedbackLoadingSpinner');
+    // Reset messages
+    successMessage.classList.add('hidden');
+    errorMessage.classList.add('hidden');
 
-                    // Reset error states
-                    fileInput.classList.remove('error-border');
-                    errorSpan.classList.add('hidden');
-                    errorDiv.classList.add('hidden');
-                    successDiv.classList.add('hidden');
+    // Disable button and show spinner
+    submitButton.disabled = true;
+    submitText.textContent = 'Submitting...';
+    loadingSpinner.classList.remove('hidden');
 
-                    // Validate file input
-                    if (!fileInput.files.length) {
-                        errorSpan.textContent = 'Please select an Excel file to upload.';
-                        errorSpan.classList.remove('hidden');
-                        fileInput.classList.add('error-border');
-                        return;
-                    }
-                    if (!fileInput.files[0].name.match(/\.(xlsx|xls)$/)) {
-                        errorSpan.textContent = 'Only .xlsx or .xls files are allowed.';
-                        errorSpan.classList.remove('hidden');
-                        fileInput.classList.add('error-border');
-                        return;
-                    }
+    try {
+        const formObject = Object.fromEntries(new FormData(form).entries());
 
-                    handleFormSubmission(
-                        this,
-                        '/upload-feedback-excel',
-                        successDiv,
-                        errorDiv,
-                        submitButton,
-                        submitText,
-                        loadingSpinner
-                    );
-                });
-            }
-            document.getElementById('addVisitBtn').addEventListener('click', function () {
-    const form = document.getElementById('visitedSchoolForm');
-    form.classList.toggle('hidden');
+const response = await fetch(form.action, {
+    method: 'POST',
+    headers: { 
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+    },
+    body: JSON.stringify(formObject)
 });
-        };
+
+        const result = await response.json();
+
+        if (response.ok) {
+            successMessage.textContent = result.message || 'Form submitted successfully!';
+            successMessage.classList.remove('hidden');
+            form.reset();
+        } else {
+            errorMessage.textContent = result.error || 'Failed to submit form';
+            if (result.details) {
+                result.details.forEach(err => {
+                    const fieldId = err.toLowerCase().split(' ')[0] + 'Error';
+                    const errorEl = document.getElementById(fieldId);
+                    if (errorEl) {
+                        errorEl.textContent = err;
+                        errorEl.classList.remove('hidden');
+                    }
+                });
+            }
+            errorMessage.classList.remove('hidden');
+        }
+    } catch (err) {
+        console.error('Form submission error:', err);
+        errorMessage.textContent = 'An error occurred: ' + err.message;
+        errorMessage.classList.remove('hidden');
+    } finally {
+        // Reset button/spinner
+        submitButton.disabled = false;
+        submitText.textContent = 'Submit Form';
+        loadingSpinner.classList.add('hidden');
+    }
+});
+}
     </script>
 </body>
 </html>

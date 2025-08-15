@@ -117,73 +117,6 @@ const loadingText = document.getElementById('loadingText');
         }
 
 
-        // WebSocket for live login activity
-function setupWebSocket() {
-    const ws = new WebSocket('ws://localhost:3000/ws/login-updates');
-    
-    ws.onopen = () => {
-        console.log('WebSocket connection established for login updates');
-    };
-
-    ws.onmessage = (event) => {
-        try {
-            const newLog = JSON.parse(event.data);
-            if (newLog.id && newLog.userEmail && newLog.ipAddress && newLog.loginTime) {
-                loginLogs.unshift(newLog); // Add new log to the beginning
-                renderLoginLogTable();
-                openTab('login-log'); // Switch to Login Log tab
-                showNotification(`New login by ${newLog.userEmail} at ${formatDateIST(newLog.loginTime)}`);
-            }
-        } catch (error) {
-            console.error('Error processing WebSocket message:', error);
-        }
-    };
-
-    ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-    };
-
-    ws.onclose = () => {
-        console.log('WebSocket connection closed. Attempting to reconnect...');
-        setTimeout(setupWebSocket, 5000); // Reconnect after 5 seconds
-    };
-}
-        // Render login log table
-        function renderLoginLogTable(logs = loginLogs) {
-            const tbody = document.getElementById('login-logs-body');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-            if (logs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="5" class="text-gray-700 text-center py-4">No login logs available yet.</td></tr>';
-                return;
-            }
-            logs.forEach(log => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
-                row.innerHTML = `
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="id">${log.id}</td>
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="userEmail">${log.userEmail}</td>
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="ipAddress">${log.ipAddress}</td>
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="loginTime">${formatDateIST(log.loginTime)}</td>
-                    <td class="py-2 px-4 border-b text-gray-700">${log.userRole || 'N/A'}</td>
-                `;
-                tbody.appendChild(row);
-            });
-            updateLoginLogFilters();
-        }
-
-        // General showMessage function
-        function showMessage(message, type, messageDiv) {
-            if (messageDiv) {
-                messageDiv.textContent = message;
-                messageDiv.classList.remove('hidden', 'bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
-                messageDiv.classList.add(type === 'success' ? 'bg-green-100' : 'bg-red-100', type === 'success' ? 'text-green-700' : 'text-red-700');
-                setTimeout(() => {
-                    messageDiv.classList.add('hidden');
-                    messageDiv.classList.remove('bg-green-100', 'text-green-700', 'bg-red-100', 'text-red-700');
-                }, 5000);
-            }
-        }
 
         // Tab navigation
         function openTab(tabName) {
@@ -719,7 +652,8 @@ function setupWebSocket() {
                     buttonText: !!buttonText,
                     loadingText: !!loadingText
                 });
-                setupWebSocket();
+               
+            
             }
 
             // Call Log Form Submission
@@ -1034,7 +968,7 @@ const contactPerson = form.querySelector('#contactPerson')?.value.trim();
             renderLoginLogTable();
             updateLoginLogFilters();
 
-            const tableIds = ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students', 'call-logs', 'login-logs','student-feedback'];
+            const tableIds = ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students', 'call-logs', 'login-logs','student-feedback','visited-school'];
             tableIds.forEach(tableId => {
                 const table = document.getElementById(tableId);
                 if (table) {
@@ -1261,7 +1195,258 @@ function openTab(tabName) {
         renderFeedbackTable();
     }
 }
+ document.getElementById('searchBox').addEventListener('keyup', function () {
+        let filter = this.value.toLowerCase();
+        let rows = document.querySelectorAll('#visitedSchoolsTable tbody tr');
+        rows.forEach(row => {
+            let name = row.cells[0].textContent.toLowerCase();
+            let address = row.cells[2].textContent.toLowerCase();
+            row.style.display = (name.includes(filter) || address.includes(filter)) ? '' : 'none';
+        });
+    });
+function sortTable(columnIndex) {
+    const table = document.querySelector('#visited-school table');
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const isAscending = table.dataset.sortOrder !== 'asc';
+    table.dataset.sortOrder = isAscending ? 'asc' : 'desc';
 
+    rows.sort((rowA, rowB) => {
+        const cellA = rowA.cells[columnIndex].textContent.trim();
+        const cellB = rowB.cells[columnIndex].textContent.trim();
+        return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+    });
+
+    tbody.innerHTML = '';
+    rows.forEach(row => tbody.appendChild(row));
+}
+document.addEventListener("DOMContentLoaded", () => {
+    const table = document.getElementById("visited-schools-table");
+    const selects = table.querySelectorAll(".filter-select");
+    const rows = Array.from(table.querySelectorAll("tbody tr"));
+
+    function populateFilters() {
+        selects.forEach(select => {
+            const colIndex = select.dataset.column;
+            const values = new Set();
+            rows.forEach(row => {
+                const cell = row.querySelector(`td:nth-child(${[...selects].indexOf(select) + 1})`);
+                if (cell) values.add(cell.textContent.trim());
+            });
+            values.forEach(val => {
+                const option = document.createElement("option");
+                option.textContent = val;
+                option.value = val;
+                select.appendChild(option);
+            });
+        });
+    }
+
+    function filterRows() {
+        rows.forEach(row => {
+            let showRow = true;
+            selects.forEach(select => {
+                const colIndex = select.parentElement.cellIndex;
+                const val = select.value;
+                if (val && row.cells[colIndex].textContent.trim() !== val) {
+                    showRow = false;
+                }
+            });
+            row.style.display = showRow ? "" : "none";
+        });
+    }
+
+    selects.forEach(select => select.addEventListener("change", filterRows));
+
+    populateFilters();
+});
+//    // LOCATION & IP TRACKING
+//     // =====================
+//     async function trackLocationAndIp() {
+//         const locationDiv = document.getElementById('dashboardLocationInfo');
+//         const ipDiv = document.getElementById('dashboardIpInfo');
+
+//         // Fetch geolocation via browser API
+//         if (navigator.geolocation) {
+//             navigator.geolocation.getCurrentPosition(
+//                 pos => {
+//                     const lat = pos.coords.latitude;
+//                     const lon = pos.coords.longitude;
+//                     if (locationDiv) {
+//                         locationDiv.innerHTML = `<strong>Latitude:</strong> ${lat} <br><strong>Longitude:</strong> ${lon}`;
+//                     }
+//                     // Also send to backend if desired
+//                     sendLocationAndIp({ latitude: lat, longitude: lon });
+//                 },
+//                 err => {
+//                     console.warn("Geolocation error:", err.message);
+//                     if (locationDiv) locationDiv.textContent = "Geolocation not available.";
+//                 }
+//             );
+//         } else {
+//             if (locationDiv) locationDiv.textContent = "Geolocation not supported.";
+//         }
+
+//         // Fetch public IP
+//         try {
+//             const res = await fetch('https://api.ipify.org?format=json');
+//             const data = await res.json();
+//             if (ipDiv) {
+//                 ipDiv.textContent = `Your IP: ${data.ip}`;
+//             }
+//             // Also send to backend
+//             sendLocationAndIp({ ip: data.ip });
+//         } catch (err) {
+//             console.error("IP fetch error:", err);
+//             if (ipDiv) ipDiv.textContent = "Could not fetch IP.";
+//         }
+//     }
+
+//     // Send combined data to backend
+//     async function sendLocationAndIp(data = {}) {
+//         try {
+//             await fetch('/log-visitor-location', {
+//                 method: 'POST',
+//                 headers: { 'Content-Type': 'application/json' },
+//                 body: JSON.stringify({
+//                     ...data,
+//                     page: 'admin-dashboard',
+//                     datetime: new Date().toISOString()
+//                 })
+//             });
+//         } catch (err) {
+//             console.error("Error sending location/IP to server:", err);
+//         }
+//     }
+
+//     // Trigger when dashboard loads
+//     document.addEventListener('DOMContentLoaded', () => {
+//         trackLocationAndIp();
+//     });
+
+
+ function updateLoginLogFilters() {
+        const columns = ['ipAddress', 'latitude', 'longitude'];
+        columns.forEach(column => {
+            const select = document.querySelector(`#login-logs select[data-column="${column}"]`);
+            if (!select) return;
+            select.innerHTML = '<option value="All">All</option>';
+            const values = new Set();
+            loginLogs.forEach(log => {
+                const value = column === 'latitude' || column === 'longitude' ? (log[column] ? parseFloat(log[column]).toFixed(6) : 'N/A') : 
+                             log[column] || 'N/A';
+                if (value && !values.has(value)) {
+                    values.add(value);
+                }
+            });
+            [...values].sort().forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+            });
+            select.addEventListener('change', () => applyFilters('login-logs'));
+        });
+    }
+
+    // Render login log table with only IP and location
+    function renderLoginLogTable(logs = loginLogs) {
+        const tbody = document.getElementById('login-logs-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-gray-700 text-center py-4">No login logs available yet.</td></tr>';
+            return;
+        }
+        logs.forEach(log => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="py-2 px-4 border-b text-gray-700" data-column="ipAddress">${log.ipAddress || 'N/A'}</td>
+                <td class="py-2 px-4 border-b text-gray-700" data-column="latitude">${log.latitude ? parseFloat(log.latitude).toFixed(6) : 'N/A'}</td>
+                <td class="py-2 px-4 border-b text-gray-700" data-column="longitude">${log.longitude ? parseFloat(log.longitude).toFixed(6) : 'N/A'}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        updateLoginLogFilters();
+    }
+
+    // Update WebSocket to handle IP and location fields
+    function setupWebSocket() {
+        const ws = new WebSocket('ws://localhost:3000/ws/login-updates');
+        
+        ws.onopen = () => {
+            console.log('WebSocket connection established for login updates');
+        };
+
+        ws.onmessage = (event) => {
+            try {
+                const newLog = JSON.parse(event.data);
+                if (newLog.ipAddress) {
+                    loginLogs.unshift(newLog); // Add new log to the beginning
+                    renderLoginLogTable();
+                    openTab('login-log');
+                    showNotification(`New login from IP ${newLog.ipAddress} at location (${newLog.latitude || 'N/A'}, ${newLog.longitude || 'N/A'})`);
+                }
+            } catch (error) {
+                console.error('Error processing WebSocket message:', error);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed. Attempting to reconnect...');
+            setTimeout(setupWebSocket, 5000);
+        };
+    }
+    async function postToWebsite(button) {
+  // Get button attributes (optional, if used for metadata)
+  const caption = button.getAttribute('data-caption') || '';
+  const postText = button.querySelector('.post-text');
+  const postingText = button.querySelector('.posting-text');
+
+  // Assume a file input exists (e.g., <input type="file" id="imageInput">)
+  const fileInput = document.getElementById('imageInput');
+  if (!fileInput || !fileInput.files[0]) {
+    alert('Please select an image to upload');
+    return;
+  }
+
+  // Toggle button state
+  postText.classList.add('hidden');
+  postingText.classList.remove('hidden');
+  button.disabled = true;
+
+  try {
+    const formData = new FormData();
+    formData.append('image', fileInput.files[0]); // Append the file
+    formData.append('caption', caption); // Optional: send caption if needed
+
+    const response = await fetch('/upload-image', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    console.log('Upload and post successful:', result);
+    alert('Image uploaded and posted successfully!');
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to upload and post image');
+  } finally {
+    // Revert button state
+    postText.classList.remove('hidden');
+    postingText.classList.add('hidden');
+    button.disabled = false;
+  }
+}
 };
     </script>
     <style>
@@ -1334,7 +1519,9 @@ function openTab(tabName) {
              <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('workshop-form')">Workshop Form</button>
                    <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('login-log')">Login Log</button>
                    <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('student-feedback')">Student Feedback</button>
-                   
+                    <!-- New Tab -->
+    <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('visited-school')">Visited Schools</button>
+</div>
                   
         </div>
 
@@ -1994,6 +2181,7 @@ function openTab(tabName) {
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Pincode</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Birthdate</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="hasCompletedMCQ">MCQ Completed<br><select class="filter-select text-sm w-full" data-column="hasCompletedMCQ"></select></th>
+                                        <th class="py-2 px-4 border-b text-left text-gray-600">Champ Status</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Score</th>
                             </tr>
                         </thead>
@@ -2013,9 +2201,13 @@ function openTab(tabName) {
                                     <td class="py-2 px-4 border-b text-gray-700">
                                         <%= participant.birthdate ? new Date(participant.birthdate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' }) : 'N/A' %>
                                     </td>
+                                    
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="hasCompletedMCQ">
                                         <%= participant.hasCompletedMCQ ? 'Yes' : 'No' %>
                                     </td>
+                                      <td class="py-2 px-4 border-b text-gray-700">
+                <%= participant.isChampion ? 'Yes' : 'No' %>
+            </td>
                                     <td class="py-2 px-4 border-b text-gray-700">
                                         <%= participant.score !== undefined ? participant.score : 'N/A' %>
                                     </td>
@@ -2029,7 +2221,7 @@ function openTab(tabName) {
             <% } %>
         </div>
 
-  <div id="detail-summary" class="tab-content hidden bg-white p-4 rounded shadow">
+<div id="detail-summary" class="tab-content hidden bg-white p-4 rounded shadow">
     <h2 class="text-xl font-bold mb-4 text-gray-700">Training Schedule: Detailed Summary</h2>
     <div class="overflow-x-auto">
         <table id="detailedSummaryTable" class="min-w-full bg-white border border-gray-300 rounded">
@@ -2043,9 +2235,8 @@ function openTab(tabName) {
                     <th class="px-3 py-2 border-b">Trainer Occupied</th>
                     <th class="px-3 py-2 border-b">School Confirmed?</th>
                     <th class="px-3 py-2 border-b">Logistics Done?</th>
-                    <th class="px-3 py-2 border-b">Materials Sent?</th>
-                    <!-- <th class="px-3 py-2 border-b">Venue Ready?</th> -->
-                    <!-- <th class="px-3 py-2 border-b">Remarks</th> -->
+                    <!-- <th class="px-3 py-2 border-b">Materials Sent?</th> -->
+                    <th class="px-3 py-2 border-b">Delivery Number</th>
                 </tr>
             </thead>
             <tbody>
@@ -2079,31 +2270,30 @@ function openTab(tabName) {
                             <td class="px-3 py-2 border-b text-gray-700">
                                 Yes
                             </td>
-                            <td class="px-3 py-2 border-b text-gray-700">
-                                N/A
+                            <td class="px-3 py-2 border-b text-gray-700 <%= school.deliveryMode === 'delivered' ? 'text-green-600' : school.deliveryMode === 'pending' ? 'text-yellow-600' : school.deliveryMode === 'shipped' ? 'text-blue-600' : '' %>">
+                                <%= school.deliveryMode || 'N/A' %>
                             </td>
-                            <td class="px-3 py-2 border-b text-gray-700">
+                            <!-- <td class="px-3 py-2 border-b text-gray-700">
                                 <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
+                            </td> -->
+                            <td class="px-3 py-2 border-b text-gray-700">
+                                <%= school.deliveryNumber || 'N/A' %>
                             </td>
-                            <!-- <td class="px-3 py-2 border-b text-gray-700">
-                                N/A
-                            </td> -->
-                            <!-- <td class="px-3 py-2 border-b text-gray-700">
-                              <%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %>
-                            </td> -->
                         </tr>
                     <% }) %>
                 <% } else { %>
                     <tr>
-                        <td class="px-3 py-2 border-b text-gray-700" colspan="11">No completed schools available.</td>
+                        <td class="px-3 py-2 border-b text-gray-700" colspan="10">No completed schools available.</td>
                     </tr>
                 <% } %>
             </tbody>
         </table>
     </div>
 </div>
-<div id="media" class="tab-content hidden">
-  <h2 class="text-2xl font-bold mb-4 text-gray-700">Image Uploads</h2>
+
+<!-- Media Section -->
+ <div id="media" class="tab-content hidden">
+  <h2 class="text-2xl font-bold mb-4 text-gray-700">Media Uploads</h2>
 
   <!-- Filter Dropdowns -->
   <div class="flex flex-col sm:flex-row sm:space-x-4 mb-4">
@@ -2124,35 +2314,37 @@ function openTab(tabName) {
         <option value="Unseen">Unseen</option>
       </select>
     </div>
+    <div>
+      <label for="mediaTypeFilter" class="text-gray-600 font-semibold mr-2">Filter by Media Type:</label>
+      <select id="mediaTypeFilter" class="border rounded py-1 px-2 text-gray-700">
+        <option value="All">All</option>
+        <option value="Image">Image</option>
+        <option value="Video">Video</option>
+      </select>
+    </div>
   </div>
 
   <!-- School Images -->
   <h3 class="text-xl font-semibold mb-2 text-gray-700">School Images</h3>
-  <% if (imageUploads.school.length > 0) { %>
+  <% if (imageUploads && imageUploads.images && imageUploads.images.school && Array.isArray(imageUploads.images.school) && imageUploads.images.school.length > 0) { %>
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-      <% imageUploads.school.forEach(upload => { %>
+      <% imageUploads.images.school.forEach(upload => { %>
         <div 
           class="media-card bg-white p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
           data-uploader-type="<%= upload.uploaderType || 'Unknown' %>"
           data-seen="<%= upload.seen ? 'true' : 'false' %>"
+          data-media-type="Image"
           onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', 'image')"
         >
-          <!-- Seen Checkbox -->
           <div class="flex items-center mb-2">
             <input type="checkbox" class="mark-seen-checkbox mr-2 h-5 w-5"
               data-media-id="<%= upload.id %>" <%= upload.seen ? 'checked' : '' %>>
             <label class="text-gray-600 text-sm">Mark as Seen</label>
           </div>
-
-          <!-- Uploader Type Badge -->
           <span class="inline-block mb-2 px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800">
             <%= upload.uploaderType %>
           </span>
-
-          <!-- Image Preview -->
           <img src="<%= upload.url %>" alt="Media" class="w-full h-48 object-cover rounded mb-2 shadow">
-
-          <!-- Description -->
           <div class="text-gray-700 text-sm mb-1">
             <strong>Description:</strong>
             <span class="description-text"><%= upload.description || 'No description provided' %></span>
@@ -2173,16 +2365,12 @@ function openTab(tabName) {
               Save
             </button>
           </div>
-
-          <!-- Optional Link -->
           <% if (upload.link) { %>
             <p class="text-gray-700 text-sm mb-1">
               <strong>Link:</strong> 
               <a href="<%= upload.link %>" target="_blank" class="text-blue-500 hover:underline"><%= upload.link %></a>
             </p>
           <% } %>
-
-          <!-- Meta Info -->
           <p class="text-gray-700 text-sm mb-1">
             <strong>Uploaded At:</strong> 
             <%= upload.uploadedAt 
@@ -2199,28 +2387,32 @@ function openTab(tabName) {
           <p class="text-gray-700 text-sm">
             <strong>Uploaded By:</strong> <%= upload.uploadedBy || 'Unknown' %>
           </p>
-
-          <!-- Action Buttons -->
-          <div class="flex justify-between mt-4 space-x-2">
-            <button 
-              type="button"
-              class="post-to-fb-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-              data-id="<%= upload.id %>"
-              data-url="<%= upload.url %>"
-              data-type="image"
-              data-caption="<%= upload.description || '' %>"
-              onclick="event.stopPropagation(); postToSocials(this)">
-              <span class="post-text">Post</span>
-              <span class="posting-text hidden">Posting...</span>
-            </button>
-
-            <button 
-              type="button"
-              onclick="event.stopPropagation(); downloadMedia('<%= upload.url %>', 'image', '<%= upload.id %>')"
-              class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
-              Download
-            </button>
-          </div>
+         <div class="flex justify-between mt-4 space-x-2">
+  <button 
+    type="button"
+    class="post-to-fb-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+    data-id="<%= upload.id %>"
+    data-url="<%= upload.url %>"
+    data-type="image"
+    data-caption="<%= upload.description || '' %>"
+    onclick="event.stopPropagation(); postToSocials(this)">
+    <span class="post-text">Post</span>
+    <span class="posting-text hidden">Posting...</span>
+  </button>
+  <button 
+    type="button"
+    class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+    onclick="event.stopPropagation(); postToWebsite(this)">
+    <span class="post-text">Post to Website</span>
+    <span class="posting-text hidden">Posting...</span>
+  </button>
+  <button 
+    type="button"
+    onclick="event.stopPropagation(); downloadMedia('<%= upload.url %>', 'image', '<%= upload.id %>')"
+    class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+    Download
+  </button>
+</div>
         </div>
       <% }) %>
     </div>
@@ -2228,33 +2420,30 @@ function openTab(tabName) {
     <p class="text-gray-500">No school images available.</p>
   <% } %>
 
-  <!-- Trainer Images -->
-  <h3 class="text-xl font-semibold mb-2 text-gray-700">Trainer Images</h3>
-  <% if (imageUploads.trainer.length > 0) { %>
+  <!-- School Videos -->
+  <h3 class="text-xl font-semibold mb-2 text-gray-700">School Videos</h3>
+  <% if (imageUploads && imageUploads.videos && imageUploads.videos.school && Array.isArray(imageUploads.videos.school) && imageUploads.videos.school.length > 0) { %>
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-      <% imageUploads.trainer.forEach(upload => { %>
+      <% imageUploads.videos.school.forEach(upload => { %>
         <div 
           class="media-card bg-white p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
           data-uploader-type="<%= upload.uploaderType || 'Unknown' %>"
           data-seen="<%= upload.seen ? 'true' : 'false' %>"
-          onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', 'image')"
+          data-media-type="Video"
+          onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', 'video')"
         >
-          <!-- Seen Checkbox -->
           <div class="flex items-center mb-2">
             <input type="checkbox" class="mark-seen-checkbox mr-2 h-5 w-5"
               data-media-id="<%= upload.id %>" <%= upload.seen ? 'checked' : '' %>>
             <label class="text-gray-600 text-sm">Mark as Seen</label>
           </div>
-
-          <!-- Uploader Type Badge -->
-          <span class="inline-block mb-2 px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
+          <span class="inline-block mb-2 px-2 py-1 text-xs font-semibold rounded bg-yellow-100 text-yellow-800">
             <%= upload.uploaderType %>
           </span>
-
-          <!-- Image Preview -->
-          <img src="<%= upload.url %>" alt="Media" class="w-full h-48 object-cover rounded mb-2 shadow">
-
-          <!-- Description -->
+          <video controls class="w-full h-48 object-cover rounded mb-2 shadow">
+            <source src="<%= upload.url %>" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
           <div class="text-gray-700 text-sm mb-1">
             <strong>Description:</strong>
             <span class="description-text"><%= upload.description || 'No description provided' %></span>
@@ -2275,16 +2464,12 @@ function openTab(tabName) {
               Save
             </button>
           </div>
-
-          <!-- Optional Link -->
           <% if (upload.link) { %>
             <p class="text-gray-700 text-sm mb-1">
               <strong>Link:</strong> 
               <a href="<%= upload.link %>" target="_blank" class="text-blue-500 hover:underline"><%= upload.link %></a>
             </p>
           <% } %>
-
-          <!-- Meta Info -->
           <p class="text-gray-700 text-sm mb-1">
             <strong>Uploaded At:</strong> 
             <%= upload.uploadedAt 
@@ -2301,8 +2486,95 @@ function openTab(tabName) {
           <p class="text-gray-700 text-sm">
             <strong>Uploaded By:</strong> <%= upload.uploadedBy || 'Unknown' %>
           </p>
+          <div class="flex justify-between mt-4 space-x-2">
+            <button 
+              type="button"
+              class="post-to-fb-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              data-id="<%= upload.id %>"
+              data-url="<%= upload.url %>"
+              data-type="video"
+              data-caption="<%= upload.description || '' %>"
+              onclick="event.stopPropagation(); postToSocials(this)">
+              <span class="post-text">Post</span>
+              <span class="posting-text hidden">Posting...</span>
+            </button>
+            <button 
+              type="button"
+              onclick="event.stopPropagation(); downloadMedia('<%= upload.url %>', 'video', '<%= upload.id %>')"
+              class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus-shadow-outline">
+              Download
+            </button>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p class="text-gray-500">No school videos available.</p>
+  <% } %>
 
-          <!-- Action Buttons -->
+  <!-- Trainer Images -->
+  <h3 class="text-xl font-semibold mb-2 text-gray-700">Trainer Images</h3>
+  <% if (imageUploads && imageUploads.images && imageUploads.images.trainer && Array.isArray(imageUploads.images.trainer) && imageUploads.images.trainer.length > 0) { %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+      <% imageUploads.images.trainer.forEach(upload => { %>
+        <div 
+          class="media-card bg-white p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
+          data-uploader-type="<%= upload.uploaderType || 'Unknown' %>"
+          data-seen="<%= upload.seen ? 'true' : 'false' %>"
+          data-media-type="Image"
+          onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', 'image')"
+        >
+          <div class="flex items-center mb-2">
+            <input type="checkbox" class="mark-seen-checkbox mr-2 h-5 w-5"
+              data-media-id="<%= upload.id %>" <%= upload.seen ? 'checked' : '' %>>
+            <label class="text-gray-600 text-sm">Mark as Seen</label>
+          </div>
+          <span class="inline-block mb-2 px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
+            <%= upload.uploaderType %>
+          </span>
+          <img src="<%= upload.url %>" alt="Media" class="w-full h-48 object-cover rounded mb-2 shadow">
+          <div class="text-gray-700 text-sm mb-1">
+            <strong>Description:</strong>
+            <span class="description-text"><%= upload.description || 'No description provided' %></span>
+            <input 
+              type="text" 
+              class="edit-description-input hidden border border-gray-300 rounded px-2 py-1 text-sm w-full mt-1" 
+              value="<%= upload.description || '' %>" 
+              data-media-id="<%= upload.id %>" 
+            />
+            <button 
+              class="edit-description-btn text-blue-500 hover:underline text-sm ml-2"
+              onclick="event.stopPropagation(); toggleDescriptionEdit(this)">
+              Edit
+            </button>
+            <button 
+              class="save-description-btn text-green-600 hover:underline text-sm ml-2 hidden"
+              onclick="event.stopPropagation(); saveDescription(this)">
+              Save
+            </button>
+          </div>
+          <% if (upload.link) { %>
+            <p class="text-gray-700 text-sm mb-1">
+              <strong>Link:</strong> 
+              <a href="<%= upload.link %>" target="_blank" class="text-blue-500 hover:underline"><%= upload.link %></a>
+            </p>
+          <% } %>
+          <p class="text-gray-700 text-sm mb-1">
+            <strong>Uploaded At:</strong> 
+            <%= upload.uploadedAt 
+              ? upload.uploadedAt.toLocaleString('en-US', {
+                  timeZone: 'Asia/Kolkata',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) 
+              : 'N/A' %>
+          </p>
+          <p class="text-gray-700 text-sm">
+            <strong>Uploaded By:</strong> <%= upload.uploadedBy || 'Unknown' %>
+          </p>
           <div class="flex justify-between mt-4 space-x-2">
             <button 
               type="button"
@@ -2315,11 +2587,10 @@ function openTab(tabName) {
               <span class="post-text">Post</span>
               <span class="posting-text hidden">Posting...</span>
             </button>
-
             <button 
               type="button"
               onclick="event.stopPropagation(); downloadMedia('<%= upload.url %>', 'image', '<%= upload.id %>')"
-              class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+              class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus-shadow-outline">
               Download
             </button>
           </div>
@@ -2330,33 +2601,30 @@ function openTab(tabName) {
     <p class="text-gray-500">No trainer images available.</p>
   <% } %>
 
-  <!-- Student Images -->
-  <h3 class="text-xl font-semibold mb-2 text-gray-700">Student Images</h3>
-  <% if (imageUploads.student.length > 0) { %>
+  <!-- Trainer Videos -->
+  <h3 class="text-xl font-semibold mb-2 text-gray-700">Trainer Videos</h3>
+  <% if (imageUploads && imageUploads.videos && imageUploads.videos.trainer && Array.isArray(imageUploads.videos.trainer) && imageUploads.videos.trainer.length > 0) { %>
     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
-      <% imageUploads.student.forEach(upload => { %>
+      <% imageUploads.videos.trainer.forEach(upload => { %>
         <div 
           class="media-card bg-white p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
           data-uploader-type="<%= upload.uploaderType || 'Unknown' %>"
           data-seen="<%= upload.seen ? 'true' : 'false' %>"
-          onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', 'image')"
+          data-media-type="Video"
+          onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', 'video')"
         >
-          <!-- Seen Checkbox -->
           <div class="flex items-center mb-2">
             <input type="checkbox" class="mark-seen-checkbox mr-2 h-5 w-5"
               data-media-id="<%= upload.id %>" <%= upload.seen ? 'checked' : '' %>>
             <label class="text-gray-600 text-sm">Mark as Seen</label>
           </div>
-
-          <!-- Uploader Type Badge -->
-          <span class="inline-block mb-2 px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
+          <span class="inline-block mb-2 px-2 py-1 text-xs font-semibold rounded bg-blue-100 text-blue-800">
             <%= upload.uploaderType %>
           </span>
-
-          <!-- Image Preview -->
-          <img src="<%= upload.url %>" alt="Media" class="w-full h-48 object-cover rounded mb-2 shadow">
-
-          <!-- Description -->
+          <video controls class="w-full h-48 object-cover rounded mb-2 shadow">
+            <source src="<%= upload.url %>" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
           <div class="text-gray-700 text-sm mb-1">
             <strong>Description:</strong>
             <span class="description-text"><%= upload.description || 'No description provided' %></span>
@@ -2377,16 +2645,12 @@ function openTab(tabName) {
               Save
             </button>
           </div>
-
-          <!-- Optional Link -->
           <% if (upload.link) { %>
             <p class="text-gray-700 text-sm mb-1">
               <strong>Link:</strong> 
               <a href="<%= upload.link %>" target="_blank" class="text-blue-500 hover:underline"><%= upload.link %></a>
             </p>
           <% } %>
-
-          <!-- Meta Info -->
           <p class="text-gray-700 text-sm mb-1">
             <strong>Uploaded At:</strong> 
             <%= upload.uploadedAt 
@@ -2403,8 +2667,95 @@ function openTab(tabName) {
           <p class="text-gray-700 text-sm">
             <strong>Uploaded By:</strong> <%= upload.uploadedBy || 'Unknown' %>
           </p>
+          <div class="flex justify-between mt-4 space-x-2">
+            <button 
+              type="button"
+              class="post-to-fb-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              data-id="<%= upload.id %>"
+              data-url="<%= upload.url %>"
+              data-type="video"
+              data-caption="<%= upload.description || '' %>"
+              onclick="event.stopPropagation(); postToSocials(this)">
+              <span class="post-text">Post</span>
+              <span class="posting-text hidden">Posting...</span>
+            </button>
+            <button 
+              type="button"
+              onclick="event.stopPropagation(); downloadMedia('<%= upload.url %>', 'video', '<%= upload.id %>')"
+              class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus-shadow-outline">
+              Download
+            </button>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p class="text-gray-500">No trainer videos available.</p>
+  <% } %>
 
-          <!-- Action Buttons -->
+  <!-- Student Images -->
+  <h3 class="text-xl font-semibold mb-2 text-gray-700">Student Images</h3>
+  <% if (imageUploads && imageUploads.images && imageUploads.images.student && Array.isArray(imageUploads.images.student) && imageUploads.images.student.length > 0) { %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+      <% imageUploads.images.student.forEach(upload => { %>
+        <div 
+          class="media-card bg-white p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
+          data-uploader-type="<%= upload.uploaderType || 'Unknown' %>"
+          data-seen="<%= upload.seen ? 'true' : 'false' %>"
+          data-media-type="Image"
+          onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', 'image')"
+        >
+          <div class="flex items-center mb-2">
+            <input type="checkbox" class="mark-seen-checkbox mr-2 h-5 w-5"
+              data-media-id="<%= upload.id %>" <%= upload.seen ? 'checked' : '' %>>
+            <label class="text-gray-600 text-sm">Mark as Seen</label>
+          </div>
+          <span class="inline-block mb-2 px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
+            <%= upload.uploaderType %>
+          </span>
+          <img src="<%= upload.url %>" alt="Media" class="w-full h-48 object-cover rounded mb-2 shadow">
+          <div class="text-gray-700 text-sm mb-1">
+            <strong>Description:</strong>
+            <span class="description-text"><%= upload.description || 'No description provided' %></span>
+            <input 
+              type="text" 
+              class="edit-description-input hidden border border-gray-300 rounded px-2 py-1 text-sm w-full mt-1" 
+              value="<%= upload.description || '' %>" 
+              data-media-id="<%= upload.id %>" 
+            />
+            <button 
+              class="edit-description-btn text-blue-500 hover:underline text-sm ml-2"
+              onclick="event.stopPropagation(); toggleDescriptionEdit(this)">
+              Edit
+            </button>
+            <button 
+              class="save-description-btn text-green-600 hover:underline text-sm ml-2 hidden"
+              onclick="event.stopPropagation(); saveDescription(this)">
+              Save
+            </button>
+          </div>
+          <% if (upload.link) { %>
+            <p class="text-gray-700 text-sm mb-1">
+              <strong>Link:</strong> 
+              <a href="<%= upload.link %>" target="_blank" class="text-blue-500 hover:underline"><%= upload.link %></a>
+            </p>
+          <% } %>
+          <p class="text-gray-700 text-sm mb-1">
+            <strong>Uploaded At:</strong> 
+            <%= upload.uploadedAt 
+              ? upload.uploadedAt.toLocaleString('en-US', {
+                  timeZone: 'Asia/Kolkata',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) 
+              : 'N/A' %>
+          </p>
+          <p class="text-gray-700 text-sm">
+            <strong>Uploaded By:</strong> <%= upload.uploadedBy || 'Unknown' %>
+          </p>
           <div class="flex justify-between mt-4 space-x-2">
             <button 
               type="button"
@@ -2417,11 +2768,10 @@ function openTab(tabName) {
               <span class="post-text">Post</span>
               <span class="posting-text hidden">Posting...</span>
             </button>
-
             <button 
               type="button"
               onclick="event.stopPropagation(); downloadMedia('<%= upload.url %>', 'image', '<%= upload.id %>')"
-              class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline">
+              class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus-shadow-outline">
               Download
             </button>
           </div>
@@ -2430,6 +2780,98 @@ function openTab(tabName) {
     </div>
   <% } else { %>
     <p class="text-gray-500">No student images available.</p>
+  <% } %>
+
+  <!-- Student Videos -->
+  <h3 class="text-xl font-semibold mb-2 text-gray-700">Student Videos</h3>
+  <% if (imageUploads && imageUploads.videos && imageUploads.videos.student && Array.isArray(imageUploads.videos.student) && imageUploads.videos.student.length > 0) { %>
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
+      <% imageUploads.videos.student.forEach(upload => { %>
+        <div 
+          class="media-card bg-white p-4 rounded-lg shadow hover:shadow-lg transition-all duration-300 cursor-pointer"
+          data-uploader-type="<%= upload.uploaderType || 'Unknown' %>"
+          data-seen="<%= upload.seen ? 'true' : 'false' %>"
+          data-media-type="Video"
+          onclick="openMediaModal('<%= upload.id %>', '<%= upload.url %>', 'video')"
+        >
+          <div class="flex items-center mb-2">
+            <input type="checkbox" class="mark-seen-checkbox mr-2 h-5 w-5"
+              data-media-id="<%= upload.id %>" <%= upload.seen ? 'checked' : '' %>>
+            <label class="text-gray-600 text-sm">Mark as Seen</label>
+          </div>
+          <span class="inline-block mb-2 px-2 py-1 text-xs font-semibold rounded bg-green-100 text-green-800">
+            <%= upload.uploaderType %>
+          </span>
+          <video controls class="w-full h-48 object-cover rounded mb-2 shadow">
+            <source src="<%= upload.url %>" type="video/mp4">
+            Your browser does not support the video tag.
+          </video>
+          <div class="text-gray-700 text-sm mb-1">
+            <strong>Description:</strong>
+            <span class="description-text"><%= upload.description || 'No description provided' %></span>
+            <input 
+              type="text" 
+              class="edit-description-input hidden border border-gray-300 rounded px-2 py-1 text-sm w-full mt-1" 
+              value="<%= upload.description || '' %>" 
+              data-media-id="<%= upload.id %>" 
+            />
+            <button 
+              class="edit-description-btn text-blue-500 hover:underline text-sm ml-2"
+              onclick="event.stopPropagation(); toggleDescriptionEdit(this)">
+              Edit
+            </button>
+            <button 
+              class="save-description-btn text-green-600 hover:underline text-sm ml-2 hidden"
+              onclick="event.stopPropagation(); saveDescription(this)">
+              Save
+            </button>
+          </div>
+          <% if (upload.link) { %>
+            <p class="text-gray-700 text-sm mb-1">
+              <strong>Link:</strong> 
+              <a href="<%= upload.link %>" target="_blank" class="text-blue-500 hover:underline"><%= upload.link %></a>
+            </p>
+          <% } %>
+          <p class="text-gray-700 text-sm mb-1">
+            <strong>Uploaded At:</strong> 
+            <%= upload.uploadedAt 
+              ? upload.uploadedAt.toLocaleString('en-US', {
+                  timeZone: 'Asia/Kolkata',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) 
+              : 'N/A' %>
+          </p>
+          <p class="text-gray-700 text-sm">
+            <strong>Uploaded By:</strong> <%= upload.uploadedBy || 'Unknown' %>
+          </p>
+          <div class="flex justify-between mt-4 space-x-2">
+            <button 
+              type="button"
+              class="post-to-fb-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+              data-id="<%= upload.id %>"
+              data-url="<%= upload.url %>"
+              data-type="video"
+              data-caption="<%= upload.description || '' %>"
+              onclick="event.stopPropagation(); postToSocials(this)">
+              <span class="post-text">Post</span>
+              <span class="posting-text hidden">Posting...</span>
+            </button>
+            <button 
+              type="button"
+              onclick="event.stopPropagation(); downloadMedia('<%= upload.url %>', 'video', '<%= upload.id %>')"
+              class="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus-shadow-outline">
+              Download
+            </button>
+          </div>
+        </div>
+      <% }) %>
+    </div>
+  <% } else { %>
+    <p class="text-gray-500">No student videos available.</p>
   <% } %>
 </div>
 
@@ -2538,28 +2980,52 @@ function openTab(tabName) {
     </div>
 </div>
 
-    </div>
+   <!-- //upload by co ordinator Workshop Summaries -->
+
     <div id="workshop-form" class="tab-content hidden p-4 bg-white rounded-b-lg">
     <h2 class="text-lg font-bold mb-4">Workshop Summaries</h2>
     
     <table class="min-w-full border-collapse border border-gray-300" id="workshopTable">
         <thead class="bg-gray-100">
-            <tr>
-                <th class="border border-gray-300 px-4 py-2">School Name</th>
-                <th class="border border-gray-300 px-4 py-2">Trainer 1</th>
-                <th class="border border-gray-300 px-4 py-2">Trainer 2</th>
-                <th class="border border-gray-300 px-4 py-2">Coordinator</th>
-                <th class="border border-gray-300 px-4 py-2">Workshop Date</th>
-                <th class="border border-gray-300 px-4 py-2">Financial Status</th>
+        <tr>
+          <th class="px-4 py-2 border text-left">School Name</th>
+          <th class="px-4 py-2 border text-left">Trainer 1</th>
+          <th class="px-4 py-2 border text-left">Trainer 2</th>
+          <th class="px-4 py-2 border text-left">Coordinator</th>
+          <th class="px-4 py-2 border text-left">Workshop Date</th>
+          <th class="px-4 py-2 border text-left">Financial Status</th>
+        </tr>
+      </thead>
+          <tbody>
+        <% if (workshopSummaries && workshopSummaries.length > 0) { %>
+          <% workshopSummaries.forEach(ws => { %>
+            <tr class="hover:bg-gray-50">
+              <td class="border px-4 py-2"><%= ws.schoolName %></td>
+              <td class="border px-4 py-2"><%= ws.trainer1 %></td>
+              <td class="border px-4 py-2"><%= ws.trainer2 %></td>
+              <td class="border px-4 py-2"><%= ws.coordinator %></td>
+              <td class="border px-4 py-2">
+                <% if (ws.workshopDate) { %>
+                  <%= ws.workshopDate %>
+                <% } else { %>
+                  <span class="text-gray-400 italic">N/A</span>
+                <% } %>
+              </td>
+              <td class="border px-4 py-2"><%= ws.financialStatus %></td>
             </tr>
-        </thead>
-        <tbody id="workshopTableBody">
-            <tr>
-                <td colspan="6" class="text-center py-4 text-gray-500">Loading...</td>
-            </tr>
-        </tbody>
+          <% }) %>
+        <% } else { %>
+          <tr>
+            <td colspan="6" class="text-center text-gray-500 py-4">
+              No workshop summaries found
+            </td>
+          </tr>
+        <% } %>
+      </tbody>
     </table>
 </div>
+
+<!-- add the admin -->
     <div id="call-log" class="tab-content container mx-auto p-6">
     <h2 class="text-2xl font-bold mb-4 text-gray-700">Call Logs</h2>
     <div class="mb-8">
@@ -2647,39 +3113,46 @@ function openTab(tabName) {
      
 <!-- Login Log Tab Content -->
 <div id="login-log" class="tab-content hidden">
-    <h2 class="text-2xl font-bold mb-4 text-gray-700">Login Log</h2>
-    <p class="text-gray-600 mb-4">Showing real-time login activity</p>
+    <h2 class="text-2xl font-bold mb-4 text-gray-700">Admin Login Activity</h2>
+    <p class="text-gray-600 mb-4">Showing real-time admin login activity with IP and location details</p>
     <div class="overflow-x-auto mb-6">
         <table id="login-logs" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
             <thead class="bg-gray-100 sticky top-0">
                 <tr>
-                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="userEmail">User Email<br><select class="filter-select text-sm w-full" data-column="userEmail"></select></th>
                     <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="ipAddress">IP Address<br><select class="filter-select text-sm w-full" data-column="ipAddress"></select></th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="loginTime">Login Time (IST)<br><select class="filter-select text-sm w-full" data-column="loginTime"></select></th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">User Role</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="latitude">Latitude<br><select class="filter-select text-sm w-full" data-column="latitude"></select></th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="longitude">Longitude<br><select class="filter-select text-sm w-full" data-column="longitude"></select></th>
                 </tr>
             </thead>
             <tbody id="login-logs-body"></tbody>
         </table>
     </div>
 </div>
-        
+        <!-- upload by co-ordiantor -->
 <div id="student-feedback" class="tab-content hidden">
     <h2 class="text-2xl font-bold mb-4 text-gray-700">Student Feedback</h2>
     <p class="text-gray-600 mb-4">Showing student feedback submissions</p>
     <div class="overflow-x-auto mb-6">
-        <table id="student-feedback" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+        <table id="student-feedback-table" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
             <thead class="bg-gray-100 sticky top-0">
                 <tr>
-                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">Student Name<br><select class="filter-select text-sm w-full" data-column="studentName"></select></th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="className">Class<br><select class="filter-select text-sm w-full" data-column="className"></select></th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">
+                        Student Name<br>
+                        <select class="filter-select text-sm w-full" data-column="studentName"></select>
+                    </th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="className">
+                        Class<br>
+                        <select class="filter-select text-sm w-full" data-column="className"></select>
+                    </th>
                     <th class="py-2 px-4 border-b text-left text-gray-600">Question 1</th>
                     <th class="py-2 px-4 border-b text-left text-gray-600">Question 2</th>
                     <th class="py-2 px-4 border-b text-left text-gray-600">Question 3</th>
                     <th class="py-2 px-4 border-b text-left text-gray-600">Question 4</th>
                     <th class="py-2 px-4 border-b text-left text-gray-600">Question 5</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="createdAt">Submission Date (IST)<br><select class="filter-select text-sm w-full" data-column="createdAt"></select></th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="createdAt">
+                        Submission Date (IST)<br>
+                        <select class="filter-select text-sm w-full" data-column="createdAt"></select>
+                    </th>
                 </tr>
             </thead>
             <tbody id="student-feedback-body"></tbody>
@@ -2687,5 +3160,72 @@ function openTab(tabName) {
     </div>
 </div>
 
+
+   
+
+<div id="visited-school" class="tab-content hidden">
+    <h2 class="text-2xl font-bold mb-4 text-gray-700">Visited Schools</h2>
+    <p class="text-gray-600 mb-4">Showing list of all visited schools</p>
+
+    <div class="overflow-x-auto mb-6">
+        <table id="visited-schools-table" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+            <thead class="bg-gray-100 sticky top-0">
+                <tr>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="name">
+                        School Name<br>
+                        <select class="filter-select text-sm w-full" data-column="name"></select>
+                    </th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="visitDate">
+                        Visit Date<br>
+                        <select class="filter-select text-sm w-full" data-column="visitDate"></select>
+                    </th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">School Address</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="contactPerson">
+                        Contact Person<br>
+                        <select class="filter-select text-sm w-full" data-column="contactPerson"></select>
+                    </th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Contact Number</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Visit Notes</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="coordinatorId">
+                        Coordinator<br>
+                        <select class="filter-select text-sm w-full" data-column="coordinatorId"></select>
+                    </th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="createdAt">
+                        Created At<br>
+                        <select class="filter-select text-sm w-full" data-column="createdAt"></select>
+                    </th>
+                </tr>
+            </thead>
+            <tbody class="text-sm divide-y divide-gray-200">
+                <% if (!visitedSchools || visitedSchools.length === 0) { %>
+                    <tr>
+                        <td colspan="8" class="py-4 px-4 text-center text-gray-500">
+                            No visited schools found.
+                        </td>
+                    </tr>
+                <% } else { %>
+                    <% visitedSchools.forEach(school => { %>
+                        <tr class="hover:bg-gray-50 transition-colors">
+                            <td class="py-3 px-4 font-medium text-gray-800"><%= school.name %></td>
+                            <td class="py-3 px-4 text-gray-700"><%= school.visitDate || 'N/A' %></td>
+                            <td class="py-3 px-4 text-gray-700"><%= school.schoolAddress %></td>
+                            <td class="py-3 px-4"><%= school.contactPerson %></td>
+                            <td class="py-3 px-4"><%= school.contactNumber %></td>
+                            <td class="py-3 px-4 text-gray-600 italic"><%= school.visitNotes %></td>
+                            <td class="py-3 px-4">
+                                <span class="px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-700">
+                                    <%= school.coordinatorName || 'N/A' %>
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-gray-500"><%= school.createdAt || 'N/A' %></td>
+                        </tr>
+                    <% }); %>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
 </body>
-</html>
+</html>	

@@ -43,25 +43,6 @@
             text-align: center;
             margin-bottom: 15px;
         }
-        .mcq-status-button {
-            background-color: #f1c40f;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            cursor: default;
-            border-radius: 4px;
-            font-size: 14px;
-            position: absolute;
-            top: 20px;
-            right: 120px;
-            transition: background-color 0.3s;
-        }
-        .mcq-status-button.complete {
-            background-color: #4CAF50;
-        }
-        .mcq-status-button.not-started {
-            background-color: #e74c3c;
-        }
         .tab-container {
             margin-top: 15px;
         }
@@ -530,7 +511,6 @@
             .table-container { max-width: 100%; }
             .trainer-select-container { grid-template-columns: 1fr; }
             .logout-button { padding: 6px 12px; font-size: 12px; top: 10px; right: 10px; }
-            .mcq-status-button { right: 100px; }
         }
         .delete-btn {
             background-color: #ff0000;
@@ -544,6 +524,13 @@
         }
         .delete-btn:hover {
             background-color: #cc0000;
+        }
+        .status-info {
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #e8f5e9;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
         }
     </style>
 </head>
@@ -560,7 +547,6 @@
         <% if (error) { %>
             <div class="error"><%= error %></div>
         <% } %>
-        <button id="mcqStatusButton" class="mcq-status-button">MCQ Status: Not Started</button>
         <a href="/logout" class="logout-button">Logout</a>
         <!-- Roadmap Section -->
         <div class="roadmap-container">
@@ -571,7 +557,7 @@
                 </div>
                 <div class="roadmap-step completed">
                     <div class="icon">✔️</div>
-                    <div class="label">Being Lawful Approved</div>
+                    <div class="label">Being Lawful Team Approved By School</div>
                 </div>
                 <div class="roadmap-step completed">
                     <div class="icon">👥</div>
@@ -579,7 +565,7 @@
                 </div>
                 <div class="roadmap-step completed">
                     <div class="icon">🏫</div>
-                    <div class="label">School Approved</div>
+                    <div class="label">School Approved By Student</div>
                 </div>
                 <div class="roadmap-step completed">
                     <div class="icon">🔐</div>
@@ -680,7 +666,7 @@
                             </div>
                             <div class="resource-item">
                                 <input type="checkbox" id="workshopKit" name="resources" value="Rs 5000 workshop kit" checked required>
-                                <label for="workshopKit">Rs 5000 workshop kit</label>
+                                <label for="workshopKit">Rs 11000 </label>
                             </div>
                             <div class="resource-item">
                                 <input type="checkbox" id="projector" name="resources" value="Projector" checked required>
@@ -727,7 +713,7 @@
                                         <input type="time" id="workshopStartTime" name="workshopStartTime" class="timepicker" required oninput="enableSaveButton()">
                                         <button type="button" id="timepickerSaveButton" class="timepicker-save-button" onclick="updateEndTime()" disabled>Save</button>
                                     </div>
-                                    <input type="hidden" id="workshopEndTime" name="workshopEndTime">
+                                    <input type="hidden" name="workshopEndTime" id="workshopEndTime">
                                 </div>
                                 <div>
                                     <label class="trainer-label">End Time:</label>
@@ -750,6 +736,11 @@
                 <% } %>
             </div>
             <div id="student-data" class="tab-content">
+                <div class="status-info">
+                    <p><strong>Total Students:</strong> <%= totalStudents %></p>
+                    <p><strong>Students Completed MCQ:</strong> <%= mcqCompletedCount %></p>
+                    <p><strong>Students Marked as Champions:</strong> <%= championCount %> (Max 50)</p>
+                </div>
                 <% if (students.length > 0) { %>
                     <div class="table-container">
                         <table id="studentTable">
@@ -769,7 +760,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <% students.sort((a, b) => (b.score || 0) - (a.score || 0)).forEach(student => { %>
+                                <% 
+                                  // Sort students: champions first, then by score in descending order
+                                  students.sort((a, b) => {
+                                    if (a.isChampion && !b.isChampion) return -1;
+                                    if (!a.isChampion && b.isChampion) return 1;
+                                    return (b.score || 0) - (a.score || 0);
+                                  }).forEach(student => { %>
                                     <tr>
                                         <td data-column="studentName"><%= student.studentName || 'N/A' %></td>
                                         <td data-column="studentClass"><%= student.studentClass || 'N/A' %></td>
@@ -850,7 +847,7 @@
                         <label for="civicsTeacherNumber">Civics Teacher Phone Number:</label>
                         <input type="text" id="civicsTeacherNumber" name="civicsTeacherNumber" value="<%= civicsTeacherNumber %>" pattern="\d{10}" required>
                         <label for="civicsTeacherEmail">Civics Teacher Email:</label>
-                        <input type="email" id="civicsTeacherEmail" name="civicsTeacherEmail" value="<%= civicsTeacherEmail %>" viewed>
+                        <input type="email" id="civicsTeacherEmail" name="civicsTeacherEmail" value="<%= civicsTeacherEmail %>" required>
                         <input type="submit" value="Update Information">
                     </form>
                 </div>
@@ -923,57 +920,12 @@
         const schoolDistrict = "<%= district %>".trim();
         let students = <%- JSON.stringify(students) %>;
 
-        document.addEventListener('DOMContentLoaded', async function () {
+        document.addEventListener('DOMContentLoaded', function () {
             console.log('DOM loaded, initializing student-data tab');
-            await fetchStudentData(); // Fetch latest student data
             openTab('student-data');
             populateTrainerSelects();
             loadWorkshopTimes();
-            updateMCQStatus();
         });
-
-        async function fetchStudentData() {
-            try {
-                const schoolEmail = "<%= schoolEmail %>";
-                const studentsSnapshot = await db.collection('schools').doc(schoolEmail).collection('students').get();
-                students = studentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                console.log('Fetched students data from Firestore:', students);
-                updateMCQStatus();
-            } catch (error) {
-                console.error('Error fetching student data:', error);
-                alert('Failed to fetch student data. Using local data as fallback.');
-            }
-        }
-
-        function updateMCQStatus() {
-            const mcqStatusButton = document.getElementById('mcqStatusButton');
-            if (!mcqStatusButton) {
-                console.error('MCQ Status Button not found');
-                return;
-            }
-
-            const totalStudents = students.length;
-            const completedMCQ = students.filter(student => {
-                const completed = student.hasCompletedMCQ === true || student.hasCompletedMCQ === 'Yes';
-                console.log(`Student ${student.studentName || 'Unknown'}: hasCompletedMCQ = ${student.hasCompletedMCQ}, counted as ${completed ? 'completed' : 'not completed'}`);
-                return completed;
-            }).length;
-
-            console.log(`Total students: ${totalStudents}, Completed MCQ: ${completedMCQ}`);
-
-            if (totalStudents >= 100 && completedMCQ >= 50 && completedMCQ < totalStudents) {
-                mcqStatusButton.textContent = 'MCQ Status: In Progress';
-                mcqStatusButton.classList.remove('complete', 'not-started');
-            } else if (totalStudents >= 100 && completedMCQ === totalStudents) {
-                mcqStatusButton.textContent = 'MCQ Status: Complete';
-                mcqStatusButton.classList.add('complete');
-                mcqStatusButton.classList.remove('not-started');
-            } else {
-                mcqStatusButton.textContent = 'MCQ Status: Not Started';
-                mcqStatusButton.classList.add('not-started');
-                mcqStatusButton.classList.remove('complete');
-            }
-        }
 
         function openTab(tabId) {
             document.querySelectorAll('.tab-content').forEach(tab => {
@@ -991,7 +943,6 @@
 
             if (tabId === 'student-data') {
                 initializeFilters('studentTable');
-                updateMCQStatus(); // Update status when switching to student-data tab
             }
             if (tabId === 'resources') {
                 updateTrainerSelection();

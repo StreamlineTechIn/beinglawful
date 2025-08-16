@@ -8,1324 +8,102 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <script>
         // Initialize callLogs and loginLogs arrays
-        let callLogs = [];
-        let loginLogs = [];
-const button = document.getElementById('exportExcelBtn');
-const buttonText = document.getElementById('exportButtonText');
-const loadingText = document.getElementById('loadingText');
-        // Format date to IST
-        function formatDateIST(date) {
-            return new Date(date).toLocaleString('en-US', {
-                timeZone: 'Asia/Kolkata',
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-        }
-  async function fetchCallLogs() {
-            try {
-                const response = await fetch('/call-logs');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch call logs');
-                }
-                callLogs = await response.json();
-                renderCallLogTable(callLogs);
-            } catch (error) {
-                console.error('Error fetching call logs:', error);
-                const tbody = document.getElementById('call-logs-body');
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">Error loading call logs.</td></tr>';
-                }
-            }
-        }   
-        document.addEventListener('DOMContentLoaded', fetchCallLogs);
-        // Update filter dropdowns for call logs
-        function updateCallLogFilters() {
-            const columns = ['id', 'callDate', 'caller', 'recipient'];
-            columns.forEach(column => {
-                const select = document.querySelector(`#call-logs select[data-column="${column}"]`);
-                if (!select) return;
-                select.innerHTML = '<option value="All">All</option>';
-                const values = new Set();
-                callLogs.forEach(log => {
-                    const value = column === 'callDate' ? formatDateIST(log[column]) : log[column];
-                    if (value && !values.has(value)) {
-                        values.add(value);
-                    }
-                });
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    select.appendChild(option);
-                });
-                select.addEventListener('change', () => applyFilters('call-logs'));
-            });
-        }
+// Initialize callLogs and loginLogs arrays
+    let callLogs = [];
+    let loginLogs = [];
 
-        // Update filter dropdowns for login logs
-        function updateLoginLogFilters() {
-            const columns = ['id', 'userEmail', 'ipAddress', 'loginTime'];
-            columns.forEach(column => {
-                const select = document.querySelector(`#login-logs select[data-column="${column}"]`);
-                if (!select) return;
-                select.innerHTML = '<option value="All">All</option>';
-                const values = new Set();
-                loginLogs.forEach(log => {
-                    const value = column === 'loginTime' ? formatDateIST(log[column]) : log[column];
-                    if (value && !values.has(value)) {
-                        values.add(value);
-                    }
-                });
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    select.appendChild(option);
-                });
-                select.addEventListener('change', () => applyFilters('login-logs'));
-            });
-        }
-
-        // Render call log table
-        function renderCallLogTable(logs = callLogs) {
-            const tbody = document.getElementById('call-logs-body');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-            if (logs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">No call logs available yet.</td></tr>';
-                return;
-            }
-            logs.forEach(log => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
-                row.innerHTML = `
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="id">${log.id}</td>
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="callDate">${formatDateIST(log.callDate)}</td>
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="caller">${log.caller}</td>
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="recipient">${log.recipient}</td>
-                    <td class="py-2 px-4 border-b text-gray-700">${log.duration || 'N/A'}</td>
-                    <td class="py-2 px-4 border-b text-gray-700">${log.notes}</td>
-                `;
-                tbody.appendChild(row);
-            });
-            updateCallLogFilters();
-        }
-
-
-
-        // Tab navigation
-        function openTab(tabName) {
-            const tabContents = document.querySelectorAll('.tab-content');
-            tabContents.forEach(content => content.classList.add('hidden'));
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => {
-                tab.classList.remove('bg-blue-600', 'text-white');
-                tab.classList.add('bg-gray-200', 'text-gray-700');
-            });
-            const targetTab = document.getElementById(tabName);
-            if (targetTab) {
-                targetTab.classList.remove('hidden');
-            }
-            const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
-            if (activeTab) {
-                activeTab.classList.remove('bg-gray-200', 'text-gray-700');
-                activeTab.classList.add('bg-blue-600', 'text-white');
-            }
-            if (tabName === 'workshop-form') {
-                fetchWorkshopSummaries();
-            } else if (tabName === 'login-log') {
-                renderLoginLogTable();
-            }
-        }
-
-        // Apply filters to tables
-        function applyFilters(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) {
-                console.warn(`Table with ID ${tableId} not found`);
-                return;
-            }
-            const rows = table.querySelectorAll('tbody tr');
-            const filters = {};
-
-            table.querySelectorAll('.filter-select').forEach(select => {
-                filters[select.dataset.column] = select.value.trim();
-            });
-
-            rows.forEach(row => {
-                let show = true;
-                for (const [column, value] of Object.entries(filters)) {
-                    if (value && value !== 'All' && value !== '') {
-                        const cell = row.querySelector(`td[data-column="${column}"]`);
-                        if (cell) {
-                            let cellText = cell.textContent.trim();
-                            if (cellText !== value) {
-                                show = false;
-                                break;
-                            }
-                        }
-                    }
-                }
-                row.style.display = show ? '' : 'none';
-            });
-        }
-
-        // Initialize filters for tables
-        function initializeFilters(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) {
-                console.warn(`Table with ID ${tableId} not found`);
-                return;
-            }
-            const headers = table.querySelectorAll('th[data-filter]');
-            const rows = table.querySelectorAll('tbody tr');
-
-            headers.forEach(header => {
-                const column = header.dataset.filter;
-                const select = header.querySelector('.filter-select');
-                if (!select) {
-                    console.warn(`Filter select not found for column ${column} in table ${tableId}`);
-                    return;
-                }
-
-                const values = new Set(['All']);
-                rows.forEach(row => {
-                    const cell = row.querySelector(`td[data-column="${column}"]`);
-                    if (cell) {
-                        let cellText = cell.textContent.trim();
-                        if (cellText && !values.has(cellText)) {
-                            values.add(cellText);
-                        }
-                    }
-                });
-
-                select.innerHTML = '';
-                let isAllSet = false;
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    if (value === 'All' && !isAllSet) {
-                        option.selected = true;
-                        isAllSet = true;
-                    }
-                    select.appendChild(option);
-                });
-
-                select.addEventListener('change', () => applyFilters(tableId));
-            });
-        }
-
-        // Confirm trainer deletion
-        function confirmDelete(name) {
-            return confirm(`Are you sure you want to delete trainer "${name}"?`);
-        }
-
-        // Handle trainer actions
-        async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
-            event.preventDefault();
-            const form = event.target.closest('form');
-            const formData = new FormData(form);
-            try {
-                const response = await fetch(url.replace(':schoolId', schoolId), {
-                    method: 'POST',
-                    body: formData
-                });
-                const redirectUrl = new URL(window.location.href);
-                if (response.ok) {
-                    redirectUrl.searchParams.set('success', successMessage);
-                } else {
-                    const result = await response.json();
-                    redirectUrl.searchParams.set('error', result.message || errorMessage);
-                }
-                window.location.href = redirectUrl.toString();
-            } catch (error) {
-                console.error('Trainer action error:', error);
-                const redirectUrl = new URL(window.location.href);
-                redirectUrl.searchParams.set('error', 'Error processing trainer action');
-                window.location.href = redirectUrl.toString();
-            }
-        }
-
-        // Mark school as completed
-        async function markSchoolCompleted(schoolId, button, row) {
-            try {
-                const response = await fetch(`/admin/complete-school/${schoolId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
-
-                if (response.ok) {
-                    const completedTable = document.querySelector('#completed-schools tbody');
-                    if (completedTable) {
-                        const completedStatusCell = row.querySelector('td[data-column="isCompleted"]');
-                        if (completedStatusCell) {
-                            completedStatusCell.textContent = 'Yes';
-                        }
-                        if (button) {
-                            button.remove();
-                        }
-                        completedTable.appendChild(row);
-                        applyFilters('completed-schools');
-                        console.log(`School ${schoolId} marked as completed`);
-                    }
-                } else {
-                    const errorData = await response.json();
-                    console.error('Failed to mark school as completed:', errorData.error);
-                    alert(`Failed to mark school as completed: ${errorData.error}`);
-                }
-            } catch (err) {
-                console.error('Error marking school:', err);
-                alert('Error marking school. Please check your connection and try again.');
-            }
-        }
-
-        // Filter media cards
-        function filterMedia() {
-            const uploaderFilter = document.getElementById('uploaderFilter');
-            const seenFilter = document.getElementById('seenFilter');
-            if (!uploaderFilter || !seenFilter) {
-                console.warn('uploaderFilter or seenFilter not found');
-                return;
-            }
-            const uploaderValue = uploaderFilter.value;
-            const seenValue = seenFilter.value;
-            const mediaCards = document.querySelectorAll('#mediaSection .media-card');
-
-            mediaCards.forEach(card => {
-                const uploader = card.dataset.uploaderType;
-                const seen = card.dataset.seen === 'true';
-                let show = true;
-
-                if (uploaderValue !== 'All' && uploader !== uploaderValue) {
-                    show = false;
-                }
-
-                if (seenValue === 'Seen' && !seen) {
-                    show = false;
-                } else if (seenValue === 'Unseen' && seen) {
-                    show = false;
-                }
-
-                card.style.display = show ? '' : 'none';
-            });
-        }
-
-        // Mark media as seen
-        async function markMediaSeen(mediaId, checkbox, cardElement) {
-            const isSeen = checkbox.checked;
-            try {
-                const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seen: isSeen })
-                });
-
-                if (response.ok) {
-                    cardElement.dataset.seen = isSeen;
-                    checkbox.classList.toggle('bg-green-500', isSeen);
-                    checkbox.classList.toggle('border-green-500', isSeen);
-                    filterMedia();
-                    console.log(`Media ${mediaId} marked as ${isSeen ? 'seen' : 'unseen'}`);
-                } else {
-                    console.error('Failed to update seen status:', await response.text());
-                    checkbox.checked = !isSeen;
-                    alert('Failed to update seen status. Please try again.');
-                }
-            } catch (err) {
-                console.error('Error marking media:', err);
-                checkbox.checked = !isSeen;
-                alert('Error marking media. Please check your connection and try again.');
-            }
-        }
-
-        // Open media modal
-        function openMediaModal(mediaId, mediaUrl, mediaType) {
-            const modal = document.getElementById('mediaModal');
-            const content = document.getElementById('mediaContent');
-            if (!modal || !content) {
-                console.warn('mediaModal or mediaContent not found');
-                return;
-            }
-
-            content.innerHTML = '';
-            if (mediaType === 'image') {
-                content.innerHTML = `<img src="${mediaUrl}" alt="Media" class="w-full rounded shadow">`;
-            } else if (mediaType === 'video') {
-                content.innerHTML = `
-                    <video controls class="w-full rounded shadow">
-                        <source src="${mediaUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                `;
-            }
-            modal.classList.remove('hidden');
-        }
-
-        // Toggle description edit
-        function toggleDescriptionEdit(button) {
-            const parentDiv = button.closest(".text-gray-700");
-            if (!parentDiv) return;
-            const span = parentDiv.querySelector(".description-text");
-            const input = parentDiv.querySelector(".edit-description-input");
-            const saveBtn = parentDiv.querySelector(".save-description-btn");
-            if (span && input && saveBtn) {
-                span.classList.add("hidden");
-                input.classList.remove("hidden");
-                button.classList.add("hidden");
-                saveBtn.classList.remove("hidden");
-            }
-        }
-
-        // Save description
-        async function saveDescription(button) {
-            const parentDiv = button.closest(".text-gray-700");
-            if (!parentDiv) return;
-            const span = parentDiv.querySelector(".description-text");
-            const input = parentDiv.querySelector(".edit-description-input");
-            const editBtn = parentDiv.querySelector(".edit-description-btn");
-            if (!span || !input || !editBtn) return;
-            const mediaId = input.dataset.mediaId;
-            const newDescription = input.value.trim();
-
-            try {
-                const response = await fetch(`/update-description/${mediaId}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ description: newDescription })
-                });
-
-                if (response.ok) {
-                    span.textContent = newDescription || 'No description provided';
-                    span.classList.remove("hidden");
-                    input.classList.add("hidden");
-                    button.classList.add("hidden");
-                    editBtn.classList.remove("hidden");
-                } else {
-                    alert("Failed to update description.");
-                }
-            } catch (error) {
-                console.error("Error:", error);
-                alert("An error occurred while updating description.");
-            }
-        }
-
-        // Download media
-        async function downloadMedia(mediaId, type) {
-            try {
-                const response = await fetch(`/download-media/${mediaId}`);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch media: ${response.statusText}`);
-                }
-                const blob = await response.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
-                const extension = type === 'video' ? 'mp4' : 'jpg';
-                const filename = `${mediaId}.${extension}`;
-
-                const anchor = document.createElement('a');
-                anchor.href = blobUrl;
-                anchor.download = filename;
-                document.body.appendChild(anchor);
-                anchor.click();
-                document.body.removeChild(anchor);
-                window.URL.revokeObjectURL(blobUrl);
-            } catch (err) {
-                console.error('Error downloading media:', err);
-                alert('Failed to download media. Please check your connection or try again.');
-            }
-        }
-
-        // Download Excel data
-      async function downloadExcel() {
-    const button = document.getElementById('exportExcelButton');
+    const button = document.getElementById('exportExcelBtn');
     const buttonText = document.getElementById('exportButtonText');
-    const loadingText = document.getElementById('exportLoadingText');
+    const loadingText = document.getElementById('loadingText');
 
-    if (button && buttonText && loadingText) {
-        button.disabled = true;
-        buttonText.classList.add('hidden');
-        loadingText.classList.remove('hidden');
-    }
-
-    try {
-        const response = await fetch('/admin/export-data', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            credentials: 'include'
+    // Format date to IST
+    function formatDateIST(date) {
+        return new Date(date).toLocaleString('en-US', {
+            timeZone: 'Asia/Kolkata',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
         });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
-        }
-
-        const blob = await response.blob();
-        if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
-            throw new Error('Invalid response type: Expected Excel file');
-        }
-
-        const blobUrl = window.URL.createObjectURL(blob);
-        const filename = `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-        const anchor = document.createElement('a');
-        anchor.href = blobUrl;
-        anchor.download = filename;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-        console.error('Error downloading Excel:', err);
-        alert(`Failed to download Excel file: ${err.message}`);
-    } finally {
-        if (button && buttonText && loadingText) {
-            button.disabled = false;
-            buttonText.classList.remove('hidden');
-            loadingText.classList.add('hidden');
-        }
     }
-}
 
-// Toggle the visibility of the custom date input field based on the dropdown selection
-// Show or hide custom date input based on select value
-  function toggleCustomDateInput(selectElem, schoolId) {
-    const customDateInput = document.getElementById(`custom-date-${schoolId}`);
-    const hiddenInput = document.getElementById(`eventDateFinal-${schoolId}`);
-
-    if (selectElem.value === 'other') {
-      customDateInput.classList.remove('hidden');
-      customDateInput.value = '';
-      hiddenInput.value = '';
-
-      // Update hidden input when user picks a date
-      customDateInput.onchange = () => {
-        hiddenInput.value = customDateInput.value;
-      };
-    } else {
-      customDateInput.classList.add('hidden');
-      hiddenInput.value = selectElem.value;
-    }
-  }
-        // Consolidated DOMContentLoaded listener
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize dialog polyfill for call log dialog
-            const callLogDialog = document.getElementById('callLogDialog');
-            if (callLogDialog && window.dialogPolyfill) {
-                console.log('Registering dialog polyfill for callLogDialog');
-                dialogPolyfill.registerDialog(callLogDialog);
-            } else if (!callLogDialog) {
-                console.warn('callLogDialog not found');
-            } else if (!window.dialogPolyfill) {
-                console.warn('Dialog polyfill not loaded');
-            }
-
-            // Call Log Dialog Controls
-            const openCallLogDialog = document.getElementById('openCallLogDialog');
-            const cancelCallLogButton = document.getElementById('cancelCallLogButton');
-            if (openCallLogDialog && callLogDialog) {
-                console.log('Found openCallLogDialog and callLogDialog, attaching event listener');
-                openCallLogDialog.addEventListener('click', () => {
-                    console.log('Add Call button clicked');
-                    callLogDialog.showModal();
-                });
-            } else {
-                console.error('openCallLogDialog or callLogDialog not found');
-            }
-            if (cancelCallLogButton && callLogDialog) {
-                console.log('Found cancelCallLogButton, attaching event listener');
-                cancelCallLogButton.addEventListener('click', () => {
-                    console.log('Cancel button clicked');
-                    callLogDialog.close();
-                });
-            } else {
-                console.warn('cancelCallLogButton or callLogDialog not found');
-            }
-
-            // Coordinator Form Submission
-            const coordinatorForm = document.getElementById('coordinatorForm');
-            const coordinatorMessage = document.getElementById('coordinatorMessage');
-            const submitButton = document.getElementById('submitButton');
-            const buttonText = document.getElementById('buttonText');
-            const loadingText = document.getElementById('loadingText');
-
-            console.log('Checking coordinatorForm elements:');
-            console.log('coordinatorForm:', coordinatorForm);
-            console.log('coordinatorMessage:', coordinatorMessage);
-            console.log('submitButton:', submitButton);
-            console.log('buttonText:', buttonText);
-            console.log('loadingText:', loadingText);
-
-            if (coordinatorForm && coordinatorMessage && submitButton && buttonText && loadingText) {
-                coordinatorForm.addEventListener('submit', async function(event) {
-                    event.preventDefault();
-                    const form = event.target;
-                    const messageDiv = coordinatorMessage;
-                    const name = form.querySelector('#name')?.value.trim();
-                    const email = form.querySelector('#email')?.value.trim();
-                    const number = form.querySelector('#number')?.value.trim();
-                    const password = form.querySelector('#password')?.value.trim();
-                    const organization = form.querySelector('#organization')?.value.trim();
-
-                    console.log('Form data:', { name, email, number, password, organization });
-
-                    const nameRegex = /^[a-zA-Z\s]+$/;
-                    if (!name || !nameRegex.test(name)) {
-                        showMessage('Name can only contain letters and spaces', 'error', messageDiv);
-                        return;
-                    }
-
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!email || !emailRegex.test(email)) {
-                        showMessage('Please enter a valid email address', 'error', messageDiv);
-                        return;
-                    }
-
-                    const phoneRegex = /^[0-9]{10}$/;
-                    if (!number || !phoneRegex.test(number)) {
-                        showMessage('Phone number must be 10 digits', 'error', messageDiv);
-                        return;
-                    }
-
-                    if (!password || password.length < 6) {
-                        showMessage('Password must be at least 6 characters', 'error', messageDiv);
-                        return;
-                    }
-
-                    const orgRegex = /^[a-zA-Z0-9\s]+$/;
-                    if (!organization || !orgRegex.test(organization)) {
-                        showMessage('Organization can only contain letters, numbers, and spaces', 'error', messageDiv);
-                        return;
-                    }
-
-                    submitButton.disabled = true;
-                    buttonText.classList.add('hidden');
-                    loadingText.classList.remove('hidden');
-
-                    try {
-                        const formData = new FormData(form);
-                        for (const [key, value] of formData.entries()) {
-                            console.log(`FormData: ${key}=${value}`);
-                        }
-
-                        const response = await fetch('http://localhost:3000/co-ordinator-register', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        let result;
-                        if (response.headers.get('content-type')?.includes('application/json')) {
-                            result = await response.json();
-                        } else {
-                            result = { error: await response.text() || 'Unknown server error' };
-                        }
-
-                        if (response.ok) {
-                            showMessage(result.message || 'Registration successful', 'success', messageDiv);
-                            form.reset();
-                            setTimeout(() => location.reload(), 1000);
-                        } else {
-                            showMessage(result.error || result.message || 'Registration failed', 'error', messageDiv);
-                            console.error('Server response:', result);
-                        }
-                    } catch (error) {
-                        showMessage('Network error. Please check your connection and try again.', 'error', messageDiv);
-                        console.error('Submission error:', error);
-                    } finally {
-                        submitButton.disabled = false;
-                        buttonText.classList.remove('hidden');
-                        loadingText.classList.add('hidden');
-                    }
-                });
-            } else {
-                console.error('Required DOM elements not found for coordinatorForm', {
-                    coordinatorForm: !!coordinatorForm,
-                    coordinatorMessage: !!coordinatorMessage,
-                    submitButton: !!submitButton,
-                    buttonText: !!buttonText,
-                    loadingText: !!loadingText
-                });
-               
-            
-            }
-
-            // Call Log Form Submission
-          // Call Log Form Submission
-const callLogForm = document.getElementById('callLogForm');
-if (callLogForm) {
-    callLogForm.addEventListener('submit', async function(event) {
-        event.preventDefault();
-        const form = event.target;
-        const messageDiv = document.getElementById('callLogMessage');
-        const submitButton = document.getElementById('submitCallLogButton');
-        const buttonText = document.getElementById('callLogButtonText');
-        const loadingText = document.getElementById('callLogLoadingText');
-
-        const callDate = form.querySelector('#callDate')?.value.trim();
-        const caller = form.querySelector('#caller')?.value.trim();
-        const recipient = form.querySelector('#recipient')?.value.trim();
-        const notes = form.querySelector('#notes')?.value.trim();
-        const schoolName = form.querySelector('#schoolName')?.value.trim();
-const contactPerson = form.querySelector('#contactPerson')?.value.trim();
-
-
-       if (!callDate || !caller || !recipient || !notes || !schoolName || !contactPerson) {
-    showMessage('All required fields must be filled', 'error', messageDiv);
-    return;
-}
-
-        submitButton.disabled = true;
-        buttonText.classList.add('hidden');
-        loadingText.classList.remove('hidden');
-
+    // Track IP address and location for https://beinglawful.in/admin-login
+    async function trackIpAddress() {
+        if (window.location.href !== 'https://beinglawful.in/admin-login') return;
         try {
-            const response = await fetch('/add-call-log', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        callDate: new Date(callDate).toISOString(),
-        caller,
-        recipient,
-        notes,
-        schoolName,
-        contactPerson
-    })
-});
-
-            let result;
-            if (response.headers.get('content-type')?.includes('application/json')) {
-                result = await response.json();
-            } else {
-                result = { message: await response.text() };
-            }
-
-            if (response.ok) {
-                // Fetch updated call logs from the server
-                const logsResponse = await fetch('/call-logs');
-                if (!logsResponse.ok) {
-                    throw new Error('Failed to fetch updated call logs');
-                }
-                callLogs = await logsResponse.json();
-                renderCallLogTable(callLogs);
-                showMessage(result.message || 'Call log added successfully', 'success', messageDiv);
-                form.reset();
-                document.getElementById('callLogDialog').close();
-            } else {
-                showMessage(result.error || 'Failed to add call log', 'error', messageDiv);
-                console.error('Server error response:', result);
+            const response = await fetch('https://ipapi.co/json/');
+            if (!response.ok) throw new Error('Failed to fetch IP data');
+            const data = await response.json();
+            const newLog = {
+                ipAddress: data.ip || 'N/A',
+                latitude: data.latitude ? parseFloat(data.latitude).toFixed(6) : 'N/A',
+                longitude: data.longitude ? parseFloat(data.longitude).toFixed(6) : 'N/A',
+                loginTime: new Date().toISOString()
+            };
+            loginLogs.unshift(newLog);
+            renderLoginLogTable();
+            // Send to server
+            await fetch('/add-login-log', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newLog)
+            });
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(newLog));
             }
         } catch (error) {
-            showMessage('Error adding call log. Please try again.', 'error', messageDiv);
-            console.error('Submission error:', error);
-        } finally {
-            submitButton.disabled = false;
-            buttonText.classList.remove('hidden');
-            loadingText.classList.add('hidden');
+            console.error('Error fetching IP or location data:', error);
         }
-    });
-} else {
-    console.warn('callLogForm not found');
-}
+    }
 
-            // Post to social media
-            const postButtons = document.querySelectorAll('.post-to-fb-btn');
-            postButtons.forEach(button => {
-                button.addEventListener('click', async (event) => {
-                    event.stopPropagation();
-                    const id = button.dataset.id;
-                    const url = decodeURI(button.dataset.url);
-                    const type = button.dataset.type;
-                    const caption = decodeURI(button.dataset.caption || '');
-
-                    const postText = button.querySelector('.post-text');
-                    const postingText = button.querySelector('.posting-text');
-                    if (postText && postingText) {
-                        postText.classList.add('hidden');
-                        postingText.classList.remove('hidden');
-                        button.disabled = true;
-                    }
-
-                    try {
-                        const res = await fetch('/post-to-socials', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ id, url, type, caption })
-                        });
-
-                        let data;
-                        if (res.headers.get('content-type')?.includes('application/json')) {
-                            data = await res.json();
-                        } else {
-                            data = { message: await res.text() };
-                        }
-
-                        if (res.ok) {
-                            alert(`✅ ${data.message}`);
-                        } else {
-                            console.error('Server error:', data);
-                            alert(`❌ Failed: ${data.message || 'Unknown error'}`);
-                        }
-                    } catch (err) {
-                        console.error('Fetch error:', err);
-                        alert('❌ Error posting to social platforms. Please check your connection or try again later.');
-                    } finally {
-                        if (postText && postingText) {
-                            button.disabled = false;
-                            postText.classList.remove('hidden');
-                            postingText.classList.add('hidden');
-                        }
-                    }
-
-                });
-            });
-
-            // Upload photo form submission
-            const uploadForm = document.getElementById('upload-form');
-            if (uploadForm) {
-                uploadForm.addEventListener('submit', async function(event) {
-                    event.preventDefault();
-                    const form = event.target;
-                    const formData = new FormData(form);
-                    const successMessageDiv = document.getElementById('success-message');
-
-                    try {
-                        const response = await fetch(form.action, {
-                            method: form.method,
-                            body: formData
-                        });
-
-                        let result;
-                        if (response.headers.get('content-type')?.includes('application/json')) {
-                            result = await response.json();
-                        } else {
-                            result = { message: await response.text() };
-                        }
-
-                        if (successMessageDiv) {
-                            successMessageDiv.textContent = result.message;
-                            successMessageDiv.classList.remove('hidden');
-                            if (!response.ok) {
-                                successMessageDiv.classList.add('bg-red-100', 'text-red-700');
-                            }
-                            form.reset();
-                            setTimeout(() => {
-                                successMessageDiv.classList.add('hidden');
-                                successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
-                            }, 5000);
-                        }
-                    } catch (error) {
-                        if (successMessageDiv) {
-                            successMessageDiv.textContent = 'Error uploading files. Please try again.';
-                            successMessageDiv.classList.remove('hidden');
-                            successMessageDiv.classList.add('bg-red-100', 'text-red-700');
-                            setTimeout(() => {
-                                successMessageDiv.classList.add('hidden');
-                                successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
-                            }, 5000);
-                        }
-                        console.error('Upload error:', error);
-                    }
-                });
-            } else {
-                console.warn('upload-form not found');
+    async function fetchCallLogs() {
+        try {
+            const response = await fetch('/call-logs');
+            if (!response.ok) {
+                throw new Error('Failed to fetch call logs');
             }
-
-            // Media upload form
-            const mediaUploadForm = document.getElementById('mediaUploadForm');
-            if (mediaUploadForm) {
-                mediaUploadForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    const uploadStatus = document.getElementById('uploadStatus');
-                    const file = document.getElementById('mediaFile')?.files[0];
-                    const formData = new FormData();
-                    formData.append('mediaFile', file);
-                    const button = document.getElementById('uploadButton');
-
-                    if (uploadStatus) {
-                        uploadStatus.innerHTML = 'Uploading...';
-                    }
-                    if (button) {
-                        button.disabled = true;
-                    }
-
-                    try {
-                        const res = await fetch('/upload-image', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        let result;
-                        if (res.headers.get('content-type')?.includes('application/json')) {
-                            result = await res.json();
-                        } else {
-                            result = { error: await res.text() };
-                        }
-
-                        if (res.ok && uploadStatus) {
-                            uploadStatus.innerHTML = `✅ Upload successful! <a href="${result.files[0].downloadUrl}" target="_blank">View</a>`;
-                        } else if (uploadStatus) {
-                            uploadStatus.innerHTML = `❌ Upload failed: ${result.error}`;
-                        }
-                    } catch (err) {
-                        if (uploadStatus) {
-                            uploadStatus.innerHTML = '❌ Upload error.';
-                        }
-                        console.error('Media upload error:', err);
-                    } finally {
-                        if (button) {
-                            button.disabled = false;
-                        }
-                    }
-                });
-            } else {
-                console.warn('mediaUploadForm not found');
-            }
-
-            // Initialize media filters and checkboxes
-            const uploaderFilter = document.getElementById('uploaderFilter');
-            const seenFilter = document.getElementById('seenFilter');
-            if (uploaderFilter && seenFilter) {
-                uploaderFilter.addEventListener('change', filterMedia);
-                seenFilter.addEventListener('change', filterMedia);
-                filterMedia();
-            } else {
-                console.warn('uploaderFilter or seenFilter not found');
-            }
-
-            const markSeenCheckboxes = document.querySelectorAll('.mark-seen-checkbox');
-            markSeenCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', (event) => {
-                    event.stopPropagation();
-                    const mediaId = checkbox.dataset.mediaId;
-                    const cardElement = checkbox.closest('.media-card');
-                    if (mediaId && cardElement) {
-                        markMediaSeen(mediaId, checkbox, cardElement);
-                    }
-                });
-                checkbox.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                });
-            });
-
-            const closeModal = document.getElementById('closeModal');
-            if (closeModal) {
-                closeModal.addEventListener('click', () => {
-                    const mediaModal = document.getElementById('mediaModal');
-                    if (mediaModal) {
-                        mediaModal.classList.add('hidden');
-                    }
-                });
-            }
-
-            // Complete school buttons
-            const completeSchoolButtons = document.querySelectorAll('.complete-school-btn');
-            completeSchoolButtons.forEach(button => {
-                button.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    const schoolId = button.dataset.schoolId;
-                    const row = button.closest('tr');
-                    if (!row) return;
-                    const isApproved = row.querySelector('[data-column="isApproved"]')?.textContent.trim() === 'Yes';
-                    const eventDate = row.querySelector('[data-column="eventDate"]')?.textContent.trim();
-                    const isCompleted = row.querySelector('[data-column="isCompleted"]')?.textContent.trim() === 'Yes';
-
-                    if (!isApproved) {
-                        alert('Cannot complete: School is not approved.');
-                        return;
-                    }
-                    if (eventDate === 'Not assigned') {
-                        alert('Cannot complete: Event date is not assigned.');
-                        return;
-                    }
-                    if (isCompleted) {
-                        alert('School is already marked as completed.');
-                        return;
-                    }
-
-                    markSchoolCompleted(schoolId, button, row);
-                });
-            });
-
-            // Export Excel button
-            const exportExcelButton = document.getElementById('exportExcelButton');
-            if (exportExcelButton) {
-                exportExcelButton.addEventListener('click', downloadExcel);
-            }
-        });
-
-        // Window onload for initialization
-        window.onload = function () {
-            openTab('visualization');
-            renderCallLogTable();
-            updateCallLogFilters();
-            renderLoginLogTable();
-            updateLoginLogFilters();
-
-            const tableIds = ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students', 'call-logs', 'login-logs','student-feedback','visited-school'];
-            tableIds.forEach(tableId => {
-                const table = document.getElementById(tableId);
-                if (table) {
-                    initializeFilters(tableId);
-                } else {
-                    console.warn(`Table with ID ${tableId} not found`);
-                }
-            });
-
-            const districtData = <%- JSON.stringify(
-                schools ? schools.reduce((acc, school) => {
-                    acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
-                    acc[school.district].schools += 1;
-                    acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
-                    acc[school.district].trainers += (school.trainerId1 || school.trainerId2 ? (school.trainerId1 && school.trainerId2 ? 2 : 1) : 0);
-                    return acc;
-                }, {}) : {}
-            ) %>;
-            const districtChartCanvas = document.getElementById('districtChart');
-            if (districtChartCanvas) {
-                const districtChart = new Chart(districtChartCanvas, {
-                    type: 'bar',
-                    data: {
-                        labels: Object.keys(districtData),
-                        datasets: [
-                            { label: 'Schools', data: Object.values(districtData).map(d => d.schools), backgroundColor: 'rgba(54, 162, 235, 0.5)' },
-                            { label: 'Students', data: Object.values(districtData).map(d => d.students), backgroundColor: 'rgba(75, 192, 192, 0.5)' },
-                            { label: 'Trainers', data: Object.values(districtData).map(d => d.trainers), backgroundColor: 'rgba(255, 99, 132, 0.5)' }
-                        ]
-                    },
-                    options: { scales: { y: { beginAtZero: true }, x: { stacked: false } } }
-                });
-            }
-
-            const professionData = <%- JSON.stringify(
-                trainers ? trainers.reduce((acc, trainer) => {
-                    acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
-                    return acc;
-                }, {}) : {}
-            ) %>;
-            const professionChartCanvas = document.getElementById('professionChart');
-            if (professionChartCanvas) {
-                const professionChart = new Chart(professionChartCanvas, {
-                    type: 'pie',
-                    data: {
-                        labels: Object.keys(professionData),
-                        datasets: [{ data: Object.values(professionData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
-                    },
-                    options: { responsive: true, plugins: { legend: { position: 'top' } } }
-                });
-            }
-
-            let workshopDataList = [];
-
-            async function fetchWorkshopSummaries() {
-                const tableBody = document.getElementById('workshopTableBody');
-                tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Loading...</td></tr>`;
-
-                try {
-                    const res = await fetch('/workshop-summaries');
-                    if (!res.ok) throw new Error('Failed to fetch');
-
-                    workshopDataList = await res.json();
-
-                    if (!workshopDataList.length) {
-                        tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No workshop summaries found</td></tr>`;
-                        return;
-                    }
-
-                    tableBody.innerHTML = workshopDataList.map((s, index) => `
-                        <tr>
-                            <td class="border border-gray-300 px-4 py-2">${s.schoolName || ''}</td>
-                            <td class="border border-gray-300 px-4 py-2">${s.coordinatorName || ''}</td>
-                            <td class="border border-gray-300 px-4 py-2">${s.workshopDate ? formatDate(s.workshopDate) : ''}</td>
-                            <td class="border border-gray-300 px-4 py-2">${s.financialStatus || ''}</td>
-                            <td class="border border-gray-300 px-4 py-2 text-center">
-                                <button 
-                                    class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                    onclick="showDetails(${index})">
-                                    View
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('');
-                } catch (err) {
-                    console.error(err);
-                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading data</td></tr>`;
-                }
-            }
-
-            function formatDate(dateObj) {
-                if (dateObj._seconds) {
-                    return new Date(dateObj._seconds * 1000).toLocaleDateString();
-                }
-                return new Date(dateObj).toLocaleDateString();
-            }
-
-            function showDetails(index) {
-                const data = workshopDataList[index];
-                const modalContent = document.getElementById('modalContent');
-                modalContent.innerHTML = Object.entries(data)
-                    .map(([key, value]) => {
-                        if (value && value._seconds) value = formatDate(value);
-                        return `<div><strong>${key}:</strong></div><div>${value ?? '-'}</div>`;
-                    })
-                    .join('');
-                document.getElementById('detailsModal').classList.remove('hidden');
-            }
-
-            function closeModal() {
-                document.getElementById('detailsModal').classList.add('hidden');
-            }
-             function toggleCustomDateInput(select, schoolId) {
-            const customDateInput = document.getElementById(`custom-date-${schoolId}`);
-            if (select.value === 'other') {
-                customDateInput.classList.remove('hidden');
-                customDateInput.setAttribute('required', 'required');
-            } else {
-                customDateInput.classList.add('hidden');
-                customDateInput.removeAttribute('required');
+            callLogs = await response.json();
+            renderCallLogTable(callLogs);
+        } catch (error) {
+            console.error('Error fetching call logs:', error);
+            const tbody = document.getElementById('call-logs-body');
+            if (tbody) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">Error loading call logs.</td></tr>';
             }
         }
-       // Toggle the visibility of the custom date input field based on the dropdown selection
-function toggleCustomDateInput(selectElement, schoolId) {
-    const customDateInput = document.getElementById(`custom-date-${schoolId}`);
-    
-    if (selectElement.value === 'other') {
-        customDateInput.classList.remove('hidden'); // Show the date input
-        customDateInput.focus(); // Optionally focus on the date input for better UX
-    } else {
-        customDateInput.classList.add('hidden'); // Hide the date input
-        customDateInput.value = ''; // Clear the custom date input
-    }
-}
+    }   
 
-// Validate the event date form before submission
-function validateEventDateForm(form, schoolId) {
-    const selectElem = form.querySelector('select[name="eventDate"]');
-    const customDateInput = form.querySelector(`#custom-date-${schoolId}`);
-    const hiddenInput = form.querySelector(`#eventDateFinal-${schoolId}`);
+    document.addEventListener('DOMContentLoaded', fetchCallLogs);
 
-    if (!selectElem.value) {
-      alert('Please select an event date or "Other" to choose a custom date.');
-      return false;
-    }
-
-    if (selectElem.value === 'other') {
-      if (!customDateInput.value) {
-        alert('Please select a custom event date.');
-        return false;
-      }
-      hiddenInput.value = customDateInput.value;
-    } else {
-      hiddenInput.value = selectElem.value;
-    }
-
-    return true;
-  }
-
-  button.addEventListener('click', async () => {
-    button.disabled = true;
-    buttonText.classList.add('hidden');
-    loadingText.classList.remove('hidden');
-
-    try {
-        const response = await fetch('/admin/export-data', {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include'
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
-        }
-
-        const blob = await response.blob();
-        if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
-            throw new Error('Invalid response type: Expected Excel file');
-        }
-
-        const blobUrl = window.URL.createObjectURL(blob);
-        const filename = `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-        const anchor = document.createElement('a');
-        anchor.href = blobUrl;
-        anchor.download = filename;
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        window.URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-        console.error('Error downloading Excel:', err);
-        alert(`Failed to download Excel file: ${err.message}`);
-    } finally {
-        button.disabled = false;
-        buttonText.classList.remove('hidden');
-        loadingText.classList.add('hidden');
-    }
-
-})
-function openTab(tabName) {
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => content.classList.add('hidden'));
-    const tabs = document.querySelectorAll('.tab');
-    tabs.forEach(tab => {
-        tab.classList.remove('bg-blue-600', 'text-white');
-        tab.classList.add('bg-gray-200', 'text-gray-700');
-    });
-    const targetTab = document.getElementById(tabName);
-    if (targetTab) {
-        targetTab.classList.remove('hidden');
-    }
-    const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
-    if (activeTab) {
-        activeTab.classList.remove('bg-gray-200', 'text-gray-700');
-        activeTab.classList.add('bg-blue-600', 'text-white');
-    }
-    if (tabName === 'workshop-form') {
-        fetchWorkshopSummaries();
-    } else if (tabName === 'login-log') {
-        renderLoginLogTable();
-    } else if (tabName === 'student-feedback') {
-        renderFeedbackTable();
-    }
-}
- document.getElementById('searchBox').addEventListener('keyup', function () {
-        let filter = this.value.toLowerCase();
-        let rows = document.querySelectorAll('#visitedSchoolsTable tbody tr');
-        rows.forEach(row => {
-            let name = row.cells[0].textContent.toLowerCase();
-            let address = row.cells[2].textContent.toLowerCase();
-            row.style.display = (name.includes(filter) || address.includes(filter)) ? '' : 'none';
-        });
-    });
-function sortTable(columnIndex) {
-    const table = document.querySelector('#visited-school table');
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const isAscending = table.dataset.sortOrder !== 'asc';
-    table.dataset.sortOrder = isAscending ? 'asc' : 'desc';
-
-    rows.sort((rowA, rowB) => {
-        const cellA = rowA.cells[columnIndex].textContent.trim();
-        const cellB = rowB.cells[columnIndex].textContent.trim();
-        return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
-    });
-
-    tbody.innerHTML = '';
-    rows.forEach(row => tbody.appendChild(row));
-}
-document.addEventListener("DOMContentLoaded", () => {
-    const table = document.getElementById("visited-schools-table");
-    const selects = table.querySelectorAll(".filter-select");
-    const rows = Array.from(table.querySelectorAll("tbody tr"));
-
-    function populateFilters() {
-        selects.forEach(select => {
-            const colIndex = select.dataset.column;
+    // Update filter dropdowns for call logs
+    function updateCallLogFilters() {
+        const columns = ['id', 'callDate', 'caller', 'recipient'];
+        columns.forEach(column => {
+            const select = document.querySelector(`#call-logs select[data-column="${column}"]`);
+            if (!select) return;
+            select.innerHTML = '<option value="All">All</option>';
             const values = new Set();
-            rows.forEach(row => {
-                const cell = row.querySelector(`td:nth-child(${[...selects].indexOf(select) + 1})`);
-                if (cell) values.add(cell.textContent.trim());
+            callLogs.forEach(log => {
+                const value = column === 'callDate' ? formatDateIST(log[column]) : log[column];
+                if (value && !values.has(value)) {
+                    values.add(value);
+                }
             });
-            values.forEach(val => {
-                const option = document.createElement("option");
-                option.textContent = val;
-                option.value = val;
+            [...values].sort().forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
                 select.appendChild(option);
             });
+            select.addEventListener('change', () => applyFilters('call-logs'));
         });
     }
 
-    function filterRows() {
-        rows.forEach(row => {
-            let showRow = true;
-            selects.forEach(select => {
-                const colIndex = select.parentElement.cellIndex;
-                const val = select.value;
-                if (val && row.cells[colIndex].textContent.trim() !== val) {
-                    showRow = false;
-                }
-            });
-            row.style.display = showRow ? "" : "none";
-        });
-    }
-
-    selects.forEach(select => select.addEventListener("change", filterRows));
-
-    populateFilters();
-});
-//    // LOCATION & IP TRACKING
-//     // =====================
-//     async function trackLocationAndIp() {
-//         const locationDiv = document.getElementById('dashboardLocationInfo');
-//         const ipDiv = document.getElementById('dashboardIpInfo');
-
-//         // Fetch geolocation via browser API
-//         if (navigator.geolocation) {
-//             navigator.geolocation.getCurrentPosition(
-//                 pos => {
-//                     const lat = pos.coords.latitude;
-//                     const lon = pos.coords.longitude;
-//                     if (locationDiv) {
-//                         locationDiv.innerHTML = `<strong>Latitude:</strong> ${lat} <br><strong>Longitude:</strong> ${lon}`;
-//                     }
-//                     // Also send to backend if desired
-//                     sendLocationAndIp({ latitude: lat, longitude: lon });
-//                 },
-//                 err => {
-//                     console.warn("Geolocation error:", err.message);
-//                     if (locationDiv) locationDiv.textContent = "Geolocation not available.";
-//                 }
-//             );
-//         } else {
-//             if (locationDiv) locationDiv.textContent = "Geolocation not supported.";
-//         }
-
-//         // Fetch public IP
-//         try {
-//             const res = await fetch('https://api.ipify.org?format=json');
-//             const data = await res.json();
-//             if (ipDiv) {
-//                 ipDiv.textContent = `Your IP: ${data.ip}`;
-//             }
-//             // Also send to backend
-//             sendLocationAndIp({ ip: data.ip });
-//         } catch (err) {
-//             console.error("IP fetch error:", err);
-//             if (ipDiv) ipDiv.textContent = "Could not fetch IP.";
-//         }
-//     }
-
-//     // Send combined data to backend
-//     async function sendLocationAndIp(data = {}) {
-//         try {
-//             await fetch('/log-visitor-location', {
-//                 method: 'POST',
-//                 headers: { 'Content-Type': 'application/json' },
-//                 body: JSON.stringify({
-//                     ...data,
-//                     page: 'admin-dashboard',
-//                     datetime: new Date().toISOString()
-//                 })
-//             });
-//         } catch (err) {
-//             console.error("Error sending location/IP to server:", err);
-//         }
-//     }
-
-//     // Trigger when dashboard loads
-//     document.addEventListener('DOMContentLoaded', () => {
-//         trackLocationAndIp();
-//     });
-
-
- function updateLoginLogFilters() {
+    // Update filter dropdowns for login logs
+    function updateLoginLogFilters() {
         const columns = ['ipAddress', 'latitude', 'longitude'];
         columns.forEach(column => {
             const select = document.querySelector(`#login-logs select[data-column="${column}"]`);
@@ -1333,8 +111,9 @@ document.addEventListener("DOMContentLoaded", () => {
             select.innerHTML = '<option value="All">All</option>';
             const values = new Set();
             loginLogs.forEach(log => {
-                const value = column === 'latitude' || column === 'longitude' ? (log[column] ? parseFloat(log[column]).toFixed(6) : 'N/A') : 
-                             log[column] || 'N/A';
+                const value = column === 'latitude' || column === 'longitude' ? 
+                    (log[column] ? parseFloat(log[column]).toFixed(6) : 'N/A') : 
+                    log[column] || 'N/A';
                 if (value && !values.has(value)) {
                     values.add(value);
                 }
@@ -1347,6 +126,31 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             select.addEventListener('change', () => applyFilters('login-logs'));
         });
+    }
+
+    // Render call log table
+    function renderCallLogTable(logs = callLogs) {
+        const tbody = document.getElementById('call-logs-body');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">No call logs available yet.</td></tr>';
+            return;
+        }
+        logs.forEach(log => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-gray-50';
+            row.innerHTML = `
+                <td class="py-2 px-4 border-b text-gray-700" data-column="id">${log.id}</td>
+                <td class="py-2 px-4 border-b text-gray-700" data-column="callDate">${formatDateIST(log.callDate)}</td>
+                <td class="py-2 px-4 border-b text-gray-700" data-column="caller">${log.caller}</td>
+                <td class="py-2 px-4 border-b text-gray-700" data-column="recipient">${log.recipient}</td>
+                <td class="py-2 px-4 border-b text-gray-700">${log.duration || 'N/A'}</td>
+                <td class="py-2 px-4 border-b text-gray-700">${log.notes}</td>
+            `;
+            tbody.appendChild(row);
+        });
+        updateCallLogFilters();
     }
 
     // Render login log table with only IP and location
@@ -1372,8 +176,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // Update WebSocket to handle IP and location fields
+    let ws;
     function setupWebSocket() {
-        const ws = new WebSocket('ws://localhost:3000/ws/login-updates');
+        ws = new WebSocket('ws://localhost:3000/ws/login-updates');
         
         ws.onopen = () => {
             console.log('WebSocket connection established for login updates');
@@ -1383,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
             try {
                 const newLog = JSON.parse(event.data);
                 if (newLog.ipAddress) {
-                    loginLogs.unshift(newLog); // Add new log to the beginning
+                    loginLogs.unshift(newLog);
                     renderLoginLogTable();
                     openTab('login-log');
                     showNotification(`New login from IP ${newLog.ipAddress} at location (${newLog.latitude || 'N/A'}, ${newLog.longitude || 'N/A'})`);
@@ -1402,52 +207,1231 @@ document.addEventListener("DOMContentLoaded", () => {
             setTimeout(setupWebSocket, 5000);
         };
     }
-    async function postToWebsite(button) {
-  // Get button attributes (optional, if used for metadata)
-  const caption = button.getAttribute('data-caption') || '';
-  const postText = button.querySelector('.post-text');
-  const postingText = button.querySelector('.posting-text');
 
-  // Assume a file input exists (e.g., <input type="file" id="imageInput">)
-  const fileInput = document.getElementById('imageInput');
-  if (!fileInput || !fileInput.files[0]) {
-    alert('Please select an image to upload');
-    return;
-  }
-
-  // Toggle button state
-  postText.classList.add('hidden');
-  postingText.classList.remove('hidden');
-  button.disabled = true;
-
-  try {
-    const formData = new FormData();
-    formData.append('image', fileInput.files[0]); // Append the file
-    formData.append('caption', caption); // Optional: send caption if needed
-
-    const response = await fetch('/upload-image', {
-      method: 'POST',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Upload failed: ${response.statusText}`);
+    // Show notification
+    function showNotification(message) {
+        console.log('Notification:', message);
+        alert(message); // Replace with a toast notification if desired
     }
 
-    const result = await response.json();
-    console.log('Upload and post successful:', result);
-    alert('Image uploaded and posted successfully!');
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Failed to upload and post image');
-  } finally {
-    // Revert button state
-    postText.classList.remove('hidden');
-    postingText.classList.add('hidden');
-    button.disabled = false;
-  }
-}
-};
+    // Tab navigation
+    function openTab(tabName) {
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => content.classList.add('hidden'));
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.classList.remove('bg-blue-600', 'text-white');
+            tab.classList.add('bg-gray-200', 'text-gray-700');
+        });
+        const targetTab = document.getElementById(tabName);
+        if (targetTab) {
+            targetTab.classList.remove('hidden');
+        }
+        const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
+        if (activeTab) {
+            activeTab.classList.remove('bg-gray-200', 'text-gray-700');
+            activeTab.classList.add('bg-blue-600', 'text-white');
+        }
+        if (tabName === 'workshop-form') {
+            fetchWorkshopSummaries();
+        } else if (tabName === 'login-log') {
+            renderLoginLogTable();
+            trackIpAddress(); // Trigger tracking when login-log tab is opened
+        } else if (tabName === 'student-feedback') {
+            renderFeedbackTable();
+        }
+    }
+
+    // Apply filters to tables
+    function applyFilters(tableId) {
+        const table = document.getElementById(tableId);
+        if (!table) {
+            console.warn(`Table with ID ${tableId} not found`);
+            return;
+        }
+        const rows = table.querySelectorAll('tbody tr');
+        const filters = {};
+
+        table.querySelectorAll('.filter-select').forEach(select => {
+            filters[select.dataset.column] = select.value.trim();
+        });
+
+        rows.forEach(row => {
+            let show = true;
+            for (const [column, value] of Object.entries(filters)) {
+                if (value && value !== 'All' && value !== '') {
+                    const cell = row.querySelector(`td[data-column="${column}"]`);
+                    if (cell) {
+                        let cellText = cell.textContent.trim();
+                        if (cellText !== value) {
+                            show = false;
+                            break;
+                        }
+                    }
+                }
+            }
+            row.style.display = show ? '' : 'none';
+        });
+    }
+
+    // Initialize filters for tables
+    function initializeFilters(tableId) {
+        const table = document.getElementById(tableId);
+        if (!table) {
+            console.warn(`Table with ID ${tableId} not found`);
+            return;
+        }
+        const headers = table.querySelectorAll('th[data-filter]');
+        const rows = table.querySelectorAll('tbody tr');
+
+        headers.forEach(header => {
+            const column = header.dataset.filter;
+            const select = header.querySelector('.filter-select');
+            if (!select) {
+                console.warn(`Filter select not found for column ${column} in table ${tableId}`);
+                return;
+            }
+
+            const values = new Set(['All']);
+            rows.forEach(row => {
+                const cell = row.querySelector(`td[data-column="${column}"]`);
+                if (cell) {
+                    let cellText = cell.textContent.trim();
+                    if (cellText && !values.has(cellText)) {
+                        values.add(cellText);
+                    }
+                }
+            });
+
+            select.innerHTML = '';
+            let isAllSet = false;
+            [...values].sort().forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                if (value === 'All' && !isAllSet) {
+                    option.selected = true;
+                    isAllSet = true;
+                }
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', () => applyFilters(tableId));
+        });
+    }
+
+    // Confirm trainer deletion
+    function confirmDelete(name) {
+        return confirm(`Are you sure you want to delete trainer "${name}"?`);
+    }
+
+    // Handle trainer actions
+    async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
+        event.preventDefault();
+        const form = event.target.closest('form');
+        const formData = new FormData(form);
+        try {
+            const response = await fetch(url.replace(':schoolId', schoolId), {
+                method: 'POST',
+                body: formData
+            });
+            const redirectUrl = new URL(window.location.href);
+            if (response.ok) {
+                redirectUrl.searchParams.set('success', successMessage);
+            } else {
+                const result = await response.json();
+                redirectUrl.searchParams.set('error', result.message || errorMessage);
+            }
+            window.location.href = redirectUrl.toString();
+        } catch (error) {
+            console.error('Trainer action error:', error);
+            const redirectUrl = new URL(window.location.href);
+            redirectUrl.searchParams.set('error', 'Error processing trainer action');
+            window.location.href = redirectUrl.toString();
+        }
+    }
+
+    // Mark school as completed
+    async function markSchoolCompleted(schoolId, button, row) {
+        try {
+            const response = await fetch(`/admin/complete-school/${schoolId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+
+            if (response.ok) {
+                const completedTable = document.querySelector('#completed-schools tbody');
+                if (completedTable) {
+                    const completedStatusCell = row.querySelector('td[data-column="isCompleted"]');
+                    if (completedStatusCell) {
+                        completedStatusCell.textContent = 'Yes';
+                    }
+                    if (button) {
+                        button.remove();
+                    }
+                    completedTable.appendChild(row);
+                    applyFilters('completed-schools');
+                    console.log(`School ${schoolId} marked as completed`);
+                }
+            } else {
+                const errorData = await response.json();
+                console.error('Failed to mark school as completed:', errorData.error);
+                alert(`Failed to mark school as completed: ${errorData.error}`);
+            }
+        } catch (err) {
+            console.error('Error marking school:', err);
+            alert('Error marking school. Please check your connection and try again.');
+        }
+    }
+
+    // Filter media cards
+    function filterMedia() {
+        const uploaderFilter = document.getElementById('uploaderFilter');
+        const seenFilter = document.getElementById('seenFilter');
+        if (!uploaderFilter || !seenFilter) {
+            console.warn('uploaderFilter or seenFilter not found');
+            return;
+        }
+        const uploaderValue = uploaderFilter.value;
+        const seenValue = seenFilter.value;
+        const mediaCards = document.querySelectorAll('#mediaSection .media-card');
+
+        mediaCards.forEach(card => {
+            const uploader = card.dataset.uploaderType;
+            const seen = card.dataset.seen === 'true';
+            let show = true;
+
+            if (uploaderValue !== 'All' && uploader !== uploaderValue) {
+                show = false;
+            }
+
+            if (seenValue === 'Seen' && !seen) {
+                show = false;
+            } else if (seenValue === 'Unseen' && seen) {
+                show = false;
+            }
+
+            card.style.display = show ? '' : 'none';
+        });
+    }
+
+    // Mark media as seen
+    async function markMediaSeen(mediaId, checkbox, cardElement) {
+        const isSeen = checkbox.checked;
+        try {
+            const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ seen: isSeen })
+            });
+
+            if (response.ok) {
+                cardElement.dataset.seen = isSeen;
+                checkbox.classList.toggle('bg-green-500', isSeen);
+                checkbox.classList.toggle('border-green-500', isSeen);
+                filterMedia();
+                console.log(`Media ${mediaId} marked as ${isSeen ? 'seen' : 'unseen'}`);
+            } else {
+                console.error('Failed to update seen status:', await response.text());
+                checkbox.checked = !isSeen;
+                alert('Failed to update seen status. Please try again.');
+            }
+        } catch (err) {
+            console.error('Error marking media:', err);
+            checkbox.checked = !isSeen;
+            alert('Error marking media. Please check your connection and try again.');
+        }
+    }
+
+    // Open media modal
+    function openMediaModal(mediaId, mediaUrl, mediaType) {
+        const modal = document.getElementById('mediaModal');
+        const content = document.getElementById('mediaContent');
+        if (!modal || !content) {
+            console.warn('mediaModal or mediaContent not found');
+            return;
+        }
+
+        content.innerHTML = '';
+        if (mediaType === 'image') {
+            content.innerHTML = `<img src="${mediaUrl}" alt="Media" class="w-full rounded shadow">`;
+        } else if (mediaType === 'video') {
+            content.innerHTML = `
+                <video controls class="w-full rounded shadow">
+                    <source src="${mediaUrl}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            `;
+        }
+        modal.classList.remove('hidden');
+    }
+
+    // Toggle description edit
+    function toggleDescriptionEdit(button) {
+        const parentDiv = button.closest(".text-gray-700");
+        if (!parentDiv) return;
+        const span = parentDiv.querySelector(".description-text");
+        const input = parentDiv.querySelector(".edit-description-input");
+        const saveBtn = parentDiv.querySelector(".save-description-btn");
+        if (span && input && saveBtn) {
+            span.classList.add("hidden");
+            input.classList.remove("hidden");
+            button.classNameList.add("hidden");
+            saveBtn.classList.remove("hidden");
+        }
+    }
+
+    // Save description
+    async function saveDescription(button) {
+        const parentDiv = button.closest(".text-gray-700");
+        if (!parentDiv) return;
+        const span = parentDiv.querySelector(".description-text");
+        const input = parentDiv.querySelector(".edit-description-input");
+        const editBtn = parentDiv.querySelector(".edit-description-btn");
+        if (!span || !input || !editBtn) return;
+        const mediaId = input.dataset.mediaId;
+        const newDescription = input.value.trim();
+
+        try {
+            const response = await fetch(`/update-description/${mediaId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ description: newDescription })
+            });
+
+            if (response.ok) {
+                span.textContent = newDescription || 'No description provided';
+                span.classList.remove("hidden");
+                input.classList.add("hidden");
+                button.classList.add("hidden");
+                editBtn.classList.remove("hidden");
+            } else {
+                alert("Failed to update description.");
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            alert("An error occurred while updating description.");
+        }
+    }
+
+    // Download media
+    async function downloadMedia(mediaId, type) {
+        try {
+            const response = await fetch(`/download-media/${mediaId}`);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch media: ${response.statusText}`);
+            }
+            const blob = await response.blob();
+            const blobUrl = window.URL.createObjectURL(blob);
+            const extension = type === 'video' ? 'mp4' : 'jpg';
+            const filename = `${mediaId}.${extension}`;
+
+            const anchor = document.createElement('a');
+            anchor.href = blobUrl;
+            anchor.download = filename;
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error('Error downloading media:', err);
+            alert('Failed to download media. Please check your connection or try again.');
+        }
+    }
+
+    // Download Excel data
+    async function downloadExcel() {
+        const button = document.getElementById('exportExcelButton');
+        const buttonText = document.getElementById('exportButtonText');
+        const loadingText = document.getElementById('exportLoadingText');
+
+        if (button && buttonText && loadingText) {
+            button.disabled = true;
+            buttonText.classList.add('hidden');
+            loadingText.classList.remove('hidden');
+        }
+
+        try {
+            const response = await fetch('/admin/export-data', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
+            }
+
+            const blob = await response.blob();
+            if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+                throw new Error('Invalid response type: Expected Excel file');
+            }
+
+            const blobUrl = window.URL.createObjectURL(blob);
+            const filename = `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+            const anchor = document.createElement('a');
+            anchor.href = blobUrl;
+            anchor.download = filename;
+            document.body.appendChild(anchor);
+            anchor.click();
+            document.body.removeChild(anchor);
+            window.URL.revokeObjectURL(blobUrl);
+        } catch (err) {
+            console.error('Error downloading Excel:', err);
+            alert(`Failed to download Excel file: ${err.message}`);
+        } finally {
+            if (button && buttonText && loadingText) {
+                button.disabled = false;
+                buttonText.classList.remove('hidden');
+                loadingText.classList.add('hidden');
+            }
+        }
+    }
+
+    // Toggle the visibility of the custom date input field based on the dropdown selection
+    // Show or hide custom date input based on select value
+    function toggleCustomDateInput(selectElem, schoolId) {
+        const customDateInput = document.getElementById(`custom-date-${schoolId}`);
+        const hiddenInput = document.getElementById(`eventDateFinal-${schoolId}`);
+
+        if (selectElem.value === 'other') {
+            customDateInput.classList.remove('hidden');
+            customDateInput.value = '';
+            hiddenInput.value = '';
+
+            // Update hidden input when user picks a date
+            customDateInput.onchange = () => {
+                hiddenInput.value = customDateInput.value;
+            };
+        } else {
+            customDateInput.classList.add('hidden');
+            hiddenInput.value = selectElem.value;
+        }
+    }
+
+    // Validate the event date form before submission
+    function validateEventDateForm(form, schoolId) {
+        const selectElem = form.querySelector('select[name="eventDate"]');
+        const customDateInput = form.querySelector(`#custom-date-${schoolId}`);
+        const hiddenInput = form.querySelector(`#eventDateFinal-${schoolId}`);
+
+        if (!selectElem.value) {
+            alert('Please select an event date or "Other" to choose a custom date.');
+            return false;
+        }
+
+        if (selectElem.value === 'other') {
+            if (!customDateInput.value) {
+                alert('Please select a custom event date.');
+                return false;
+            }
+            hiddenInput.value = customDateInput.value;
+        } else {
+            hiddenInput.value = selectElem.value;
+        }
+
+        return true;
+    }
+
+    // Consolidated DOMContentLoaded listener
+    document.addEventListener('DOMContentLoaded', () => {
+        // Initialize dialog polyfill for call log dialog
+        const callLogDialog = document.getElementById('callLogDialog');
+        if (callLogDialog && window.dialogPolyfill) {
+            console.log('Registering dialog polyfill for callLogDialog');
+            dialogPolyfill.registerDialog(callLogDialog);
+        } else if (!callLogDialog) {
+            console.warn('callLogDialog not found');
+        } else if (!window.dialogPolyfill) {
+            console.warn('Dialog polyfill not loaded');
+        }
+
+        // Call Log Dialog Controls
+        const openCallLogDialog = document.getElementById('openCallLogDialog');
+        const cancelCallLogButton = document.getElementById('cancelCallLogButton');
+        if (openCallLogDialog && callLogDialog) {
+            console.log('Found openCallLogDialog and callLogDialog, attaching event listener');
+            openCallLogDialog.addEventListener('click', () => {
+                console.log('Add Call button clicked');
+                callLogDialog.showModal();
+            });
+        } else {
+            console.error('openCallLogDialog or callLogDialog not found');
+        }
+        if (cancelCallLogButton && callLogDialog) {
+            console.log('Found cancelCallLogButton, attaching event listener');
+            cancelCallLogButton.addEventListener('click', () => {
+                console.log('Cancel button clicked');
+                callLogDialog.close();
+            });
+        } else {
+            console.warn('cancelCallLogButton or callLogDialog not found');
+        }
+
+        // Coordinator Form Submission
+        const coordinatorForm = document.getElementById('coordinatorForm');
+        const coordinatorMessage = document.getElementById('coordinatorMessage');
+        const submitButton = document.getElementById('submitButton');
+        const buttonText = document.getElementById('buttonText');
+        const loadingText = document.getElementById('loadingText');
+
+        console.log('Checking coordinatorForm elements:');
+        console.log('coordinatorForm:', coordinatorForm);
+        console.log('coordinatorMessage:', coordinatorMessage);
+        console.log('submitButton:', submitButton);
+        console.log('buttonText:', buttonText);
+        console.log('loadingText:', loadingText);
+
+        if (coordinatorForm && coordinatorMessage && submitButton && buttonText && loadingText) {
+            coordinatorForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const form = event.target;
+                const messageDiv = coordinatorMessage;
+                const name = form.querySelector('#name')?.value.trim();
+                const email = form.querySelector('#email')?.value.trim();
+                const number = form.querySelector('#number')?.value.trim();
+                const password = form.querySelector('#password')?.value.trim();
+                const organization = form.querySelector('#organization')?.value.trim();
+
+                console.log('Form data:', { name, email, number, password, organization });
+
+                const nameRegex = /^[a-zA-Z\s]+$/;
+                if (!name || !nameRegex.test(name)) {
+                    showMessage('Name can only contain letters and spaces', 'error', messageDiv);
+                    return;
+                }
+
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!email || !emailRegex.test(email)) {
+                    showMessage('Please enter a valid email address', 'error', messageDiv);
+                    return;
+                }
+
+                const phoneRegex = /^[0-9]{10}$/;
+                if (!number || !phoneRegex.test(number)) {
+                    showMessage('Phone number must be 10 digits', 'error', messageDiv);
+                    return;
+                }
+
+                if (!password || password.length < 6) {
+                    showMessage('Password must be at least 6 characters', 'error', messageDiv);
+                    return;
+                }
+
+                const orgRegex = /^[a-zA-Z0-9\s]+$/;
+                if (!organization || !orgRegex.test(organization)) {
+                    showMessage('Organization can only contain letters, numbers, and spaces', 'error', messageDiv);
+                    return;
+                }
+
+                submitButton.disabled = true;
+                buttonText.classList.add('hidden');
+                loadingText.classList.remove('hidden');
+
+                try {
+                    const formData = new FormData(form);
+                    for (const [key, value] of formData.entries()) {
+                        console.log(`FormData: ${key}=${value}`);
+                    }
+
+                    const response = await fetch('http://localhost:3000/co-ordinator-register', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    let result;
+                    if (response.headers.get('content-type')?.includes('application/json')) {
+                        result = await response.json();
+                    } else {
+                        result = { error: await response.text() || 'Unknown server error' };
+                    }
+
+                    if (response.ok) {
+                        showMessage(result.message || 'Registration successful', 'success', messageDiv);
+                        form.reset();
+                        setTimeout(() => location.reload(), 1000);
+                    } else {
+                        showMessage(result.error || result.message || 'Registration failed', 'error', messageDiv);
+                        console.error('Server response:', result);
+                    }
+                } catch (error) {
+                    showMessage('Network error. Please check your connection and try again.', 'error', messageDiv);
+                    console.error('Submission error:', error);
+                } finally {
+                    submitButton.disabled = false;
+                    buttonText.classList.remove('hidden');
+                    loadingText.classList.add('hidden');
+                }
+            });
+        } else {
+            console.error('Required DOM elements not found for coordinatorForm', {
+                coordinatorForm: !!coordinatorForm,
+                coordinatorMessage: !!coordinatorMessage,
+                submitButton: !!submitButton,
+                buttonText: !!buttonText,
+                loadingText: !!loadingText
+            });
+        }
+
+        // Call Log Form Submission
+        const callLogForm = document.getElementById('callLogForm');
+        if (callLogForm) {
+            callLogForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const form = event.target;
+                const messageDiv = document.getElementById('callLogMessage');
+                const submitButton = document.getElementById('submitCallLogButton');
+                const buttonText = document.getElementById('callLogButtonText');
+                const loadingText = document.getElementById('callLogLoadingText');
+
+                const callDate = form.querySelector('#callDate')?.value.trim();
+                const caller = form.querySelector('#caller')?.value.trim();
+                const recipient = form.querySelector('#recipient')?.value.trim();
+                const notes = form.querySelector('#notes')?.value.trim();
+                const schoolName = form.querySelector('#schoolName')?.value.trim();
+                const contactPerson = form.querySelector('#contactPerson')?.value.trim();
+
+                if (!callDate || !caller || !recipient || !notes || !schoolName || !contactPerson) {
+                    showMessage('All required fields must be filled', 'error', messageDiv);
+                    return;
+                }
+
+                submitButton.disabled = true;
+                buttonText.classList.add('hidden');
+                loadingText.classList.remove('hidden');
+
+                try {
+                    const response = await fetch('/add-call-log', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            callDate: new Date(callDate).toISOString(),
+                            caller,
+                            recipient,
+                            notes,
+                            schoolName,
+                            contactPerson
+                        })
+                    });
+
+                    let result;
+                    if (response.headers.get('content-type')?.includes('application/json')) {
+                        result = await response.json();
+                    } else {
+                        result = { message: await response.text() };
+                    }
+
+                    if (response.ok) {
+                        // Fetch updated call logs from the server
+                        const logsResponse = await fetch('/call-logs');
+                        if (!logsResponse.ok) {
+                            throw new Error('Failed to fetch updated call logs');
+                        }
+                        callLogs = await logsResponse.json();
+                        renderCallLogTable(callLogs);
+                        showMessage(result.message || 'Call log added successfully', 'success', messageDiv);
+                        form.reset();
+                        document.getElementById('callLogDialog').close();
+                    } else {
+                        showMessage(result.error || 'Failed to add call log', 'error', messageDiv);
+                        console.error('Server error response:', result);
+                    }
+                } catch (error) {
+                    showMessage('Error adding call log. Please try again.', 'error', messageDiv);
+                    console.error('Submission error:', error);
+                } finally {
+                    submitButton.disabled = false;
+                    buttonText.classList.remove('hidden');
+                    loadingText.classList.remove('hidden');
+                }
+            });
+        } else {
+            console.warn('callLogForm not found');
+        }
+
+        // Post to social media
+        const postButtons = document.querySelectorAll('.post-to-fb-btn');
+        postButtons.forEach(button => {
+            button.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                const id = button.dataset.id;
+                const url = decodeURI(button.dataset.url);
+                const type = button.dataset.type;
+                const caption = decodeURI(button.dataset.caption || '');
+
+                const postText = button.querySelector('.post-text');
+                const postingText = button.querySelector('.posting-text');
+                if (postText && postingText) {
+                    postText.classList.add('hidden');
+                    postingText.classList.remove('hidden');
+                    button.disabled = true;
+                }
+
+                try {
+                    const res = await fetch('/post-to-socials', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ id, url, type, caption })
+                    });
+
+                    let data;
+                    if (res.headers.get('content-type')?.includes('application/json')) {
+                        data = await res.json();
+                    } else {
+                        data = { message: await res.text() };
+                    }
+
+                    if (res.ok) {
+                        alert(`✅ ${data.message}`);
+                    } else {
+                        console.error('Server error:', data);
+                        alert(`❌ Failed: ${data.message || 'Unknown error'}`);
+                    }
+                } catch (err) {
+                    console.error('Fetch error:', err);
+                    alert('❌ Error posting to social platforms. Please check your connection or try again later.');
+                } finally {
+                    if (postText && postingText) {
+                        button.disabled = false;
+                        postText.classList.remove('hidden');
+                        postingText.classList.add('hidden');
+                    }
+                }
+            });
+        });
+
+        // Upload photo form submission
+        const uploadForm = document.getElementById('upload-form');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const form = event.target;
+                const formData = new FormData(form);
+                const successMessageDiv = document.getElementById('success-message');
+
+                try {
+                    const response = await fetch(form.action, {
+                        method: form.method,
+                        body: formData
+                    });
+
+                    let result;
+                    if (response.headers.get('content-type')?.includes('application/json')) {
+                        result = await response.json();
+                    } else {
+                        result = { message: await response.text() };
+                    }
+
+                    if (successMessageDiv) {
+                        successMessageDiv.textContent = result.message;
+                        successMessageDiv.classList.remove('hidden');
+                        if (!response.ok) {
+                            successMessageDiv.classList.add('bg-red-100', 'text-red-700');
+                        }
+                        form.reset();
+                        setTimeout(() => {
+                            successMessageDiv.classList.add('hidden');
+                            successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
+                        }, 5000);
+                    }
+                } catch (error) {
+                    if (successMessageDiv) {
+                        successMessageDiv.textContent = 'Error uploading files. Please try again.';
+                        successMessageDiv.classList.remove('hidden');
+                        successMessageDiv.classList.add('bg-red-100', 'text-red-700');
+                        setTimeout(() => {
+                            successMessageDiv.classList.add('hidden');
+                            successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
+                        }, 5000);
+                    }
+                    console.error('Upload error:', error);
+                }
+            });
+        } else {
+            console.warn('upload-form not found');
+        }
+
+        // Media upload form
+        const mediaUploadForm = document.getElementById('mediaUploadForm');
+        if (mediaUploadForm) {
+            mediaUploadForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const uploadStatus = document.getElementById('uploadStatus');
+                const file = document.getElementById('mediaFile')?.files[0];
+                const formData = new FormData();
+                formData.append('mediaFile', file);
+                const button = document.getElementById('uploadButton');
+
+                if (uploadStatus) {
+                    uploadStatus.innerHTML = 'Uploading...';
+                }
+                if (button) {
+                    button.disabled = true;
+                }
+
+                try {
+                    const res = await fetch('/upload-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    let result;
+                    if (res.headers.get('content-type')?.includes('application/json')) {
+                        result = await res.json();
+                    } else {
+                        result = { error: await res.text() };
+                    }
+
+                    if (res.ok && uploadStatus) {
+                        uploadStatus.innerHTML = `✅ Upload successful! <a href="${result.files[0].downloadUrl}" target="_blank">View</a>`;
+                    } else if (uploadStatus) {
+                        uploadStatus.innerHTML = `❌ Upload failed: ${result.error}`;
+                    }
+                } catch (err) {
+                    if (uploadStatus) {
+                        uploadStatus.innerHTML = '❌ Upload error.';
+                    }
+                    console.error('Media upload error:', err);
+                } finally {
+                    if (button) {
+                        button.disabled = false;
+                    }
+                }
+            });
+        } else {
+            console.warn('mediaUploadForm not found');
+        }
+
+        // Initialize media filters and checkboxes
+        const uploaderFilter = document.getElementById('uploaderFilter');
+        const seenFilter = document.getElementById('seenFilter');
+        if (uploaderFilter && seenFilter) {
+            uploaderFilter.addEventListener('change', filterMedia);
+            seenFilter.addEventListener('change', filterMedia);
+            filterMedia();
+        } else {
+            console.warn('uploaderFilter or seenFilter not found');
+        }
+
+        const markSeenCheckboxes = document.querySelectorAll('.mark-seen-checkbox');
+        markSeenCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', (event) => {
+                event.stopPropagation();
+                const mediaId = checkbox.dataset.mediaId;
+                const cardElement = checkbox.closest('.media-card');
+                if (mediaId && cardElement) {
+                    markMediaSeen(mediaId, checkbox, cardElement);
+                }
+            });
+            checkbox.addEventListener('click', (event) => {
+                event.stopPropagation();
+            });
+        });
+
+        const closeModal = document.getElementById('closeModal');
+        if (closeModal) {
+            closeModal.addEventListener('click', () => {
+                const mediaModal = document.getElementById('mediaModal');
+                if (mediaModal) {
+                    mediaModal.classList.add('hidden');
+                }
+            });
+        }
+
+        // Complete school buttons
+        const completeSchoolButtons = document.querySelectorAll('.complete-school-btn');
+        completeSchoolButtons.forEach(button => {
+            button.addEventListener('click', (event) => {
+                event.preventDefault();
+                const schoolId = button.dataset.schoolId;
+                const row = button.closest('tr');
+                if (!row) return;
+                const isApproved = row.querySelector('[data-column="isApproved"]')?.textContent.trim() === 'Yes';
+                const eventDate = row.querySelector('[data-column="eventDate"]')?.textContent.trim();
+                const isCompleted = row.querySelector('[data-column="isCompleted"]')?.textContent.trim() === 'Yes';
+
+                if (!isApproved) {
+                    alert('Cannot complete: School is not approved.');
+                    return;
+                }
+                if (eventDate === 'Not assigned') {
+                    alert('Cannot complete: Event date is not assigned.');
+                    return;
+                }
+                if (isCompleted) {
+                    alert('School is already marked as completed.');
+                    return;
+                }
+
+                markSchoolCompleted(schoolId, button, row);
+            });
+        });
+
+        // Export Excel button
+        const exportExcelButton = document.getElementById('exportExcelButton');
+        if (exportExcelButton) {
+            exportExcelButton.addEventListener('click', downloadExcel);
+        }
+
+        // Initialize IP tracking
+        trackIpAddress();
+        setInterval(trackIpAddress, 60000); // Track every 60 seconds
+        setupWebSocket(); // Initialize WebSocket
+    });
+
+    // Window onload for initialization
+    window.onload = function () {
+        openTab('visualization');
+        renderCallLogTable();
+        updateCallLogFilters();
+        renderLoginLogTable();
+        updateLoginLogFilters();
+
+        const tableIds = ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students', 'call-logs', 'login-logs','student-feedback','visited-school'];
+        tableIds.forEach(tableId => {
+            const table = document.getElementById(tableId);
+            if (table) {
+                initializeFilters(tableId);
+            } else {
+                console.warn(`Table with ID ${tableId} not found`);
+            }
+        });
+
+        const districtData = <%- JSON.stringify(
+            schools ? schools.reduce((acc, school) => {
+                acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
+                acc[school.district].schools += 1;
+                acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
+                acc[school.district].trainers += (school.trainerId1 || school.trainerId2 ? (school.trainerId1 && school.trainerId2 ? 2 : 1) : 0);
+                return acc;
+            }, {}) : {}
+        ) %>;
+        const districtChartCanvas = document.getElementById('districtChart');
+        if (districtChartCanvas) {
+            const districtChart = new Chart(districtChartCanvas, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(districtData),
+                    datasets: [
+                        { label: 'Schools', data: Object.values(districtData).map(d => d.schools), backgroundColor: 'rgba(54, 162, 235, 0.5)' },
+                        { label: 'Students', data: Object.values(districtData).map(d => d.students), backgroundColor: 'rgba(75, 192, 192, 0.5)' },
+                        { label: 'Trainers', data: Object.values(districtData).map(d => d.trainers), backgroundColor: 'rgba(255, 99, 132, 0.5)' }
+                    ]
+                },
+                options: { scales: { y: { beginAtZero: true }, x: { stacked: false } } }
+            });
+        }
+
+        const professionData = <%- JSON.stringify(
+            trainers ? trainers.reduce((acc, trainer) => {
+                acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
+                return acc;
+            }, {}) : {}
+        ) %>;
+        const professionChartCanvas = document.getElementById('professionChart');
+        if (professionChartCanvas) {
+            const professionChart = new Chart(professionChartCanvas, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(professionData),
+                    datasets: [{ data: Object.values(professionData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
+                },
+                options: { responsive: true, plugins: { legend: { position: 'top' } } }
+            });
+        }
+
+        let workshopDataList = [];
+
+        async function fetchWorkshopSummaries() {
+            const tableBody = document.getElementById('workshopTableBody');
+            tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Loading...</td></tr>`;
+
+            try {
+                const res = await fetch('/workshop-summaries');
+                if (!res.ok) throw new Error('Failed to fetch');
+
+                workshopDataList = await res.json();
+
+                if (!workshopDataList.length) {
+                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No workshop summaries found</td></tr>`;
+                    return;
+                }
+
+                tableBody.innerHTML = workshopDataList.map((s, index) => `
+                    <tr>
+                        <td class="border border-gray-300 px-4 py-2">${s.schoolName || ''}</td>
+                        <td class="border border-gray-300 px-4 py-2">${s.coordinatorName || ''}</td>
+                        <td class="border border-gray-300 px-4 py-2">${s.workshopDate ? formatDate(s.workshopDate) : ''}</td>
+                        <td class="border border-gray-300 px-4 py-2">${s.financialStatus || ''}</td>
+                        <td class="border border-gray-300 px-4 py-2 text-center">
+                            <button 
+                                class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                                onclick="showDetails(${index})">
+                                View
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+                tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading data</td></tr>`;
+            }
+        }
+
+        function formatDate(dateObj) {
+            if (dateObj._seconds) {
+                return new Date(dateObj._seconds * 1000).toLocaleDateString();
+            }
+            return new Date(dateObj).toLocaleDateString();
+        }
+
+        function showDetails(index) {
+            const data = workshopDataList[index];
+            const modalContent = document.getElementById('modalContent');
+            modalContent.innerHTML = Object.entries(data)
+                .map(([key, value]) => {
+                    if (value && value._seconds) value = formatDate(value);
+                    return `<div><strong>${key}:</strong></div><div>${value ?? '-'}</div>`;
+                })
+                .join('');
+            document.getElementById('detailsModal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').classList.add('hidden');
+        }
+
+        function toggleCustomDateInput(select, schoolId) {
+            const customDateInput = document.getElementById(`custom-date-${schoolId}`);
+            if (select.value === 'other') {
+                customDateInput.classList.remove('hidden');
+                customDateInput.setAttribute('required', 'required');
+            } else {
+                customDateInput.classList.add('hidden');
+                customDateInput.removeAttribute('required');
+            }
+        }
+
+        // Toggle the visibility of the custom date input field based on the dropdown selection
+        function toggleCustomDateInput(selectElement, schoolId) {
+            const customDateInput = document.getElementById(`custom-date-${schoolId}`);
+            
+            if (selectElement.value === 'other') {
+                customDateInput.classList.remove('hidden'); // Show the date input
+                customDateInput.focus(); // Optionally focus on the date input for better UX
+            } else {
+                customDateInput.classList.add('hidden'); // Hide the date input
+                customDateInput.value = ''; // Clear the custom date input
+            }
+        }
+
+        // Validate the event date form before submission
+        function validateEventDateForm(form, schoolId) {
+            const selectElem = form.querySelector('select[name="eventDate"]');
+            const customDateInput = form.querySelector(`#custom-date-${schoolId}`);
+            const hiddenInput = form.querySelector(`#eventDateFinal-${schoolId}`);
+
+            if (!selectElem.value) {
+                alert('Please select an event date or "Other" to choose a custom date.');
+                return false;
+            }
+
+            if (selectElem.value === 'other') {
+                if (!customDateInput.value) {
+                    alert('Please select a custom event date.');
+                    return false;
+                }
+                hiddenInput.value = customDateInput.value;
+            } else {
+                hiddenInput.value = selectElem.value;
+            }
+
+            return true;
+        }
+
+        button.addEventListener('click', async () => {
+            button.disabled = true;
+            buttonText.classList.add('hidden');
+            loadingText.classList.remove('hidden');
+
+            try {
+                const response = await fetch('/admin/export-data', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include'
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
+                }
+
+                const blob = await response.blob();
+                if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+                    throw new Error('Invalid response type: Expected Excel file');
+                }
+
+                const blobUrl = window.URL.createObjectURL(blob);
+                const filename = `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+                const anchor = document.createElement('a');
+                anchor.href = blobUrl;
+                anchor.download = filename;
+                document.body.appendChild(anchor);
+                anchor.click();
+                document.body.removeChild(anchor);
+                window.URL.revokeObjectURL(blobUrl);
+            } catch (err) {
+                console.error('Error downloading Excel:', err);
+                alert(`Failed to download Excel file: ${err.message}`);
+            } finally {
+                button.disabled = false;
+                buttonText.classList.remove('hidden');
+                loadingText.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('searchBox').addEventListener('keyup', function () {
+            let filter = this.value.toLowerCase();
+            let rows = document.querySelectorAll('#visitedSchoolsTable tbody tr');
+            rows.forEach(row => {
+                let name = row.cells[0].textContent.toLowerCase();
+                let address = row.cells[2].textContent.toLowerCase();
+                row.style.display = (name.includes(filter) || address.includes(filter)) ? '' : 'none';
+            });
+        });
+
+        function sortTable(columnIndex) {
+            const table = document.querySelector('#visited-school table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const isAscending = table.dataset.sortOrder !== 'asc';
+            table.dataset.sortOrder = isAscending ? 'asc' : 'desc';
+
+            rows.sort((rowA, rowB) => {
+                const cellA = rowA.cells[columnIndex].textContent.trim();
+                const cellB = rowB.cells[columnIndex].textContent.trim();
+                return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+            });
+
+            tbody.innerHTML = '';
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const table = document.getElementById("visited-schools-table");
+            const selects = table.querySelectorAll(".filter-select");
+            const rows = Array.from(table.querySelectorAll("tbody tr"));
+
+            function populateFilters() {
+                selects.forEach(select => {
+                    const colIndex = select.dataset.column;
+                    const values = new Set();
+                    rows.forEach(row => {
+                        const cell = row.querySelector(`td:nth-child(${[...selects].indexOf(select) + 1})`);
+                        if (cell) values.add(cell.textContent.trim());
+                    });
+                    values.forEach(val => {
+                        const option = document.createElement("option");
+                        option.textContent = val;
+                        option.value = val;
+                        select.appendChild(option);
+                    });
+                });
+            }
+
+            function filterRows() {
+                rows.forEach(row => {
+                    let showRow = true;
+                    selects.forEach(select => {
+                        const colIndex = select.parentElement.cellIndex;
+                        const val = select.value;
+                        if (val && row.cells[colIndex].textContent.trim() !== val) {
+                            showRow = false;
+                        }
+                    });
+                    row.style.display = showRow ? "" : "none";
+                });
+            }
+
+            selects.forEach(select => select.addEventListener("change", filterRows));
+
+            populateFilters();
+        });
+
+        async function postToWebsite(button) {
+            // Get button attributes (optional, if used for metadata)
+            const caption = button.getAttribute('data-caption') || '';
+            const postText = button.querySelector('.post-text');
+            const postingText = button.querySelector('.posting-text');
+
+            // Assume a file input exists (e.g., <input type="file" id="imageInput">)
+            const fileInput = document.getElementById('imageInput');
+            if (!fileInput || !fileInput.files[0]) {
+                alert('Please select an image to upload');
+                return;
+            }
+
+            // Toggle button state
+            postText.classList.add('hidden');
+            postingText.classList.remove('hidden');
+            button.disabled = true;
+
+            try {
+                const formData = new FormData();
+                formData.append('image', fileInput.files[0]); // Append the file
+                formData.append('caption', caption); // Optional: send caption if needed
+
+                const response = await fetch('/upload-image', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Upload failed: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('Upload and post successful:', result);
+                alert('Image uploaded and posted successfully!');
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Failed to upload and post image');
+            } finally {
+                // Revert button state
+                postText.classList.remove('hidden');
+                postingText.classList.add('hidden');
+                button.disabled = false;
+            }
+        }
+
+        // Placeholder for renderFeedbackTable
+        function renderFeedbackTable() {
+            console.log('Rendering feedback table (implement as needed)');
+            // Add your feedback table rendering logic here
+        }
+
+        // Show message (used in forms)
+        function showMessage(message, type, messageDiv) {
+            if (messageDiv) {
+                messageDiv.textContent = message;
+                messageDiv.classList.remove('hidden');
+                messageDiv.classList.toggle('bg-red-100', type === 'error');
+                messageDiv.classList.toggle('text-red-700', type === 'error');
+                messageDiv.classList.toggle('bg-green-100', type === 'success');
+                messageDiv.classList.toggle('text-green-700', type === 'success');
+                setTimeout(() => {
+                    messageDiv.classList.add('hidden');
+                    messageDiv.classList.remove('bg-red-100', 'text-red-700', 'bg-green-100', 'text-green-700');
+                }, 5000);
+            }
+        }
+    };
     </script>
     <style>
         .mark-seen-checkbox:checked {
@@ -2402,6 +2386,10 @@ document.addEventListener("DOMContentLoaded", () => {
   <button 
     type="button"
     class="bg-purple-500 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+    data-id="<%= upload.id %>"
+    data-url="<%= upload.url %>"
+    data-type="image"
+    data-caption="<%= upload.description || '' %>"
     onclick="event.stopPropagation(); postToWebsite(this)">
     <span class="post-text">Post to Website</span>
     <span class="posting-text hidden">Posting...</span>

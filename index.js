@@ -1326,6 +1326,67 @@ app.post('/upload-image', requireAdmin, uploadImages, async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
+  try {
+    console.log('🟢 Upload started', req.files);
+
+    const files = req.files;
+    if (!files || files.length === 0) {
+      console.log('❌ No image files provided');
+      return res.status(400).json({ error: 'No image files provided' });
+    }
+
+    const uploadedFiles = [];
+    for (const file of files) {
+      const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
+      const timestamp = Date.now();
+      const storagePath = `media/admin upload photo/${timestamp}_${sanitizedFileName}`;
+      const storageFile = bucket.file(storagePath);
+
+      await new Promise((resolve, reject) => {
+        const stream = storageFile.createWriteStream({
+          metadata: { contentType: file.mimetype },
+        });
+
+        stream.on('error', (error) => {
+          console.error(`❌ Upload error for ${sanitizedFileName}:`, error);
+          reject(error);
+        });
+
+        stream.on('finish', async () => {
+          const [url] = await storageFile.getSignedUrl({
+            action: 'read',
+            expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          });
+
+          const mediaRef = await db.collection('gallery').add({
+            storagePath,
+            url,
+            uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+          });
+
+        //   console.log('\n✅ Image Uploaded');
+        //   console.log('📂 Firebase Storage Path:', `gs://beinglawful-ee5a4.appspot.com/${storagePath}`);
+        //   console.log('🌐 Public URL:', url);
+
+          uploadedFiles.push({ storagePath, downloadUrl: url, mediaId: mediaRef.id });
+          resolve();
+        });
+
+        stream.end(file.buffer);
+      });
+    }
+
+    res.status(200).json({
+      message: 'Images uploaded successfully',
+      files: uploadedFiles,
+    });
+  } catch (error) {
+    console.error('❌ Server error:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 // Fetch gallery media route
 app.get('/gallery', async (req, res) => {
   try {
@@ -2177,6 +2238,99 @@ app.post('/school-dashboard/delete-student/:id', async (req, res) => {
     });
     
 
+
+
+    // admin to fetch photos and videos from Firestore
+// Route to fetch photos and videos from Firestore
+    app.get('/fetch-media', requireAdmin, async (req, res) => {
+    try {
+        const { parentMobile1, trainerEmail, schoolEmail } = req.query; // Optional filters
+        const imageUploads = {
+        images: {
+            school: [],
+            trainer: [],
+            student: []
+        },
+        videos: {
+            school: [],
+            trainer: [],
+            student: []
+        },
+        all: [] // For sorting all media by uploadedAt
+        };
+
+        // Helper function to fetch media from a collection
+        async function fetchMediaFromCollection(collectionName, identifierField, identifierValue, uploaderType, nameField) {
+            console.log
+        let query = db.collection(collectionName);
+        if (identifierValue) {
+            query = query.where(identifierField, '==', identifierValue);
+        }
+
+        const snapshot = await query.get();
+        if (snapshot.empty) {
+            console.warn(`No ${collectionName} found for ${identifierField}: ${identifierValue || 'all'}`);
+            return;
+        }
+
+        for (const doc of snapshot.docs) {
+            const uploaderName = doc.data()[nameField] || 'Unknown';
+            const mediaSnapshot = await doc.ref.collection('mediaUploads').get();
+            mediaSnapshot.forEach(mediaDoc => {
+            const mediaData = mediaDoc.data();
+            const mediaItem = {
+                id: mediaDoc.id,
+                url: mediaData.url,
+                path: mediaData.path,
+                type: mediaData.type,
+                description: mediaData.description || '',
+                link: mediaData.link || '',
+                uploadedAt: mediaData.uploadedAt ? mediaData.uploadedAt.toDate() : null,
+                ownerId: doc.id,
+                uploaderType,
+                seen: mediaData.seen || false,
+                uploadedBy: uploaderName
+            };
+
+            if (mediaData.type === 'image') {
+                imageUploads.images[uploaderType].push(mediaItem);
+            } else if (mediaData.type === 'video') {
+                imageUploads.videos[uploaderType].push(mediaItem);
+            }
+            imageUploads.all.push(mediaItem);
+                       });
+        }
+        }
+
+        // Fetch media from all collections
+        await Promise.all([
+        fetchMediaFromCollection('participants', 'parentMobile1', parentMobile1, 'student', 'studentName'),
+        fetchMediaFromCollection('trainers', 'email', trainerEmail, 'trainer', 'trainerName'),
+        fetchMediaFromCollection('schools', 'schoolEmail', schoolEmail, 'school', 'schoolName')
+        ]);
+
+        // Sort all media by uploadedAt (descending)
+        imageUploads.all.sort((a, b) => (b.uploadedAt || 0) - (a.uploadedAt || 0));
+            
+        res.render('media', {
+        imageUploads,
+        error: null,
+        success: req.query.success || null
+        });
+    } catch (error) {
+        console.error('Error fetching media from Firestore:', error.message, error.stack);
+        res.render('media', {
+        imageUploads: {
+            images: { school: [], trainer: [], student: [] },
+            videos: { school: [], trainer: [], student: [] },
+            all: []
+        },
+        error: `Error fetching media: ${error.message}`,
+        success: null
+        });
+    }
+    });
+
 app.post('/school-dashboard/approve-student/:id', async (req, res) => {
     try {
         const studentId = req.params.id;
@@ -2998,7 +3152,7 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
 
             schoolMediaPromises.push(
                 db.collection('schools').doc(doc.id).collection('mediaUploads')
-                    .where('type', '==', 'image')
+                    .where('type', 'in', ['image', 'video'])
                     .get()
                     .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
                         id: mediaDoc.id,
@@ -3054,7 +3208,7 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             const data = doc.data();
             trainerMediaPromises.push(
                 db.collection('trainers').doc(doc.id).collection('mediaUploads')
-                    .where('type', '==', 'image')
+                    .where('type', 'in', ['image', 'video'])
                     .get()
                     .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
                         id: mediaDoc.id,
@@ -3119,7 +3273,7 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             const data = doc.data();
             studentMediaPromises.push(
                 db.collection('participants').doc(doc.id).collection('mediaUploads')
-                    .where('type', '==', 'image')
+                    .where('type', 'in', ['image', 'video'])
                     .get()
                     .then(mediaSnap => mediaSnap.docs.map(mediaDoc => ({
                         id: mediaDoc.id,
@@ -3181,7 +3335,7 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             if (createdAt && isNaN(createdAt.getTime())) createdAt = null;
             return { id: doc.id, ...data, callDate, createdAt };
         });
-
+        
         /* ------------------- FETCH WORKSHOP SUMMARIES ------------------- */
         const workshopSummariesSnapshot = await db.collection('workshopSummaries').get();
         if (workshopSummariesSnapshot.empty) console.warn('No workshop summaries found in Firestore');
@@ -5310,6 +5464,50 @@ app.get('/visited-schools', isAuthenticated, async (req, res) => {
     }
 });
 
+//feedback summary formr for student
+app.get('/feedback', async (req, res) => {
+    try {
+        const filters = {
+            coordinatorId: req.query.coordinatorId // Assuming coordinatorId is passed as query param
+        };
+
+        let feedbackEntries = [];
+        let feedbackQuery = db.collection('studentFeedback');
+        
+        if (filters.coordinatorId) {
+            feedbackQuery = feedbackQuery.where('coordinatorId', '==', filters.coordinatorId);
+        }
+        
+        const feedbackSnapshot = await feedbackQuery
+            .where('status', '==', 'submitted')
+            .orderBy('createdAt', 'desc')
+            .get();
+            
+        feedbackEntries = feedbackSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+                id: doc.id,
+                studentName: data.studentName || 'N/A',
+                className: data.className || 'N/A',
+                question1: data.question1 || 'N/A',
+                question2: data.question2 || 'N/A',
+                question3: data.question3 || 'N/A',
+                question4: data.question4 || 'N/A',
+                question5: data.question5 || 'N/A',
+                coordinatorId: data.coordinatorId || 'N/A',
+                createdAt: formatToIST(data.createdAt),
+                status: data.status || 'N/A'
+            };
+        });
+
+        // Render the EJS template with feedback entries
+        res.render('feedback', { feedbackEntries });
+
+    } catch (error) {
+        console.error('Error fetching student feedback:', error);
+        res.status(500).send('Error fetching feedback');
+    }
+});
  // GET: Download Feedback Excel Template
 app.get('/download-feedback-template', (req, res) => {
     try {

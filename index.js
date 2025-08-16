@@ -5542,7 +5542,65 @@ app.get('/call-logs', async (req, res) => {
     }
 });
 
+
+//ip and loation tracker
+const http = require('http');
+const server = http.createServer(app);
+const { WebSocketServer } = require('ws');
+const wss = new WebSocketServer({ server, path: '/admin-login/ws/login-updates' });
+
+wss.on('connection', (ws) => {
+  console.log('New WebSocket client connected ✅');
+
+  ws.send(JSON.stringify({ message: 'Welcome Admin!' }));
+
+  ws.on('message', (msg) => {
+    console.log('Received:', msg.toString());
+  });
+
+  ws.on('close', () => {
+    console.log('Client disconnected ❌');
+  });
+});
  
+
+app.post('/add-login-log', async (req, res) => {
+  try {
+    // Fetch IP data from ipapi.co
+    const response = await axios.get('https://ipapi.co/json/');
+    const data = response.data;
+
+    const newLog = {
+      ipAddress: data.ip || 'N/A',
+      latitude: data.latitude ? parseFloat(data.latitude).toFixed(6) : 'N/A',
+      longitude: data.longitude ? parseFloat(data.longitude).toFixed(6) : 'N/A',
+      loginTime: new Date().toISOString() // Server-side timestamp
+    };
+
+    // Store in Firestore
+    await db.collection('loginLogs').add(newLog);
+
+    res.status(200).json({ message: 'Login log added successfully', log: newLog });
+  } catch (error) {
+    console.error('Error fetching IP or storing log:', error);
+    res.status(500).json({ error: 'Failed to add login log' });
+  }
+});
+
+// Express route to fetch all login logs
+app.get('/get-login-logs', async (req, res) => {
+  try {
+    const logsSnapshot = await db.collection('loginLogs').orderBy('loginTime', 'desc').get();
+    const logs = [];
+    logsSnapshot.forEach(doc => {
+      logs.push({ id: doc.id, ...doc.data() });
+    });
+    res.status(200).json({ logs });
+  } catch (error) {
+    console.error('Error fetching login logs:', error);
+    res.status(500).json({ error: 'Failed to fetch login logs' });
+  }
+});
 // Start the server
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {

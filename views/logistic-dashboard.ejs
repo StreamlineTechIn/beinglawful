@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Logistic Admin Panel</title>
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" />
   <style>
@@ -12,48 +13,100 @@
       padding: 0;
       min-height: 100vh;
       display: flex;
+      flex-direction: column;
     }
 
-    .sidebar {
-      width: 250px;
+    .navbar {
       background-color: #343a40;
-      color: white;
-      padding: 20px 0;
-      position: fixed;
-      height: 100%;
-    }
-
-    .sidebar h2 {
       padding: 10px 20px;
+    }
+
+    .navbar-brand {
+      color: white !important;
       font-size: 1.5rem;
-      border-bottom: 1px solid #495057;
+      font-weight: bold;
     }
 
-    .sidebar ul {
-      list-style: none;
-      padding: 0;
+    .dropdown-menu {
+      background-color: #343a40;
+      border: none;
     }
 
-    .sidebar ul li {
-      padding: 12px 20px;
-    }
-
-    .sidebar ul li a {
+    .dropdown-item {
       color: #f8f9fa;
-      text-decoration: none;
-      display: block;
       font-weight: 500;
     }
 
-    .sidebar ul li a:hover {
+    .dropdown-item:hover {
       background-color: #495057;
-      border-radius: 4px;
+      color: #f8f9fa;
     }
 
     .content {
-      margin-left: 270px;
+      flex: 1;
       padding: 20px;
-      width: calc(100% - 270px);
+      width: 100%;
+      overflow-x: auto;
+    }
+
+    .counter {
+      background-color: #fff;
+      border: 1px solid #dee2e6;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 15px;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+
+    .counter span {
+      margin-right: 20px;
+    }
+
+    .counter .total {
+      color: #343a40;
+    }
+
+    .counter .pending {
+      color: #fd7e14;
+    }
+
+    .counter .delivered {
+      color: #28a745;
+    }
+
+    .table-container {
+      width: 100%;
+      height: calc(100vh - 150px); /* Adjusted for counter height */
+      overflow-y: auto;
+    }
+
+    .table {
+      width: 100%;
+      table-layout: auto;
+    }
+
+    .table th,
+    .table td {
+      white-space: nowrap;
+      padding: 8px;
+    }
+
+    .table th {
+      position: sticky;
+      top: 0;
+      background-color: #343a40;
+      color: white;
+      z-index: 1;
+    }
+
+    .table td {
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    .table td:hover {
+      background-color: #e9ecef;
     }
 
     .status-pending {
@@ -74,6 +127,8 @@
     .btn-primary {
       background-color: #0069d9;
       border: none;
+      padding: 5px 10px;
+      font-size: 0.875rem;
     }
 
     .btn-primary:hover {
@@ -82,185 +137,286 @@
 
     .delivery-number-input {
       display: none;
-      width: 100px;
+      width: 100%;
     }
 
-    .agency-input {
-      width: 150px;
+    .selected-text {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #343a40;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      display: none;
+      z-index: 1000;
+    }
+
+    .modal-content {
+      border-radius: 8px;
+    }
+
+    .modal-header {
+      background-color: #343a40;
+      color: white;
+    }
+
+    .modal-footer {
+      border-top: none;
     }
 
     @media (max-width: 768px) {
-      .sidebar {
-        width: 100%;
-        height: auto;
-        position: relative;
+      .content {
+        padding: 10px;
       }
 
-      .content {
-        margin-left: 0;
+      .counter {
+        font-size: 0.875rem;
+        padding: 8px;
+      }
+
+      .counter span {
+        display: block;
+        margin-bottom: 5px;
+      }
+
+      .table-container {
+        height: calc(100vh - 130px);
+      }
+
+      .form-inline .form-control {
         width: 100%;
+      }
+
+      .form-inline .btn {
+        width: 100%;
+      }
+
+      .selected-text {
+        width: calc(100% - 40px);
+        bottom: 10px;
+        right: 10px;
+        font-size: 0.875rem;
       }
     }
   </style>
 </head>
 <body>
-<div class="sidebar">
-  <h2>Logistic Portal</h2>
-  <ul>
-    <li><a href="/logistic-dashboard">Dashboard</a></li>
-    <li><a href="/logout">Logout</a></li>
-  </ul>
-</div>
+  <!-- Navbar with Three-Dot Menu -->
+  <nav class="navbar navbar-expand">
+    <a class="navbar-brand" href="#">Logistic Portal</a>
+    <div class="ml-auto">
+      <div class="dropdown">
+        <button class="btn btn-dark dropdown-toggle" type="button" id="menuDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <span class="navbar-toggler-icon">⋮</span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-right" aria-labelledby="menuDropdown">
+          <a class="dropdown-item" href="/logistic-dashboard">Dashboard</a>
+          <a class="dropdown-item" href="/logout">Logout</a>
+        </div>
+      </div>
+    </div>
+  </nav>
 
-<div class="content">
-  <h3 class="mb-4">Approved Schools</h3>
+  <div class="content">
+    <h3 class="mb-3">Approved Schools</h3>
 
-  <table class="table table-bordered table-striped">
-    <thead class="thead-dark">
-      <tr>
-        <th>School Name</th>
-        <th>Civics Sir Number</th>
-        <th>School Phone Number</th>
-        <th>Principal Number</th>
-        <th>City</th>
-        <th>District</th>
-        <th>Agency</th>
-        <th>Event Date</th>
-        <th>Status</th>
-        <th>Delivery Mode</th>
-        <th>Change Status</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% if (schools.length === 0) { %>
-        <tr><td colspan="11">No schools found.</td></tr>
-      <% } else { %>
-        <% schools.forEach(school => { %>
+    <!-- Counter Display -->
+    <div class="counter">
+      <span class="total">Total Schools: <span id="totalCount"><%= schools.length %></span></span>
+      <span class="pending">Pending: <span id="pendingCount"><%= schools.filter(s => s.status === 'pending').length %></span></span>
+      <span class="delivered">Delivered: <span id="deliveredCount"><%= schools.filter(s => s.status === 'delivered').length %></span></span>
+    </div>
+
+    <!-- Selected Text Notification -->
+    <div class="selected-text" id="selectedText"></div>
+
+    <!-- Table Container -->
+    <div class="table-container">
+      <table class="table table-bordered table-striped">
+        <thead class="thead-dark">
           <tr>
-            <td><%= school.name %></td>
-            <td><%= school.civicsSirNumber %></td>
-            <td><%= school.schoolPhoneNumber %></td>
-            <td><%= school.principalNumber %></td>
-            <td><%= school.city %></td>
-            <td><%= school.district %></td>
-            <td>
-              <form method="POST" action="/update-delivery" class="form-inline update-delivery-form" data-id="<%= school.id %>">
-                <input type="text" name="agency" class="form-control mr-2 agency-input" value="<%= school.agency %>" placeholder="Enter agency">
-                <input type="hidden" name="id" value="<%= school.id %>">
-                <input type="hidden" name="deliveryMode" value="<%= school.deliveryMode %>">
-                <input type="hidden" name="deliveryNumber" value="<%= school.deliveryNumber %>">
-                <button type="submit" class="btn btn-sm btn-primary">Update</button>
-              </form>
-            </td>
-            <td><%= school.eventDate %></td>
-            <td class="status-cell" data-id="<%= school.id %>">
-              <% if (school.status === 'delivered') { %>
-                <span class="status-delivered">Delivered</span>
-              <% } else if (school.status === 'pack') { %>
-                <span class="status-pack">Pack</span>
-              <% } else { %>
-                <span class="status-pending">Pending</span>
-              <% } %>
-            </td>
-            <td>
-              <form method="POST" action="/update-delivery" class="form-inline update-delivery-form" data-id="<%= school.id %>">
-                <input type="hidden" name="id" value="<%= school.id %>">
-                <input type="hidden" name="agency" value="<%= school.agency %>">
-                <select name="deliveryMode" class="form-control mr-2 delivery-mode-select">
-                  <option value="pending" <%= school.deliveryMode === 'pending' ? 'selected' : '' %>>Pending</option>
-                  <option value="by hand" <%= school.deliveryMode === 'by hand' ? 'selected' : '' %>>By Hand</option>
-                  <option value="post" <%= school.deliveryMode === 'post' ? 'selected' : '' %>>Post</option>
-                  <option value="train" <%= school.deliveryMode === 'train' ? 'selected' : '' %>>Train</option>
-                  <option value="bus" <%= school.deliveryMode === 'bus' ? 'selected' : '' %>>Bus</option>
-                  <option value="courier" <%= school.deliveryMode === 'courier' ? 'selected' : '' %>>Courier</option>
-                </select>
-                <input type="text" name="deliveryNumber" class="form-control mr-2 delivery-number-input" value="<%= school.deliveryNumber %>" placeholder="Enter barcode">
-                <button type="submit" class="btn btn-sm btn-primary">Submit</button>
-              </form>
-            </td>
-            <td>
-              <form method="POST" action="/update-status" class="form-inline update-status-form" data-id="<%= school.id %>">
-                <input type="hidden" name="id" value="<%= school.id %>">
-                <select name="status" class="form-control mr-2">
-                  <option value="pending" <%= school.status === 'pending' ? 'selected' : '' %>>Pending</option>
-                  <option value="pack" <%= school.status === 'pack' ? 'selected' : '' %>>Pack</option>
-                  <option value="delivered" <%= school.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
-                </select>
-                <button type="submit" class="btn btn-sm btn-primary">Submit</button>
-              </form>
-            </td>
+            <th>School Name</th>
+            <th>Event Date</th>
+            <th>City</th>
+            <th>District</th>
+            <th>Status</th>
+            <th>Delivery Mode</th>
+            <th>Change Status</th>
+            <th>Civics Sir Number</th>
+            <th>School Phone Number</th>
+            <th>Principal Number</th>
+            <!-- <th>Agency</th> -->
           </tr>
-        <% }); %>
-      <% } %>
-    </tbody>
-  </table>
-</div>
+        </thead>
+        <tbody>
+          <% if (schools.length === 0) { %>
+            <tr><td colspan="11">No schools found.</td></tr>
+          <% } else { %>
+            <% schools.forEach(school => { %>
+              <tr>
+                <td><%= school.name %></td>
+                <td><%= school.eventDate %></td>
+                <td><%= school.city %></td>
+                <td><%= school.district %></td>
+                <td class="status-cell" data-id="<%= school.id %>">
+                  <% if (school.status === 'delivered') { %>
+                    <span class="status-delivered">Delivered</span>
+                  <% } else if (school.status === 'pack') { %>
+                    <span class="status-pack">Pack</span>
+                  <% } else { %>
+                    <span class="status-pending">Pending</span>
+                  <% } %>
+                </td>
+                <td class="delivery-mode-cell" data-id="<%= school.id %>" data-toggle="modal" data-target="#deliveryModal" data-delivery-mode="<%= school.deliveryMode %>" data-delivery-number="<%= school.deliveryNumber %>">
+                  <%= school.deliveryMode || 'Pending' %> <%= school.deliveryNumber ? `(${school.deliveryNumber})` : '' %>
+                </td>
+                <td>
+                  <form method="POST" action="/update-status" class="form-inline update-status-form" data-id="<%= school.id %>">
+                    <input type="hidden" name="id" value="<%= school.id %>">
+                    <select name="status" class="form-control mr-2">
+                      <option value="pending" <%= school.status === 'pending' ? 'selected' : '' %>>Pending</option>
+                      <option value="pack" <%= school.status === 'pack' ? 'selected' : '' %>>Pack</option>
+                      <option value="delivered" <%= school.status === 'delivered' ? 'selected' : '' %>>Delivered</option>
+                    </select>
+                    <button type="submit" class="btn btn-sm btn-primary">Submit</button>
+                  </form>
+                </td>
+                <td><%= school.civicsSirNumber %></td>
+                <td><%= school.schoolPhoneNumber %></td>
+                <td><%= school.principalNumber %></td>
+                <!-- <td><%= school.agency || '' %></td> -->
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
-<script>
-  // Handle status updates
-  document.querySelectorAll('.update-status-form').forEach(form => {
-    form.addEventListener('submit', async function (e) {
-      e.preventDefault();
+  <!-- Delivery Mode Update Modal -->
+  <div class="modal fade" id="deliveryModal" tabindex="-1" role="dialog" aria-labelledby="deliveryModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="deliveryModalLabel">Update Delivery Mode</h5>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+          </button>
+        </div>
+        <form method="POST" action="/update-delivery" id="deliveryModalForm">
+          <div class="modal-body">
+            <input type="hidden" name="id" id="modalSchoolId">
+            <div class="form-group">
+              <label for="modalDeliveryMode">Delivery Mode</label>
+              <select name="deliveryMode" id="modalDeliveryMode" class="form-control">
+                <option value="pending">Pending</option>
+                <option value="by hand">By Hand</option>
+                <option value="post">Post</option>
+                <option value="train">Train</option>
+                <option value="bus">Bus</option>
+                <option value="courier">Courier</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="modalDeliveryNumber">Delivery Number (if applicable)</label>
+              <input type="text" name="deliveryNumber" id="modalDeliveryNumber" class="form-control delivery-number-input" placeholder="Enter barcode">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Submit</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
 
-      const id = this.getAttribute('data-id');
-      const status = this.querySelector('select[name="status"]').value;
+  <!-- Bootstrap JS and dependencies -->
+  <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
 
-      try {
-        const response = await fetch('/update-status', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded'
-          },
-          body: new URLSearchParams({ id, status })
-        });
+  <script>
+    // Function to update counter display
+    function updateCounter() {
+      const totalCount = document.querySelectorAll('.status-cell').length;
+      const pendingCount = document.querySelectorAll('.status-cell .status-pending').length;
+      const deliveredCount = document.querySelectorAll('.status-cell .status-delivered').length;
 
-        if (response.ok) {
-          const statusCell = document.querySelector(`.status-cell[data-id="${id}"]`);
-          let statusHTML = '';
+      document.getElementById('totalCount').textContent = totalCount;
+      document.getElementById('pendingCount').textContent = pendingCount;
+      document.getElementById('deliveredCount').textContent = deliveredCount;
+    }
 
-          if (status === 'delivered') {
-            statusHTML = '<span class="status-delivered">Delivered</span>';
-          } else if (status === 'pack') {
-            statusHTML = '<span class="status-pack">Pack</span>';
+    // Handle status updates
+    document.querySelectorAll('.update-status-form').forEach(form => {
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+
+        const id = this.getAttribute('data-id');
+        const status = this.querySelector('select[name="status"]').value;
+
+        try {
+          const response = await fetch('/update-status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({ id, status })
+          });
+
+          if (response.ok) {
+            const statusCell = document.querySelector(`.status-cell[data-id="${id}"]`);
+            let statusHTML = '';
+
+            if (status === 'delivered') {
+              statusHTML = '<span class="status-delivered">Delivered</span>';
+            } else if (status === 'pack') {
+              statusHTML = '<span class="status-pack">Pack</span>';
+            } else {
+              statusHTML = '<span class="status-pending">Pending</span>';
+            }
+
+            statusCell.innerHTML = statusHTML;
+            updateCounter(); // Update counter after status change
           } else {
-            statusHTML = '<span class="status-pending">Pending</span>';
+            alert('Failed to update status.');
           }
-
-          statusCell.innerHTML = statusHTML;
-        } else {
-          alert('Failed to update status.');
+        } catch (err) {
+          console.error('Error:', err);
+          alert('Error updating status.');
         }
-      } catch (err) {
-        console.error('Error:', err);
-        alert('Error updating status.');
-      }
-    });
-  });
-
-  // Handle delivery mode and agency updates
-  document.querySelectorAll('.update-delivery-form').forEach(form => {
-    const select = form.querySelector('.delivery-mode-select');
-    const numberInput = form.querySelector('.delivery-number-input');
-
-    // Initial state for delivery number input
-    if (select && (select.value === 'bus' || select.value === 'train' || select.value === 'post')) {
-      numberInput.style.display = 'block';
-    } else if (select) {
-      numberInput.style.display = 'none';
-    }
-
-    // Toggle number input based on delivery mode selection
-    if (select) {
-      select.addEventListener('change', () => {
-        numberInput.style.display = (select.value === 'bus' || select.value === 'train' || select.value === 'post') ? 'block' : 'none';
       });
-    }
+    });
 
-    // Handle form submission
-    form.addEventListener('submit', async function (e) {
+    // Handle delivery mode cell click to open modal
+    document.querySelectorAll('.delivery-mode-cell').forEach(cell => {
+      cell.addEventListener('click', function () {
+        const id = this.getAttribute('data-id');
+        const deliveryMode = this.getAttribute('data-delivery-mode') || 'pending';
+        const deliveryNumber = this.getAttribute('data-delivery-number') || '';
+
+        // Populate modal fields
+        document.getElementById('modalSchoolId').value = id;
+        document.getElementById('modalDeliveryMode').value = deliveryMode;
+        document.getElementById('modalDeliveryNumber').value = deliveryNumber;
+
+        // Show/hide delivery number input based on selected mode
+        const numberInput = document.getElementById('modalDeliveryNumber');
+        numberInput.style.display = (deliveryMode === 'bus' || deliveryMode === 'train' || deliveryMode === 'post') ? 'block' : 'none';
+
+        // Update delivery number visibility on mode change
+        document.getElementById('modalDeliveryMode').addEventListener('change', function () {
+          numberInput.style.display = (this.value === 'bus' || this.value === 'train' || this.value === 'post') ? 'block' : 'none';
+        });
+      });
+    });
+
+    // Handle delivery mode form submission
+    document.getElementById('deliveryModalForm').addEventListener('submit', async function (e) {
       e.preventDefault();
 
-      const id = this.getAttribute('data-id');
       const formData = new FormData(this);
       const data = Object.fromEntries(formData);
 
@@ -273,7 +429,16 @@
           body: new URLSearchParams(data)
         });
 
-        if (!response.ok) {
+        if (response.ok) {
+          const id = data.id;
+          const deliveryMode = data.deliveryMode;
+          const deliveryNumber = data.deliveryNumber;
+          const cell = document.querySelector(`.delivery-mode-cell[data-id="${id}"]`);
+          cell.textContent = deliveryNumber ? `${deliveryMode} (${deliveryNumber})` : deliveryMode;
+          cell.setAttribute('data-delivery-mode', deliveryMode);
+          cell.setAttribute('data-delivery-number', deliveryNumber);
+          $('#deliveryModal').modal('hide');
+        } else {
           alert('Failed to update delivery details.');
         }
       } catch (err) {
@@ -281,7 +446,30 @@
         alert('Error updating delivery details.');
       }
     });
-  });
-</script>
+
+    // Handle table cell click to show text (excluding delivery mode cells)
+    document.querySelectorAll('.table td:not(.delivery-mode-cell)').forEach(cell => {
+      cell.addEventListener('click', function (e) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON') {
+          const text = this.textContent.trim();
+          if (text) {
+            const selectedTextDiv = document.getElementById('selectedText');
+            selectedTextDiv.textContent = `Selected: ${text}`;
+            selectedTextDiv.style.display = 'block';
+            setTimeout(() => {
+              selectedTextDiv.style.display = 'none';
+            }, 3000);
+            this.style.backgroundColor = '#d1ecf1';
+            setTimeout(() => {
+              this.style.backgroundColor = '';
+            }, 1000);
+          }
+        }
+      });
+    });
+
+    // Initialize counter on page load
+    updateCounter();
+  </script>
 </body>
 </html>

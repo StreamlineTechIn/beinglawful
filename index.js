@@ -1327,14 +1327,12 @@ app.post('/upload-image', requireAdmin, uploadImages, async (req, res) => {
   }
 });
 
+// Backend: /post-to-website
 app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
   try {
-    console.log('🟢 Upload started', req.files);
-
     const files = req.files;
     if (!files || files.length === 0) {
-      console.log('❌ No image files provided');
-      return res.status(400).json({ error: 'No image files provided' });
+      return res.status(400).json({ error: 'No media files provided' });
     }
 
     const uploadedFiles = [];
@@ -1349,11 +1347,7 @@ app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
           metadata: { contentType: file.mimetype },
         });
 
-        stream.on('error', (error) => {
-          console.error(`❌ Upload error for ${sanitizedFileName}:`, error);
-          reject(error);
-        });
-
+        stream.on('error', reject);
         stream.on('finish', async () => {
           const [url] = await storageFile.getSignedUrl({
             action: 'read',
@@ -1364,13 +1358,13 @@ app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
             storagePath,
             url,
             uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+            mediaType: file.mimetype.startsWith('image') ? 'Image' : 'Video',
+            description: req.body.caption || '',
+            uploadedBy: req.user.email || 'Unknown',
+            postedToWebsite: true
           });
 
-        //   console.log('\n✅ Image Uploaded');
-        //   console.log('📂 Firebase Storage Path:', `gs://beinglawful-ee5a4.appspot.com/${storagePath}`);
-        //   console.log('🌐 Public URL:', url);
-
-          uploadedFiles.push({ storagePath, downloadUrl: url, mediaId: mediaRef.id });
+          uploadedFiles.push({ id: mediaRef.id, storagePath, url });
           resolve();
         });
 
@@ -1379,7 +1373,7 @@ app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
     }
 
     res.status(200).json({
-      message: 'Images uploaded successfully',
+      message: 'Media uploaded successfully',
       files: uploadedFiles,
     });
   } catch (error) {
@@ -1388,13 +1382,30 @@ app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
   }
 });
 // Fetch gallery media route
+// app.get('/gallery', async (req, res) => {
+//   try {
+//     const snapshot = await db.collection('gallery').get();
+//     if (snapshot.empty) {
+//       return res.status(200).json({ message: 'Images fetched successfully', images: [] });
+//     }
+//     const images = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+//     res.status(200).json({ message: 'Images fetched successfully', images });
+//   } catch (error) {
+//     console.error('❌ Error fetching gallery:', error);
+//     res.status(500).json({ error: 'Server error', details: error.message });
+//   }
+// });
+// Backend: /gallery (updated to filter posted media)
 app.get('/gallery', async (req, res) => {
   try {
-    const snapshot = await db.collection('gallery').get();
+    const snapshot = await db.collection('gallery').where('postedToWebsite', '==', true).get();
     if (snapshot.empty) {
       return res.status(200).json({ message: 'Images fetched successfully', images: [] });
     }
-    const images = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const images = [];
+    snapshot.docs.forEach(doc => {
+      images.push({ id: doc.id, ...doc.data() });
+    });
     res.status(200).json({ message: 'Images fetched successfully', images });
   } catch (error) {
     console.error('❌ Error fetching gallery:', error);
@@ -1402,6 +1413,27 @@ app.get('/gallery', async (req, res) => {
   }
 });
 
+app.post('/mark-seen', requireAdmin, async (req, res) => {
+  try {
+    const { mediaId, seen } = req.body;
+    await db.collection('gallery').doc(mediaId).update({ seen });
+    res.status(200).json({ message: 'Media status updated' });
+  } catch (error) {
+    console.error('❌ Error marking media as seen:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+app.post('/update-description', requireAdmin, async (req, res) => {
+  try {
+    const { mediaId, description } = req.body;
+    await db.collection('gallery').doc(mediaId).update({ description });
+    res.status(200).json({ message: 'Description updated' });
+  } catch (error) {
+    console.error('❌ Error updating description:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 // School dashboard (renders schoolDashboard.ejs)
 
 app.get('/school-dashboard', async (req, res) => {
@@ -5762,7 +5794,8 @@ wss.on('connection', (ws) => {
 });
  
 
-app.post('/add-login-log', async (req, res) => {
+// Express route to add login log
+app.post('/add-login-log', requireAdmin, async (req, res) => {
   try {
     // Fetch IP data from ipapi.co
     const response = await axios.get('https://ipapi.co/json/');
@@ -5772,31 +5805,32 @@ app.post('/add-login-log', async (req, res) => {
       ipAddress: data.ip || 'N/A',
       latitude: data.latitude ? parseFloat(data.latitude).toFixed(6) : 'N/A',
       longitude: data.longitude ? parseFloat(data.longitude).toFixed(6) : 'N/A',
-      loginTime: new Date().toISOString() // Server-side timestamp
+      loginTime: admin.firestore.FieldValue.serverTimestamp() // Use Firestore server timestamp
     };
 
     // Store in Firestore
-    await db.collection('loginLogs').add(newLog);
+    const docRef = await db.collection('adminLoginLogs').add(newLog);
+    const logWithId = { id: docRef.id, ...newLog };
 
-    res.status(200).json({ message: 'Login log added successfully', log: newLog });
+    res.status(200).json({ message: 'Login log added successfully', log: logWithId });
   } catch (error) {
     console.error('Error fetching IP or storing log:', error);
-    res.status(500).json({ error: 'Failed to add login log' });
+    res.status(500).json({ error: 'Failed to add login log', details: error.message });
   }
 });
 
 // Express route to fetch all login logs
-app.get('/get-login-logs', async (req, res) => {
+app.get('/get-login-logs', requireAdmin, async (req, res) => {
   try {
-    const logsSnapshot = await db.collection('loginLogs').orderBy('loginTime', 'desc').get();
-    const logs = [];
-    logsSnapshot.forEach(doc => {
-      logs.push({ id: doc.id, ...doc.data() });
-    });
+    const logsSnapshot = await db.collection('adminLoginLogs').orderBy('loginTime', 'desc').get();
+    const logs = logsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }));
     res.status(200).json({ logs });
   } catch (error) {
     console.error('Error fetching login logs:', error);
-    res.status(500).json({ error: 'Failed to fetch login logs' });
+    res.status(500).json({ error: 'Failed to fetch login logs', details: error.message });
   }
 });
 // Start the server

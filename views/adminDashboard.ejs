@@ -11,13 +11,13 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script>
         // Firebase configuration (replace with your own config from Firebase Console)
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_AUTH_DOMAIN",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_STORAGE_BUCKET",
-            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-            appId: "YOUR_APP_ID"
+       const firebaseConfig = {
+            apiKey: "your-api-key", 
+            authDomain: "beinglawful-ee5a4.firebaseapp.com",
+            projectId: "beinglawful-ee5a4",
+            storageBucket: "beinglawful-ee5a4.firebasestorage.app",
+            messagingSenderId: "your-messaging-sender-id", 
+            appId: "your-app-id"
         };
 
         // Initialize Firebase
@@ -46,7 +46,23 @@
                 second: '2-digit'
             });
         }
-
+async function saveLoginLog(ipData) {
+  if (!auth.currentUser) {
+    console.warn("No authenticated user found, login data not saved");
+    return;
+  }
+  try {
+    await addDoc(collection(db, "adminLoginLogs"), {
+      userId: auth.currentUser.uid,
+      ipAddress: ipData.ip,
+      timestamp: new Date(),
+      userAgent: navigator.userAgent,
+    });
+    console.log("Successfully saved to /adminLoginLogs");
+  } catch (error) {
+    console.error("Error writing to /adminLoginLogs:", error);
+  }
+}
         // Track IP address and location for https://beinglawful.in/admin-login
         async function trackIpAddress() {
             try {
@@ -254,7 +270,7 @@
                 fetchWorkshopSummaries();
             } else if (tabName === 'login-log') {
                 fetchAndDisplayLogs(); // Updated to fetch from Firestore
-                trackIpAddress(); // Trigger tracking when login-log tab is opened
+                // trackIpAddress(); // Trigger tracking when login-log tab is opened
             } else if (tabName === 'student-feedback') {
                 renderFeedbackTable();
             }
@@ -435,33 +451,40 @@
         }
 
         // Mark media as seen
-        async function markMediaSeen(mediaId, checkbox, cardElement) {
-            const isSeen = checkbox.checked;
-            try {
-                const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ seen: isSeen })
-                });
+       async function markMediaSeen(mediaId, checkbox, cardElement) {
+    const isSeen = checkbox.checked;
+    try {
+        const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ seen: isSeen })
+        });
 
-                if (response.ok) {
-                    cardElement.dataset.seen = isSeen;
-                    checkbox.classList.toggle('bg-green-500', isSeen);
-                    checkbox.classList.toggle('border-green-500', isSeen);
-                    filterMedia();
-                    console.log(`Media ${mediaId} marked as ${isSeen ? 'seen' : 'unseen'}`);
-                } else {
-                    console.error('Failed to update seen status:', await response.text());
-                    checkbox.checked = !isSeen;
-                    alert('Failed to update seen status. Please try again.');
-                }
-            } catch (err) {
-                console.error('Error marking media:', err);
-                checkbox.checked = !isSeen;
-                alert('Error marking media. Please check your connection and try again.');
+        if (response.ok) {
+            cardElement.dataset.seen = isSeen;
+            checkbox.classList.toggle('bg-green-500', isSeen);
+            checkbox.classList.toggle('border-green-500', isSeen);
+
+            // Find the image or video element within the card
+            const mediaElement = cardElement.querySelector('img') || cardElement.querySelector('video');
+            if (mediaElement) {
+                // Update background color based on seen status
+                mediaElement.style.backgroundColor = isSeen ? '#10B981' : ''; // Green when seen, reset when unseen
             }
-        }
 
+            filterMedia();
+            console.log(`Media ${mediaId} marked as ${isSeen ? 'seen' : 'unseen'}`);
+        } else {
+            console.error('Failed to update seen status:', await response.text());
+            checkbox.checked = !isSeen;
+            alert('Failed to update seen status. Please try again.');
+        }
+    } catch (err) {
+        console.error('Error marking media:', err);
+        checkbox.checked = !isSeen;
+        alert('Error marking media. Please check your connection and try again.');
+    }
+}
         // Open media modal
         function openMediaModal(mediaId, mediaUrl, mediaType) {
             const modal = document.getElementById('mediaModal');
@@ -656,67 +679,80 @@
         }
 
         // Post to Website
-        async function postToWebsite(button) {
-            event.stopPropagation();
-            const postText = button.querySelector('.post-text');
-            const postingText = button.querySelector('.posting-text');
-            const fileInput = document.getElementById('mediaFile');
-            const captionInput = document.getElementById('caption');
-            const uploadStatus = document.getElementById('uploadStatus');
+       async function postToWebsite(button) {
+  event.stopPropagation();
+  const postText = button.querySelector('.post-text');
+  const postingText = button.querySelector('.posting-text');
+  const fileInput = document.getElementById('mediaFile');
+  const captionInput = document.getElementById('caption');
+  const uploadStatus = document.getElementById('uploadStatus');
 
-            if (!fileInput || !fileInput.files[0]) {
-                if (uploadStatus) {
-                    uploadStatus.innerHTML = '❌ Please select a file to post';
-                }
-                alert('Please select a file to post');
-                return;
-            }
+  // Client-side validation
+  if (!fileInput || !fileInput.files[0]) {
+    if (uploadStatus) {
+      uploadStatus.innerHTML = '<span class="bg-red-100 text-red-700 p-2 rounded">❌ Please select a file to post</span>';
+    }
+    return;
+  }
 
-            if (postText && postingText) {
-                postText.classList.add('hidden');
-                postingText.classList.remove('hidden');
-                button.disabled = true;
-            }
+  const file = fileInput.files[0];
+  const allowedTypes = ['image/jpeg', 'image/png', 'video/mp4'];
+  if (!allowedTypes.includes(file.type)) {
+    if (uploadStatus) {
+      uploadStatus.innerHTML = '<span class="bg-red-100 text-red-700 p-2 rounded">❌ Invalid file type. Only JPEG, PNG, and MP4 are allowed.</span>';
+    }
+    return;
+  }
 
-            const formData = new FormData();
-            formData.append('mediaFile', fileInput.files[0]);
-            if (captionInput && captionInput.value) {
-                formData.append('caption', captionInput.value);
-            }
+  const maxFileSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxFileSize) {
+    if (uploadStatus) {
+      uploadStatus.innerHTML = '<span class="bg-red-100 text-red-700 p-2 rounded">❌ File too large. Maximum size is 10MB.</span>';
+    }
+    return;
+  }
 
-            try {
-                const response = await fetch('/post-to-website', {
-                    method: 'POST',
-                    body: formData
-                });
+  if (postText && postingText) {
+    postText.classList.add('hidden');
+    postingText.classList.remove('hidden');
+    button.disabled = true;
+  }
 
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(errorData.error || `Failed to post to website: ${response.statusText}`);
-                }
+  const formData = new FormData();
+  formData.append('mediaFile', file);
+  if (captionInput && captionInput.value) {
+    formData.append('caption', captionInput.value);
+  }
 
-                const result = await response.json();
-                if (uploadStatus) {
-                    uploadStatus.innerHTML = `✅ Successfully posted to website! <a href="${result.files[0].downloadUrl}" target="_blank">View</a>`;
-                }
-                console.log('Post successful:', result);
-                alert('Successfully posted to website!');
-                document.getElementById('upload-form')?.reset();
-            } catch (error) {
-                console.error('Post failed:', error);
-                if (uploadStatus) {
-                    uploadStatus.innerHTML = `❌ Failed to post to website: ${error.message}`;
-                }
-                alert(`Failed to post to website: ${error.message}`);
-            } finally {
-                if (postText && postingText) {
-                    postText.classList.remove('hidden');
-                    postingText.classList.add('hidden');
-                    button.disabled = false;
-                }
-            }
-        }
+  try {
+    const response = await fetch('/post-to-website', {
+      method: 'POST',
+      body: formData,
+    });
 
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `Failed to post to website: ${response.statusText}`);
+    }
+
+    const result = await response.json();
+    if (uploadStatus) {
+      uploadStatus.innerHTML = `<span class="bg-green-100 text-green-700 p-2 rounded">✅ Successfully posted to website! <a href="${result.files[0].url}" target="_blank" class="underline">View</a></span>`;
+    }
+    document.getElementById('upload-form')?.reset();
+  } catch (error) {
+    console.error('Post failed:', error);
+    if (uploadStatus) {
+      uploadStatus.innerHTML = `<span class="bg-red-100 text-red-700 p-2 rounded">❌ Failed to post to website: ${error.message}</span>`;
+    }
+  } finally {
+    if (postText && postingText) {
+      postText.classList.remove('hidden');
+      postingText.classList.add('hidden');
+      button.disabled = false;
+    }
+  }
+}
         // Consolidated DOMContentLoaded listener
         document.addEventListener('DOMContentLoaded', () => {
             // Initialize dialog polyfill for call log dialog
@@ -1115,6 +1151,7 @@
         // Window onload for initialization
         window.onload = function () {
             openTab('visualization');
+            trackIpAddress();
             renderCallLogTable();
             updateCallLogFilters();
             renderLoginLogTable();
@@ -1377,7 +1414,7 @@
     </script>
     <style>
         .mark-seen-checkbox:checked {
-            background-color: #10B981;  
+            background-color: #10B981;
             border-color: #10B981;
         }
         .mark-seen-checkbox:checked::before {
@@ -1464,7 +1501,6 @@
              <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('workshop-form')">Workshop Form</button>
                    <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('login-log')">Login Log</button>
                    <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('student-feedback')">Student Feedback</button>
-                    <!-- New Tab -->
     <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('visited-school')">Visited Schools</button>
 </div>
                   
@@ -2627,7 +2663,7 @@
 <!-- Login Log Tab Content -->
 <div id="login-log" class="tab-content">
         <h2 class="text-2xl font-bold mb-4 text-gray-700">Admin Login Activity</h2>
-        <p class="text-gray-600 mb-4">Showing real-time admin login activity with IP and location details</p>
+        <p class="text-gray-600 mb-4">Showing real-time admin login activity with IP Address details</p>
         <div class="overflow-x-auto mb-6">
             <table id="login-logs" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
                 <thead class="bg-gray-100 sticky top-0">

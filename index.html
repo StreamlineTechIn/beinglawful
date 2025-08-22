@@ -162,7 +162,7 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet"/>
   <link href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css" rel="stylesheet"/>
-  <style>
+    <style>
     html, body {
       margin: 0;
       padding: 0;
@@ -302,6 +302,37 @@
       border-radius: 12px;
       object-fit: cover;
     }
+    .book-section {
+  background: linear-gradient(135deg, #fef3c7 0%, #d7c992 100%);
+  transition: background 0.3s ease;
+}
+.book-card {
+  background: white;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.book-card:hover {
+  transform: translateY(-8px);
+}
+.book-image {
+  background-size: cover;
+  background-position: center;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.book-image:hover {
+  transform: scale(1.08);
+}
+.buy-button {
+  background: linear-gradient(45deg, #d97706, #f59e0b);
+  transition: all 0.3s ease;
+}
+.buy-button:hover {
+  background: linear-gradient(45deg, #b45309, #d97706);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
     @media (min-width: 768px) {
       .book-bg {
         width: 200px;
@@ -580,10 +611,10 @@
       border: 2px solid #1e40af;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       transition: transform 0.3s ease, box-shadow 0.3s ease;
-      padding: 1rem 3rem; /* Increased padding for taller button */
+      padding: 1rem 3rem;
       width: auto;
       min-width: 180px;
-      min-height: 48px; /* Added min-height for taller button */
+      min-height: 48px;
       line-height: 1.5;
     }
     .blink-button:hover {
@@ -657,6 +688,31 @@
       font-size: 24px;
       cursor: pointer;
       z-index: 1002;
+    }
+    .stats-card {
+      background: linear-gradient(135deg, #f59e0b, #1e40af);
+      color: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      margin: 1rem 0;
+    }
+    .stats-card:hover {
+      transform: translateY(-5px) rotate(2deg);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    }
+    .stats-counter {
+      font-size: 2.5rem;
+      font-weight: bold;
+      display: block;
+      text-align: center;
+    }
+    .participation-modal-content {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      max-width: 400px;
+      width: 90%;
     }
     @media (min-width: 320px) {
       .hero-section {
@@ -867,7 +923,7 @@
     </div>
   </section>
 
-  <!-- Modal for Participation Options -->
+    <!-- Modal for Participation Options -->
   <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden" id="participateModal">
     <div class="bg-white rounded-lg p-3 w-11/12 max-w-md">
       <div class="flex justify-between items-center mb-3">
@@ -889,6 +945,40 @@
       </div>
     </div>
   </div>
+<!-- Our Impact Section -->
+<section class="bg-gradient-to-r from-blue-50 to-amber-50 min-h-screen flex flex-col items-center justify-center py-12 px-4" id="impact" data-aos="fade-up">
+  <h2 class="text-2xl md:text-3xl font-bold text-center mb-8 text-gray-800" data-aos="fade-up" data-aos-delay="200">Our Impact: Join the Movement</h2>
+  <p class="text-center text-gray-600 mb-6 max-w-2xl text-sm md:text-base" data-aos="fade-up" data-aos-delay="300">
+    See how Being Lawful is empowering schools, trainers, and students across India. These numbers grow every day—be part of the change!
+  </p>
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8 max-w-4xl w-full">
+    <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300" data-aos="zoom-in" data-aos-delay="400">
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Schools</h3>
+      <p class="text-3xl font-bold text-blue-600"><span class="counter" data-target="0" id="totalSchools">0</span>+</p>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300" data-aos="zoom-in" data-aos-delay="500">
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Trainers</h3>
+      <p class="text-3xl font-bold text-blue-600"><span class="counter" data-target="0" id="totalTrainers">0</span>+</p>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300" data-aos="zoom-in" data-aos-delay="600">
+      <h3 class="text-lg font-semibold text-gray-700 mb-2">Total Students</h3>
+      <p class="text-3xl font-bold text-blue-600"><span class="counter" data-target="0" id="totalStudents">0</span>+</p>
+    </div>
+
+  </div>
+  <!-- <div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl w-full">
+    <div class="bg-white p-6 rounded-xl shadow-lg" data-aos="fade-right" data-aos-delay="1200">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">District-wise School Distribution</h3>
+      <canvas id="districtChart" height="200"></canvas>
+    </div>
+    <div class="bg-white p-6 rounded-xl shadow-lg" data-aos="fade-left" data-aos-delay="1300">
+      <h3 class="text-lg font-semibold text-gray-700 mb-4">Profession-wise Trainers</h3>
+      <canvas id="professionChart" height="200"></canvas>
+    </div>
+  </div> -->
+</section>
+  
+
 
   <!-- Vision Section -->
   <section class="vision-bg min-h-screen flex flex-col items-center justify-center py-8 px-4" id="vision" data-aos="fade-up">
@@ -966,25 +1056,32 @@
   </section>
 
   <!-- Book Overview Section -->
-  <section class="tan-bg min-h-screen flex flex-col items-center justify-center py-8 px-4" id="book" data-aos="fade-up">
-    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Being Lawful Book Overview</h2>
-    <div class="flex flex-col md:flex-row gap-4 max-w-4xl w-full items-center px-1">
-      <div class="bg-gray-200 p-3 rounded-xl flex-1 transform hover:-translate-y-2 transition-all duration-300" data-aos="fade-right" data-aos-delay="300">
-        <p class="text-gray-600 mb-3 text-xs sm:text-sm">
-          In their vulnerability, children need protection from life's injustices. This book serves as a guide, imparting knowledge about their rights, safety measures, and remedies in challenging situations. Additionally, as they grow, they must comprehend their responsibilities, respect others' rights, and grasp the significance of 'Being Lawful', the central theme of this book.
+  
+<section class="book-section min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8" id="book" data-aos="fade-up">
+ <h2 class="text-2xl sm:text-3xl md:text-3xl font-extrabold text-center mb-8 text-gray-900 tracking-tight" data-aos="fade-up" data-aos-delay="200">Being Lawful Book Overview</h2>
+    <div class="flex flex-col md:flex-row gap-8 max-w-5xl w-full items-center px-4">
+      <div class="book-card p-6 rounded-2xl flex-1" data-aos="fade-right" data-aos-delay="300">
+        <p class="text-gray-700 mb-4 text-sm sm:text-base leading-relaxed">
+          In their vulnerability, children need protection from life's injustices. This book serves as a guide, imparting knowledge about their rights, safety measures, and remedies in challenging situations. As they grow, they must understand their responsibilities, respect others' rights, and embrace the significance of <span class="highlight-text">'Being Lawful'</span>, the central theme of this book.
         </p>
-        <p class="text-gray-600 mb-3 text-xs sm:text-sm">
-          As empowered citizens, children have the ability to shape the future of India. The book encourages them to expand their focus beyond self-interest to encompass society, our country, and the entire world. Embracing the philosophy of Vasudhaiva Kutumbakam—the global family—is what the world needs today.
+        <p class="text-gray-700 mb-4 text-sm sm:text-base leading-relaxed">
+          As empowered citizens, children have the power to shape India's future. This book inspires them to look beyond self-interest, embracing society, our nation, and the world. The philosophy of <span class="highlight-text">Vasudhaiva Kutumbakam</span>—the global family—is the vision for a better tomorrow.
         </p>
-        <p class="text-gray-600 mb-3 text-xs sm:text-sm">
-          May this book provide a fresh perspective on this journey, proving valuable not only to children but also to their parents and teachers.
+        <p class="text-gray-700 mb-6 text-sm sm:text-base leading-relaxed">
+          May this book offer a fresh perspective, proving invaluable not only to children but also to their parents and teachers.
         </p>
-        <a href="/buy-book" class="px-3 py-1 bg-gray-800 text-white rounded-md hover:bg-blue-600 transform hover:-translate-y-1 transition-all duration-300 text-xs sm:text-sm" data-aos="zoom-in" data-aos-delay="400">Buy book</a>
+        <a href="/buy-book" class="buy-button inline-block px-6 py-3 text-white rounded-full text-sm sm:text-base font-semibold shadow-md" data-aos="zoom-in" data-aos-delay="400">
+          Buy the Book Now
+        </a>
       </div>
-      <div class="book-bg w-full md:w-48 transform hover:scale-105 transition-all duration-300" data-aos="fade-left" data-aos-delay="300"></div>
+      <div class="book-image relative w-full md:w-64 h-80 bg-cover bg-center rounded-2xl shadow-xl" style="background-image: url('assets/being_lawful.jpg')" data-aos="fade-left" data-aos-delay="300">
+        <div class="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent rounded-2xl"></div>
+      </div>
     </div>
   </section>
 
+
+   <div id="root"></div>
   <!-- Image Modal -->
   <div id="imageModal" class="modal" onclick="closeModal(event)">
     <span class="close-modal" onclick="closeModal(event)" aria-label="Close Image Modal">×</span>
@@ -1041,7 +1138,7 @@
   </section>
 
   <!-- Activities Section -->
-  <section class="bg-white min-h-screen flex flex-col items-center justify-center py-8 px-4" id="activities" data-aos="fade-up">
+ <section class="bg-white min-h-screen flex flex-col items-center justify-center py-8 px-4" id="activities" data-aos="fade-up">
     <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Gallery</h2>
     <div class="gallery-grid">
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="300">
@@ -1164,14 +1261,13 @@
           <span class="gallery-title">Adv. S.K Jain addressed the trainers</span>
         </div>
       </div>
-  
-      <div class="mt-6">
+    </div>
+    <div class="mt-6 flex justify-center">
       <a href="./gallery.html" target="_blank" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transform hover:-translate-y-1 transition-all duration-300 text-sm" data-aos="zoom-in" data-aos-delay="1100">View More</a>
     </div>
-
-  </section>
-<div style="display: flex; justify-content: center; align-items: center; height: 80vh;">
-  <video controls autoplay muted style="max-width:50%; max-height:50%;" id="myVideo">
+</section>
+<div style="display: flex; justify-content: center; align-items: center; height: 60vh;">
+  <video controls autoplay muted style="max-width:70%; max-height:70%;" id="myVideo">
     <source src="./Assets/dharmadhikari.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
@@ -1313,6 +1409,11 @@
   <!-- JavaScript -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.6.7/dist/axios.min.js"></script>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script> -->
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7.23.9/babel.min.js"></script>
 <script>
 
 AOS.init({
@@ -1389,6 +1490,104 @@ function closeVideoModal() {
   video.pause();
   video.currentTime = 0;
   modal.style.display = 'none';
+}
+
+// Load Chart.js
+const script = document.createElement('script');
+script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js';
+script.onload = () => initializeImpactSection();
+document.head.appendChild(script);
+
+// Counter Animation Class
+class CountUp {
+  constructor(el, target) {
+    this.el = el;
+    this.target = parseInt(target, 10);
+    this.count = 0;
+    this.increment = Math.ceil(this.target / 100);
+    this.interval = setInterval(() => this.update(), 20);
+  }
+  update() {
+    this.count += this.increment;
+    if (this.count >= this.target) {
+      this.count = this.target;
+      clearInterval(this.interval);
+    }
+    this.el.textContent = this.count;
+  }
+}
+
+// Initialize Impact Section
+async function initializeImpactSection() {
+  try {
+    // Fetch stats from API
+    const response = await fetch('/api/impact-stats');
+    const stats = await response.json();
+    if (stats.error) throw new Error(stats.error);
+
+    // Update counters
+    document.getElementById('totalSchools').setAttribute('data-target', stats.totalSchools || 0);
+    document.getElementById('totalTrainers').setAttribute('data-target', stats.totalTrainers || 0);
+    document.getElementById('totalStudents').setAttribute('data-target', stats.totalStudents || 0)
+
+    // Initialize counters when section is in view
+    const impactSection = document.getElementById('impact');
+    const observer = new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) {
+        document.querySelectorAll('.counter').forEach(counter => {
+          new CountUp(counter, counter.getAttribute('data-target'));
+        });
+        observer.disconnect();
+      }
+    });
+    observer.observe(impactSection);
+
+    // District Chart (Bar)
+    // const districtCtx = document.getElementById('districtChart').getContext('2d');
+    // new Chart(districtCtx, {
+    //   type: 'bar',
+    //   data: {
+    //     labels: stats.districtData.map(d => d.city),
+    //     datasets: [{
+    //       label: 'Schools',
+    //       data: stats.districtData.map(d => d.count),
+    //       backgroundColor: 'rgba(54, 162, 235, 0.6)',
+    //       borderColor: 'rgba(54, 162, 235, 1)',
+    //       borderWidth: 1
+    //     }]
+    //   },
+    //   options: {
+    //     responsive: true,
+    //     scales: { y: { beginAtZero: true } },
+    //     plugins: { legend: { display: false } }
+    //   }
+    // });
+
+    // Profession Chart (Pie)
+    // const professionCtx = document.getElementById('professionChart').getContext('2d');
+    // new Chart(professionCtx, {
+    //   type: 'pie',
+    //   data: {
+    //     labels: stats.professionData.map(p => p.profession),
+    //     datasets: [{
+    //       data: stats.professionData.map(p => p.count),
+    //       backgroundColor: [
+    //         'rgba(255, 99, 132, 0.6)',
+    //         'rgba(54, 162, 235, 0.6)',
+    //         'rgba(255, 206, 86, 0.6)',
+    //         'rgba(75, 192, 192, 0.6)',
+    //         'rgba(153, 102, 255, 0.6)'
+    //       ]
+    //     }]
+    //   },
+    //   options: {
+    //     responsive: true,
+    //     plugins: { legend: { position: 'bottom' } }
+    //   }
+    // });
+  } catch (err) {
+    // console.error('Error initializing impact section:', err);
+  }
 }
 </script>
 

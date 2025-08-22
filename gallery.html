@@ -94,14 +94,14 @@
       border-radius: 8px;
       aspect-ratio: 16 / 9;
     }
-    .gallery-item img {
+    .gallery-item img, .gallery-item video {
       width: 100%;
       height: 100%;
       object-fit: cover;
       transition: transform 0.3s ease;
       cursor: pointer;
     }
-    .gallery-item:hover img {
+    .gallery-item:hover img, .gallery-item:hover video {
       transform: scale(1.1);
     }
     .gallery-overlay {
@@ -145,7 +145,7 @@
       max-width: 90%;
       max-height: 90vh;
     }
-    .modal-content img {
+    .modal-content img, .modal-content video {
       width: 100%;
       height: auto;
       max-height: 90vh;
@@ -252,30 +252,36 @@
 
   <!-- Upload Photo Section -->
   <section id="upload-photo" class="bg-white py-8 px-4 hidden" data-aos="fade-up">
-    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Upload Photo</h2>
+    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Upload Media</h2>
     <form id="upload-form" enctype="multipart/form-data" class="max-w-md mx-auto p-6 bg-white rounded-lg shadow-lg">
       <div class="mb-4">
-        <label for="images" class="block text-sm font-medium text-gray-700 mb-2">Select Images</label>
-        <input type="file" name="images" id="images" multiple accept="image/*"
+        <label for="mediaFile" class="block text-sm font-medium text-gray-700 mb-2">Select Media (Images/Videos)</label>
+        <input type="file" name="mediaFile" id="mediaFile" multiple accept="image/*,video/mp4"
                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md 
                       file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 
                       hover:file:bg-blue-100 cursor-pointer"/>
       </div>
-      <button type="submit" 
+      <div class="mb-4">
+        <label for="caption" class="block text-sm font-medium text-gray-700 mb-2">Caption (Optional)</label>
+        <input type="text" name="caption" id="caption" placeholder="Enter caption"
+               class="block w-full text-sm text-gray-500 border border-gray-300 rounded-md p-2"/>
+      </div>
+      <button type="button" onclick="postToWebsite(this)" 
               class="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md 
                      hover:bg-blue-700 transition duration-200">
-        Upload
+        <span class="post-text">Post to Website</span>
+        <span class="posting-text hidden">Posting...</span>
       </button>
     </form>
     <div id="success-message" class="hidden mt-4 p-4 bg-green-100 text-green-700 rounded-md text-center"></div>
-    <div id="error-message" class="error-message">Failed to upload images. Please try again.</div>
+    <div id="error-message" class="error-message max-w-md mx-auto">Failed to upload media. Please try again.</div>
   </section>
 
   <!-- Gallery Section -->
   <section class="bg-white min-h-screen flex flex-col items-center justify-center py-8 px-4" id="activities" data-aos="fade-up">
     <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Gallery</h2>
     <div id="gallery-loading" class="loading max-w-md mx-auto">Loading...</div>
-    <div id="error-gallery" class="error-message max-w-md mx-auto">Failed to load gallery images. Please try again later.</div>
+    <div id="error-gallery" class="error-message max-w-md mx-auto">Failed to load gallery media. Please try again later.</div>
     <div class="gallery-grid" id="gallery-grid">
       <!-- Static Images -->
       <div class="gallery-item" data-aos="fade-up" data-aos-delay="300">
@@ -398,15 +404,19 @@
           <span class="gallery-title">Adv. S.K Jain addressed the trainers</span>
         </div>
       </div>
-      <!-- Dynamic images will be appended here -->
+      <!-- Dynamic media will be appended here -->
     </div>
   </section>
 
-  <!-- Image Modal -->
+  <!-- Media Modal -->
   <div id="imageModal" class="modal">
-    <span class="close-modal" aria-label="Close Image Modal">×</span>
+    <span class="close-modal" aria-label="Close Media Modal">×</span>
     <div class="modal-content">
-      <img id="modalImage" src="" alt="Modal Image">
+      <img id="modalImage" src="" alt="Modal Image" class="hidden">
+      <video id="modalVideo" controls class="hidden">
+        <source src="" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
     </div>
   </div>
 
@@ -496,22 +506,37 @@
     }
 
     // Modal Functions
-    function openModal(imgElement) {
+    function openModal(element, mediaType) {
       const modal = document.getElementById('imageModal');
-      const modalImg = document.getElementById('modalImage');
-      modalImg.src = imgElement.src;
-      modalImg.alt = imgElement.alt || 'Uploaded Image';
+      const modalImage = document.getElementById('modalImage');
+      const modalVideo = document.getElementById('modalVideo');
+      if (mediaType === 'Image') {
+        modalImage.src = element.src;
+        modalImage.alt = element.alt || 'Uploaded Image';
+        modalImage.classList.remove('hidden');
+        modalVideo.classList.add('hidden');
+        modalImage.onerror = function() {
+          console.error('Failed to load image:', modalImage.src);
+          modal.classList.remove('active');
+        };
+      } else {
+        modalVideo.querySelector('source').src = element.querySelector('source').src;
+        modalVideo.load();
+        modalVideo.classList.remove('hidden');
+        modalImage.classList.add('hidden');
+        modalVideo.onerror = function() {
+          console.error('Failed to load video:', modalVideo.src);
+          modal.classList.remove('active');
+        };
+      }
       modal.classList.add('active');
-      modalImg.onerror = function() {
-        console.error('Failed to load image:', modalImg.src);
-        modal.classList.remove('active');
-      };
     }
 
     function closeModal(event) {
       const modal = document.getElementById('imageModal');
       if (event.target.classList.contains('modal') || event.target.classList.contains('close-modal')) {
         modal.classList.remove('active');
+        document.getElementById('modalVideo').pause();
       }
     }
 
@@ -520,17 +545,101 @@
       const modal = document.getElementById('imageModal');
       if (event.key === 'Escape' && modal.classList.contains('active')) {
         modal.classList.remove('active');
+        document.getElementById('modalVideo').pause();
       }
     });
 
-    // Event Delegation for Gallery Images
+    // Event Delegation for Gallery Media
     document.getElementById('gallery-grid').addEventListener('click', function(event) {
       if (event.target.tagName === 'IMG') {
-        openModal(event.target);
+        openModal(event.target, 'Image');
+      } else if (event.target.tagName === 'VIDEO' || event.target.closest('video')) {
+        openModal(event.target.closest('video'), 'Video');
       }
     });
 
-    // Fetch Gallery Images
+    // Post to Website Function
+    async function postToWebsite(button) {
+      event.stopPropagation();
+      const postText = button.querySelector('.post-text');
+      const postingText = button.querySelector('.posting-text');
+      const fileInput = document.getElementById('mediaFile');
+      const captionInput = document.getElementById('caption');
+      const successMessage = document.getElementById('success-message');
+      const errorMessage = document.getElementById('error-message');
+
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        errorMessage.textContent = 'Please select at least one file to post';
+        errorMessage.style.display = 'block';
+        setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
+        return;
+      }
+
+      for (const file of fileInput.files) {
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          errorMessage.textContent = `File ${file.name} exceeds 5MB limit`;
+          errorMessage.style.display = 'block';
+          setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
+          return;
+        }
+      }
+
+      if (postText && postingText) {
+        postText.classList.add('hidden');
+        postingText.classList.remove('hidden');
+        button.disabled = true;
+      }
+
+      try {
+        const user = firebase.auth().currentUser;
+        if (!user) {
+          throw new Error('Please log in to upload files');
+        }
+        const idToken = await user.getIdToken();
+        const formData = new FormData();
+        for (const file of fileInput.files) {
+          formData.append('mediaFile', file);
+        }
+        if (captionInput && captionInput.value) {
+          formData.append('caption', captionInput.value);
+        }
+
+        const response = await fetch('/post-to-website', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          },
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error || `Failed to post to website: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        successMessage.textContent = `Successfully posted to website! ${result.files.map(file => `<a href="${file.url}" target="_blank">View ${file.storagePath.split('/').pop()}</a>`).join(', ')}`;
+        successMessage.classList.remove('hidden');
+        document.getElementById('upload-form').reset();
+        setTimeout(() => {
+          successMessage.classList.add('hidden');
+          fetchGalleryImages();
+        }, 5000);
+      } catch (error) {
+        console.error('Post failed:', error);
+        errorMessage.textContent = `Failed to post to website: ${error.message}`;
+        errorMessage.style.display = 'block';
+        setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
+      } finally {
+        if (postText && postingText) {
+          postText.classList.remove('hidden');
+          postingText.classList.add('hidden');
+          button.disabled = false;
+        }
+      }
+    }
+
+    // Fetch Gallery Images and Videos
     async function fetchGalleryImages() {
       const errorGallery = document.getElementById('error-gallery');
       const loading = document.getElementById('gallery-loading');
@@ -547,23 +656,31 @@
           headers = { 'Authorization': `Bearer ${idToken}` };
         }
 
-        const response = await fetch('http://localhost:3000/gallery', {
+        const response = await fetch('/gallery', {
           method: 'GET',
           headers
         });
         const data = await response.json();
 
         if (data.message === 'Images fetched successfully') {
-          let delay = 1300; // Start after 20 static images
-          data.images.forEach(image => {
+          let delay = 1300; // Start after static images
+          data.images.forEach(media => {
             const galleryItem = document.createElement('div');
             galleryItem.className = 'gallery-item';
             galleryItem.setAttribute('data-aos', 'fade-up');
             galleryItem.setAttribute('data-aos-delay', delay);
-            const fileName = image.storagePath.split('/').pop().replace(/^\d+_/, '');
-            const title = fileName.replace(/\.[^/.]+$/, '') || 'Uploaded Image';
-            galleryItem.innerHTML = `
-              <img src="${image.url}" alt="${title}" loading="lazy">
+            const fileName = media.storagePath.split('/').pop().replace(/^\d+_/, '');
+            const title = media.description || fileName.replace(/\.[^/.]+$/, '') || 'Uploaded Media';
+            galleryItem.innerHTML = media.mediaType === 'Image' ? `
+              <img src="${media.url}" alt="${title}" loading="lazy">
+              <div class="gallery-overlay">
+                <span class="gallery-title">${title}</span>
+              </div>
+            ` : `
+              <video controls>
+                <source src="${media.url}" type="video/mp4">
+                Your browser does not support the video tag.
+              </video>
               <div class="gallery-overlay">
                 <span class="gallery-title">${title}</span>
               </div>
@@ -576,12 +693,12 @@
           loading.classList.add('hidden');
           errorGallery.style.display = 'none';
         } else {
-          throw new Error(data.error || response.statusText || 'Failed to fetch gallery images');
+          throw new Error(data.error || response.statusText || 'Failed to fetch gallery media');
         }
       } catch (error) {
-        console.error('Error fetching gallery images:', error);
+        console.error('Error fetching gallery media:', error);
         loading.classList.add('hidden');
-        errorGallery.textContent = 'Failed to load gallery images: ' + error.message;
+        errorGallery.textContent = 'Failed to load gallery media: ' + error.message;
         errorGallery.style.display = 'block';
         setTimeout(() => { errorGallery.style.display = 'none'; }, 5000);
       }
@@ -609,66 +726,12 @@
       } else {
         uploadSection.classList.add('hidden');
       }
+      fetchGalleryImages(); // Fetch media for all users
     });
-
-    // Handle Upload Form Submission
-    async function uploadImages(event) {
-      event.preventDefault();
-      const form = event.target;
-      const successMessageDiv = document.getElementById('success-message');
-      const errorMessageDiv = document.getElementById('error-message');
-      try {
-        const user = firebase.auth().currentUser;
-        if (!user) {
-          errorMessageDiv.textContent = 'Please log in to upload files.';
-          errorMessageDiv.style.display = 'block';
-          setTimeout(() => { errorMessageDiv.style.display = 'none'; }, 5000);
-          return;
-        }
-        const files = form.querySelector('#images').files;
-        for (const file of files) {
-          if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            errorMessageDiv.textContent = `File ${file.name} exceeds 5MB limit.`;
-            errorMessageDiv.style.display = 'block';
-            setTimeout(() => { errorMessageDiv.style.display = 'none'; }, 5000);
-            return;
-          }
-        }
-        const formData = new FormData(form);
-        const idToken = await user.getIdToken();
-        const response = await fetch('http://localhost:3000/upload-image', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          },
-          body: formData
-        });
-        const result = await response.json();
-        if (response.ok) {
-          successMessageDiv.textContent = result.message;
-          successMessageDiv.classList.remove('hidden');
-          form.reset();
-          setTimeout(() => {
-            successMessageDiv.classList.add('hidden');
-            fetchGalleryImages();
-          }, 5000);
-        } else {
-          throw new Error(result.error || 'Failed to upload images');
-        }
-      } catch (error) {
-        console.error('Error uploading files:', error);
-        errorMessageDiv.textContent = 'Error uploading files: ' + error.message;
-        errorMessageDiv.style.display = 'block';
-        setTimeout(() => { errorMessageDiv.style.display = 'none'; }, 5000);
-      }
-    }
-
-    // Attach Upload Handler
-    document.getElementById('upload-form').addEventListener('submit', uploadImages);
 
     // Initialize on Page Load
     document.addEventListener('DOMContentLoaded', function() {
-      fetchGalleryImages();
+      document.getElementById('imageModal').addEventListener('click', closeModal);
     });
   </script>
 </body>

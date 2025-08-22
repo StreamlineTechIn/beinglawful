@@ -617,124 +617,120 @@
                 <button class="tab-button" onclick="openTab('edit-info')">Edit School Information</button>
                 <button class="tab-button" onclick="openTab('media-upload')">Media Upload</button>
             </div>
-            <div id="resources" class="tab-content active">
-                <% if (resourcesConfirmed) { %>
-                    <div class="confirmation-message">
-                        <h4 style="color: #4CAF50;">The school must ensure that event photos are uploaded in the “Media Upload” section for media coverage by Being Lawful officials.</h4>
-                        <p>You have confirmed the arrangement of the following resources:</p>
-                        <ul>
-                            <% selectedResources.forEach(resource => { %>
-                                <li><%= resource %></li>
+       <div id="resources" class="tab-content active">
+    <% if (resourcesConfirmed) { %>
+        <div class="confirmation-message">
+            <h4 style="color: #4CAF50;">The school must ensure that event photos are uploaded in the “Media Upload” section for media coverage by Being Lawful officials.</h4>
+            <p>You have confirmed the arrangement of the following resources:</p>
+            <ul>
+                <% selectedResources.forEach(resource => { %>
+                    <li><%= resource %></li>
+                <% }) %>
+            </ul>
+            <% if (typeof workshopStartTime !== 'undefined' && typeof workshopEndTime !== 'undefined' && workshopStartTime && workshopEndTime) { %>
+                <p>Workshop Schedule: <%= workshopStartTime %> to <%= workshopEndTime %> (4-hour duration)</p>
+            <% } %>
+            <% if (selectedTrainers && selectedTrainers.length > 0) { %>
+                <% selectedTrainers.forEach((trainer, index) => { %>
+                    <p>Selected Trainer <%= index + 1 %>: <%= trainer.trainerName %> (<%= trainer.district %>)</p>
+                    <% if (trainer.isOtherDistrict) { %>
+                        <p class="trainer-note">Note: An additional ₹1000 + travel expenses will be charged for selecting a trainer from another district.</p>
+                    <% } %>
+                <% }) %>
+            <% } %>
+        </div>
+    <% } else { %>
+        <div class="resources-form">
+            <form action="/school-dashboard/submit-resources" method="post">
+                <input type="hidden" name="schoolEmail" value="<%= schoolEmail %>">
+                <p>Please confirm the resources you agree to arrange or pay for:</p>
+                <div class="resource-item">
+                    <input type="checkbox" id="trainerRemediation" name="resources" value="Trainer remediation" checked required>
+                    <label for="trainerRemediation">Trainer accomodation (if applicable)</label>
+                </div>
+                <div class="resource-item">
+                    <input type="checkbox" id="workshopKit" name="resources" value="Rs 5000 workshop kit" checked required>
+                    <label for="workshopKit">Rs 11000 Workshop Fees (includes student online MCQ test, online certificates for students who appeared in MCQ test, Workshop kit, Online Game Accesses, trainer remuneration, Trainer travelling cost)</label>
+                </div>
+                <div class="resource-item">
+                    <input type="checkbox" id="mic" name="resources" value="Mic" checked required>
+                    <label for="mic">Mic</label>
+                </div>
+                <div class="resource-item">
+                    <input type="checkbox" id="cleanEnvironment" name="resources" value="Clean environment" checked required>
+                    <label for="cleanEnvironment">Clean environment</label>
+                </div>
+                <div class="resource-item">
+                    <input type="checkbox" id="seatingArrangement" name="resources" value="50 student seating arrangement" checked required>
+                    <label for="seatingArrangement">50 student seating arrangement</label>
+                </div>
+                <div class="resource-item">
+                    <input type="checkbox" id="projector" name="resources" value="Projector" checked required>
+                    <label for="projector">Projector</label>
+                </div>
+                <div class="resource-item">
+                    <input type="checkbox" id="travelingExpense" name="resources" value="Traveling expense" checked required>
+                    <label for="travelingExpense">I agree to Pay this amount via Online or bank transfer to Being Lawful Team. (note: Please avoid any direct or cash transaction with trainers or co-ordinators. Being Lawful Team will not be responsible for any cash transaction between school and trainer.)</label>
+                </div>
+                <div class="resource-item">
+                    <input type="checkbox" id="internetConnection" name="resources" value="Internet connection" checked required>
+                    <label for="internetConnection">Internet connection</label>
+                </div>
+                <div class="resource-item">
+                    <input type="checkbox" id="showAllTrainers" name="showAllTrainers" onchange="updateTrainerSelection()">
+                    <label for="showAllTrainers">Show all trainers (including other districts)</label>
+                </div>
+                <div class="trainer-select-container">
+                    <div>
+                        <label for="trainerId1" class="trainer-label">Trainer 1:</label>
+                        <select id="trainerId1" name="trainerId1" class="filter-select" required onchange="updateTrainerSelection()">
+                            <option value="">Select a trainer</option>
+                            <% trainers.forEach(trainer => { %>
+                                <option value="<%= trainer.id %>" data-district="<%= trainer.district %>" data-dates='<%= JSON.stringify(trainer.availableDates || []) %>'>
+                                    <%= trainer.trainerName %> (<%= trainer.district %>)
+                                </option>
                             <% }) %>
-                        </ul>
-                        <% if (typeof workshopStartTime !== 'undefined' && typeof workshopEndTime !== 'undefined' && workshopStartTime && workshopEndTime) { %>
-                            <p>Workshop Schedule: <%= workshopStartTime %> to <%= workshopEndTime %> (4-hour duration)</p>
-                        <% } %>
-                        <% if (selectedTrainers && selectedTrainers.length > 0) { %>
-                            <% selectedTrainers.forEach((trainer, index) => { %>
-                                <p>Selected Trainer <%= index + 1 %>: <%= trainer.trainerName %> (<%= trainer.district %>)</p>
-                                <% if (trainer.isOtherDistrict) { %>
-                                    <p class="trainer-note">Note: An additional ₹1000 + travel expenses will be charged for selecting a trainer from another district.</p>
-                                <% } %>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="trainerId2" class="trainer-label">Trainer 2:</label>
+                        <select id="trainerId2" name="trainerId2" class="filter-select" required onchange="updateTrainerSelection()">
+                            <option value="">Select a trainer</option>
+                            <% trainers.forEach(trainer => { %>
+                                <option value="<%= trainer.id %>" data-district="<%= trainer.district %>" data-dates='<%= JSON.stringify(trainer.availableDates || []) %>'>
+                                    <%= trainer.trainerName %> (<%= trainer.district %>)
+                                </option>
                             <% }) %>
-                        <% } %>
+                        </select>
                     </div>
-                <% } else { %>
-                    <div class="resources-form">
-                        <form action="/school-dashboard/submit-resources" method="post">
-                            <input type="hidden" name="schoolEmail" value="<%= schoolEmail %>">
-                            <p>Please confirm the resources you agree to arrange or pay for:</p>
-                            <div class="resource-item">
-                                <input type="checkbox" id="trainerRemediation" name="resources" value="Trainer remediation" checked required>
-                                <label for="trainerRemediation">Trainer remuneration</label>
-                            </div>
-                            <div class="resource-item">
-                                <input type="checkbox" id="travelingExpense" name="resources" value="Traveling expense" checked required>
-                                <label for="travelingExpense">Traveling expense</label>
-                            </div>
-                            <div class="resource-item">
-                                <input type="checkbox" id="mic" name="resources" value="Mic" checked required>
-                                <label for="mic">Mic</label>
-                            </div>
-                            <div class="resource-item">
-                                <input type="checkbox" id="cleanEnvironment" name="resources" value="Clean environment" checked required>
-                                <label for="cleanEnvironment">Clean environment</label>
-                            </div>
-                            <div class="resource-item">
-                                <input type="checkbox" id="seatingArrangement" name="resources" value="50 student seating arrangement" checked required>
-                                <label for="seatingArrangement">50 student seating arrangement</label>
-                            </div>
-                            <div class="resource-item">
-                                <input type="checkbox" id="workshopKit" name="resources" value="Rs 5000 workshop kit" checked required>
-                                <label for="workshopKit">Rs 11000 </label>
-                            </div>
-                            <div class="resource-item">
-                                <input type="checkbox" id="projector" name="resources" value="Projector" checked required>
-                                <label for="projector">Projector</label>
-                            </div>
-                            <div class="resource-item">
-                                <input type="checkbox" id="trainer1" name="resources" value="Trainer 1" checked required>
-                                <label for="trainer1">Trainer 1</label>
-                            </div>
-                            <div class="resource-item">
-                                <input type="checkbox" id="trainer2" name="resources" value="Trainer 2" checked required>
-                                <label for="trainer2">Trainer 2</label>
-                            </div>
-                            <div class="resource-item">
-                                <input type="checkbox" id="showAllTrainers" name="showAllTrainers" onchange="updateTrainerSelection()">
-                                <label for="showAllTrainers">Show all trainers (including other districts)</label>
-                            </div>
-                            <div class="trainer-select-container">
-                                <div>
-                                    <label for="trainerId1" class="trainer-label">Trainer 1:</label>
-                                    <select id="trainerId1" name="trainerId1" class="filter-select" required onchange="updateTrainerSelection()">
-                                        <option value="">Select a trainer</option>
-                                        <% trainers.forEach(trainer => { %>
-                                            <option value="<%= trainer.id %>" data-district="<%= trainer.district %>" data-dates='<%= JSON.stringify(trainer.availableDates || []) %>'>
-                                                <%= trainer.trainerName %> (<%= trainer.district %>)
-                                            </option>
-                                        <% }) %>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="trainerId2" class="trainer-label">Trainer 2:</label>
-                                    <select id="trainerId2" name="trainerId2" class="filter-select" required onchange="updateTrainerSelection()">
-                                        <option value="">Select a trainer</option>
-                                        <% trainers.forEach(trainer => { %>
-                                            <option value="<%= trainer.id %>" data-district="<%= trainer.district %>" data-dates='<%= JSON.stringify(trainer.availableDates || []) %>'>
-                                                <%= trainer.trainerName %> (<%= trainer.district %>)
-                                            </option>
-                                        <% }) %>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label for="workshopStartTime" class="trainer-label">Workshop Time:</label>
-                                    <div class="timepicker-container">
-                                        <input type="time" id="workshopStartTime" name="workshopStartTime" class="timepicker" required oninput="enableSaveButton()">
-                                        <button type="button" id="timepickerSaveButton" class="timepicker-save-button" onclick="updateEndTime()" disabled>Save</button>
-                                    </div>
-                                    <input type="hidden" name="workshopEndTime" id="workshopEndTime">
-                                </div>
-                                <div>
-                                    <label class="trainer-label">End Time:</label>
-                                    <span id="workshopEndTimeDisplay" style="margin-left: 10px;"></span>
-                                </div>
-                                <span id="durationMessage" class="duration-message">Workshop duration: 4 hours</span>
-                                <p class="trainer-note" id="trainer1-dates" style="display: none;">
-                                    Available Dates for Trainer 1: <span id="trainer1-dates-list" class="date-list"></span>
-                                </p>
-                                <p class="trainer-note" id="trainer2-dates" style="display: none;">
-                                    Available Dates for Trainer 2: <span id="trainer2-dates-list" class="date-list"></span>
-                                </p>
-                                <p class="trainer-note" id="trainer-cost-note" style="display: none;">
-                                    Note: Selecting a trainer from another district will incur an additional ₹1000 + travel expenses.
-                                </p>
-                            </div>
-                            <input type="submit" value="Confirm Resources and Trainer">
-                        </form>
+                    <div>
+                        <label for="workshopStartTime" class="trainer-label">Workshop Time:</label>
+                        <div class="timepicker-container">
+                            <input type="time" id="workshopStartTime" name="workshopStartTime" class="timepicker" required oninput="enableSaveButton()">
+                            <button type="button" id="timepickerSaveButton" class="timepicker-save-button" onclick="updateEndTime()" disabled>Save</button>
+                        </div>
+                        <input type="hidden" name="workshopEndTime" id="workshopEndTime">
                     </div>
-                <% } %>
-            </div>
+                    <div>
+                        <label class="trainer-label">End Time:</label>
+                        <span id="workshopEndTimeDisplay" style="margin-left: 10px;"></span>
+                    </div>
+                    <span id="durationMessage" class="duration-message">Workshop duration: 4 hours</span>
+                    <p class="trainer-note" id="trainer1-dates" style="display: none;">
+                        Available Dates for Trainer 1: <span id="trainer1-dates-list" class="date-list"></span>
+                    </p>
+                    <p class="trainer-note" id="trainer2-dates" style="display: none;">
+                        Available Dates for Trainer 2: <span id="trainer2-dates-list" class="date-list"></span>
+                    </p>
+                    <p class="trainer-note" id="trainer-cost-note" style="display: none;">
+                        Note: Selecting a trainer from another district will incur an additional ₹1000 + travel expenses.
+                    </p>
+                </div>
+                <input type="submit" value="Confirm Resources and Trainer">
+            </form>
+        </div>
+    <% } %>
+</div>
             <div id="student-data" class="tab-content">
                 <div class="status-info">
                     <p><strong>Total Students:</strong> <%= totalStudents %></p>

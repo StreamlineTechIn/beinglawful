@@ -5791,25 +5791,7 @@ app.get('/call-logs', async (req, res) => {
 });
 
 
-//ip and loation tracker
-const http = require('http');
-const server = http.createServer(app);
-const { WebSocketServer } = require('ws');
-const wss = new WebSocketServer({ server, path: '/admin-login/ws/login-updates' });
 
-wss.on('connection', (ws) => {
-  console.log('New WebSocket client connected ✅');
-
-  ws.send(JSON.stringify({ message: 'Welcome Admin!' }));
-
-  ws.on('message', (msg) => {
-    console.log('Received:', msg.toString());
-  });
-
-  ws.on('close', () => {
-    console.log('Client disconnected ❌');
-  });
-});
  
 
 // Express route to add login log

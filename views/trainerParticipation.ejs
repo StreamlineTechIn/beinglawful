@@ -87,145 +87,141 @@
       </p>
     </div>
 
-        <% if (errors && errors.length > 0) { %>
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                <strong class="font-bold">Error:</strong>
-                <ul class="list-disc list-inside">
-                    <% errors.forEach(error => { %>
-                        <li><%= error.msg %></li>
-                    <% }) %>
-                </ul>
-            </div>
-        <% } %>
+    <% if (errors && errors.length > 0) { %>
+        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <strong class="font-bold">Error:</strong>
+            <ul class="list-disc list-inside">
+                <% errors.forEach(error => { %>
+                    <li><%= error.msg %></li>
+                <% }) %>
+            </ul>
+        </div>
+    <% } %>
 
-        <form action="/trainer-participate" method="POST" id="trainerForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="trainerName">
-                    Trainer Name
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="trainerName" name="trainerName" type="text" placeholder="Enter trainer name" required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="mobileNumber">
-                    Mobile Number
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="mobileNumber" name="mobileNumber" type="text" placeholder="Enter mobile number (10 digits)" pattern="\d{10}" required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="whatsappNumber">
-                    WhatsApp Number
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="whatsappNumber" name="whatsappNumber" type="text" placeholder="Enter WhatsApp number (10 digits)" pattern="\d{10}" required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
-                    Email Address
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" name="email" type="email" placeholder="Enter email address" required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="city">
-                    City
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="city" name="city" type="text" placeholder="Enter city" required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="district">
-                    District
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="district" name="district" type="text" placeholder="Enter district" required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="profession">
-                    Profession
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="profession" name="profession" type="text" placeholder="Enter profession" required>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 text-sm font-bold mb-2" for="referenceName">
-                    Reference Name
-                </label>
-                <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="referenceName" name="referenceName" type="text" placeholder="Enter reference name" required>
-            </div>
-            <div class="flex items-center justify-between">
-                <button id="submitBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
-                    Submit
-                </button>
-                <a href="/" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
-                    Back to Home
-                </a>
-            </div>
-        </form>
+    <form action="/trainer-participate" method="POST" id="trainerForm" class="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="trainerName">
+                Trainer Name
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="trainerName" name="trainerName" type="text" placeholder="Enter trainer name" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="mobileNumber">
+                Mobile Number
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="mobileNumber" name="mobileNumber" type="text" placeholder="Enter mobile number (10 digits)" pattern="\d{10}" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="whatsappNumber">
+                WhatsApp Number
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="whatsappNumber" name="whatsappNumber" type="text" placeholder="Enter WhatsApp number (10 digits)" pattern="\d{10}" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="email">
+                Email Address
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="email" name="email" type="email" placeholder="Enter email address" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="city">
+                City
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="city" name="city" type="text" placeholder="Enter city" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="district">
+                District
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="district" name="district" type="text" placeholder="Enter district" required>
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="profession">
+                Profession
+            </label>
+            <select class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="profession" name="profession" required>
+                <option value="" disabled selected>Select your profession</option>
+                <option value="Lawyer">Lawyer</option>
+                <option value="Civics Teacher">Civics Teacher</option>
+                <option value="Competitive Exam Aspirant">Competitive Exam Aspirant</option>
+                <option value="Other">Other</option>
+            </select>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline mt-2 hidden" id="otherProfession" name="otherProfession" type="text" placeholder="Specify your profession">
+        </div>
+        <div class="mb-4">
+            <label class="block text-gray-700 text-sm font-bold mb-2" for="referenceName">
+                Reference Name
+            </label>
+            <input class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" id="referenceName" name="referenceName" type="text" placeholder="Enter reference name" required>
+        </div>
+        <div class="flex items-center justify-between">
+            <button id="submitBtn" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline" type="submit">
+                Submit
+            </button>
+            <a href="/" class="inline-block align-baseline font-bold text-sm text-blue-500 hover:text-blue-800">
+                Back to Home
+            </a>
+        </div>
+    </form>
 
-        <h2 class="text-2xl font-bold mt-8 mb-4">Registered Trainers</h2>
-        <% if (trainers && trainers.length > 0) { %>
-            <div class="overflow-x-auto">
-                <table class="min-w-full bg-white">
-                    <thead class="bg-gray-200">
+    <h2 class="text-2xl font-bold mt-8 mb-4">Registered Trainers</h2>
+    <% if (trainers && trainers.length > 0) { %>
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="py-2 px-4 border">Trainer Name</th>
+                        <th class="py-2 px-4 border">City</th>
+                        <th class="py-2 px-4 border">District</th>
+                        <th class="py-2 px-4 border">Profession</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% trainers.forEach(trainer => { %>
                         <tr>
-                            <th class="py-2 px-4 border">Trainer Name</th>
-                            <th class="py-2 px-4 border">City</th>
-                            <th class="py-2 px-4 border">District</th>
-                            <th class="py-2 px-4 border">Profession</th>
+                            <td class="py-2 px-4 border"><%= trainer.trainerName %></td>
+                            <td class="py-2 px-4 border"><%= trainer.city %></td>
+                            <td class="py-2 px-4 border"><%= trainer.district %></td>
+                            <td class="py-2 px-4 border"><%= trainer.profession %></td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <% trainers.forEach(trainer => { %>
-                            <tr>
-                                <td class="py-2 px-4 border"><%= trainer.trainerName %></td>
-                                <td class="py-2 px-4 border"><%= trainer.city %></td>
-                                <td class="py-2 px-4 border"><%= trainer.district %></td>
-                                <td class="py-2 px-4 border"><%= trainer.profession %></td>
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-            </div>
-        <% } else { %>
-            <p class="text-gray-700">No trainers registered yet.</p>
-        <% } %>
-    </div>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    <% } else { %>
+        <p class="text-gray-700">No trainers registered yet.</p>
+    <% } %>
+</div>
 
-    <script>
-        document.getElementById('trainerForm').addEventListener(' Monaco', function(event) {
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.disabled = true;
-            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            submitBtn.classList.remove('hover:bg-blue-700');
+<script>
+    document.getElementById('trainerForm').addEventListener('submit', function(event) {
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+        submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        submitBtn.classList.remove('hover:bg-blue-700');
 
-            // Optional: Simulate server response for testing (remove in production)
-            setTimeout(() => {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                submitBtn.classList.add('hover:bg-blue-700');
-            }, 2000);
+        // Optional: Simulate server response for testing (remove in production)
+        setTimeout(() => {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            submitBtn.classList.add('hover:bg-blue-700');
+        }, 2000);
+    });
 
-            // In a real scenario, re-enable the button based on server response
-            // Example with Fetch API (uncomment and adjust for your server):
-            /*
-            fetch('/trainer-participate', {
-                method: 'POST',
-                body: new FormData(this)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    submitBtn.classList.add('hover:bg-blue-700');
-                } else {
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                    submitBtn.classList.add('hover:bg-blue-700');
-                }
-            })
-            .catch(error => {
-                submitBtn.disabled = false;
-                submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-                submitBtn.classList.add('hover:bg-blue-700');
-            });
-            */
-        });
-    </script>
+    // Handle profession dropdown and other profession text field
+    const professionSelect = document.getElementById('profession');
+    const otherProfessionInput = document.getElementById('otherProfession');
+
+    professionSelect.addEventListener('change', function() {
+        if (this.value === 'Other') {
+            otherProfessionInput.classList.remove('hidden');
+            otherProfessionInput.setAttribute('required', 'required');
+        } else {
+            otherProfessionInput.classList.add('hidden');
+            otherProfessionInput.removeAttribute('required');
+            otherProfessionInput.value = '';
+        }
+    });
+</script>
 </body>
 </html>

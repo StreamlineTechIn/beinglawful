@@ -4700,20 +4700,43 @@ app.post('/trainer-participate', [
     body('profession').trim().notEmpty().withMessage('Profession is required'),
     body('mobileNumber').trim().matches(/^\d{10}$/).withMessage('Mobile number must be 10 digits'),
     body('whatsappNumber').trim().matches(/^\d{10}$/).withMessage('WhatsApp number must be 10 digits'),
-    body('referenceName').trim().notEmpty().withMessage('Reference name is required')
+    body('referenceName').trim().notEmpty().withMessage('Reference name is required'),
+    body('otherProfession').trim().custom((value, { req }) => {
+        if (req.body.profession === 'Other' && !value) {
+            throw new Error('Other profession is required when profession is "Other"');
+        }
+        return true;
+    }),
 ], async (req, res) => {
     try {
         const validationErrors = validationResult(req);
         const errors = validationErrors.isEmpty() ? [] : validationErrors.array();
 
         const {
-            trainerName, email, city, district, profession, mobileNumber, whatsappNumber, referenceName
+            trainerName,
+            email,
+            city,
+            district,
+            profession,
+            mobileNumber,
+            whatsappNumber,
+            referenceName,
+            otherProfession,
         } = req.body;
 
+        // Determine the profession to store
+        const finalProfession = profession === 'Other' ? otherProfession : profession;
+
+        // Validate that finalProfession is not empty
+        if (!finalProfession) {
+            errors.push({ param: 'profession', msg: 'Profession cannot be empty' });
+        }
+
+        // Check for duplicates
         const duplicateChecks = [
             { field: 'email', value: email, message: 'Email already exists' },
             { field: 'mobileNumber', value: mobileNumber, message: 'Mobile number already exists' },
-            { field: 'whatsappNumber', value: whatsappNumber, message: 'WhatsApp number already exists' }
+            { field: 'whatsappNumber', value: whatsappNumber, message: 'WhatsApp number already exists' },
         ];
 
         for (const check of duplicateChecks) {
@@ -4727,31 +4750,35 @@ app.post('/trainer-participate', [
             return await renderFormWithErrors(res, errors);
         }
 
+        // Store data in Firebase
         await db.collection('trainers').add({
             trainerName,
             email,
             city,
             district,
-            profession,
+            profession: finalProfession, // Store finalProfession
             mobileNumber,
             whatsappNumber,
             referenceName,
             registeredAt: admin.firestore.FieldValue.serverTimestamp(),
-            isApproved: false
+            isApproved: false,
         });
 
-        // await sendEmail(
-        //     email,
-        //     emailTemplates.trainerRegistration.subject,
-        //     emailTemplates.trainerRegistration.text(trainerName, email, mobileNumber),
-        //     emailTemplates.trainerRegistration.html(trainerName, email, mobileNumber)
-        // );
+        // Uncomment and implement email sending if needed
+        /*
+        await sendEmail(
+            email,
+            emailTemplates.trainerRegistration.subject,
+            emailTemplates.trainerRegistration.text(trainerName, email, mobileNumber),
+            emailTemplates.trainerRegistration.html(trainerName, email, mobileNumber)
+        );
+        */
 
+        // Render confirmation page
         res.render('confirmation', {
             schoolEmail: email,
-            principalNumber: mobileNumber
+            principalNumber: mobileNumber,
         });
-
     } catch (error) {
         console.error('Error in trainer-participate route:', error.message, error.stack);
         await renderFormWithErrors(res, [{ msg: 'Internal server error. Please try again later.' }]);

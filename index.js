@@ -1266,155 +1266,159 @@ app.post('/admin/assign-event-date-school/:id', requireAdmin, async (req, res) =
 });
 
 // Upload multiple images one by one to the specified path
-app.post('/upload-image', requireAdmin, uploadImages, async (req, res) => {
-  try {
-    console.log('🟢 Upload started', req.files);
+    app.post('/upload-image', requireAdmin, uploadImages, async (req, res) => {
+    try {
+        console.log('🟢 Upload started', req.files);
 
-    const files = req.files;
-    if (!files || files.length === 0) {
-      console.log('❌ No image files provided');
-      return res.status(400).json({ error: 'No image files provided' });
-    }
+        const files = req.files;
+        if (!files || files.length === 0) {
+        console.log('❌ No image files provided');
+        return res.status(400).json({ error: 'No image files provided' });
+        }
 
-    const uploadedFiles = [];
-    for (const file of files) {
-      const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
-      const timestamp = Date.now();
-      const storagePath = `media/admin upload photo/${timestamp}_${sanitizedFileName}`;
-      const storageFile = bucket.file(storagePath);
+        const uploadedFiles = [];
+        for (const file of files) {
+        const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
+        const timestamp = Date.now();
+        const storagePath = `media/admin upload photo/${timestamp}_${sanitizedFileName}`;
+        const storageFile = bucket.file(storagePath);
 
-      await new Promise((resolve, reject) => {
-        const stream = storageFile.createWriteStream({
-          metadata: { contentType: file.mimetype },
-        });
+        await new Promise((resolve, reject) => {
+            const stream = storageFile.createWriteStream({
+            metadata: { contentType: file.mimetype },
+            });
 
-        stream.on('error', (error) => {
-          console.error(`❌ Upload error for ${sanitizedFileName}:`, error);
-          reject(error);
-        });
+            stream.on('error', (error) => {
+            console.error(`❌ Upload error for ${sanitizedFileName}:`, error);
+            reject(error);
+            });
 
-        stream.on('finish', async () => {
-          const [url] = await storageFile.getSignedUrl({
-            action: 'read',
-            expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-          });
-
-          const mediaRef = await db.collection('admin upload photo').add({
-            storagePath,
-            url,
-            uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
-          });
-          uploadedFiles.push({ storagePath, downloadUrl: url, mediaId: mediaRef.id });
-          resolve();
-        });
-
-        stream.end(file.buffer);
-      });
-    }
-
-    res.status(200).json({
-      message: 'Images uploaded successfully',
-      files: uploadedFiles,
-    });
-  } catch (error) {
-    console.error('❌ Server error:', error);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Backend: /post-to-website
-app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
-  try {
-    const files = req.files;
-    if (!files || files.length === 0) {
-      return res.status(400).json({ error: 'No media files provided' });
-    }
-
-    // Validate file types and sizes
-    const allowedTypes = ['image/jpeg', 'image/png', 'video/mp4'];
-    const maxFileSize = 10 * 1024 * 1024; // 10MB
-    for (const file of files) {
-      if (!allowedTypes.includes(file.mimetype)) {
-        return res.status(400).json({ error: `Invalid file type: ${file.mimetype}` });
-      }
-      if (file.size > maxFileSize) {
-        return res.status(400).json({ error: `File too large: ${file.originalname}` });
-      }
-    }
-
-    const uploadedFiles = [];
-    for (const file of files) {
-      const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
-      const timestamp = Date.now();
-      const storagePath = `media/admin upload photo/${timestamp}_${sanitizedFileName}`;
-      const storageFile = bucket.file(storagePath);
-
-      await new Promise((resolve, reject) => {
-        const stream = storageFile.createWriteStream({
-          metadata: { contentType: file.mimetype },
-        });
-
-        stream.on('error', reject);
-        stream.on('finish', async () => {
-          try {
+            stream.on('finish', async () => {
             const [url] = await storageFile.getSignedUrl({
-              action: 'read',
-              expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+                action: 'read',
+                expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
             });
 
             const mediaRef = await db.collection('admin upload photo').add({
-              storagePath,
-              url,
-              uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
-              mediaType: file.mimetype.startsWith('image') ? 'Image' : 'Video',
-              description: req.body.caption || '',
-              uploadedBy: req.user.email || 'Unknown',
-              postedToWebsite: true,
-              fileSize: file.size,
+                storagePath,
+                url,
+                uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+            });
+            uploadedFiles.push({ storagePath, downloadUrl: url, mediaId: mediaRef.id });
+            resolve();
             });
 
-            uploadedFiles.push({ id: mediaRef.id, storagePath, url, fileName: sanitizedFileName });
-            resolve();
-          } catch (err) {
-            reject(err);
-          }
+            stream.end(file.buffer);
         });
+        }
 
-        stream.end(file.buffer);
-      });
+        res.status(200).json({
+        message: 'Images uploaded successfully',
+        files: uploadedFiles,
+        });
+    } catch (error) {
+        console.error('❌ Server error:', error);
+        res.status(500).json({ error: 'Server error' });
     }
-
-    res.status(200).json({
-      message: 'Media uploaded successfully',
-      files: uploadedFiles,
     });
-  } catch (error) {
-    console.error('❌ Server error:', error.message);
-    res.status(500).json({ error: `Server error: ${error.message}` });
-  }
-});
+
+    // Backend: /post-to-website
+    app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
+    try {
+        const files = req.files;
+        if (!files || files.length === 0) {
+        return res.status(400).json({ error: 'No media files provided' });
+        }
+
+        // Validate file types and sizes
+        const allowedTypes = ['image/jpeg', 'image/png', 'video/mp4'];
+        const maxFileSize = 10 * 1024 * 1024; // 10MB
+        for (const file of files) {
+        if (!allowedTypes.includes(file.mimetype)) {
+            return res.status(400).json({ error: `Invalid file type: ${file.mimetype}` });
+        }
+        if (file.size > maxFileSize) {
+            return res.status(400).json({ error: `File too large: ${file.originalname}` });
+        }
+        }
+
+        const uploadedFiles = [];
+        for (const file of files) {
+        const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
+        const timestamp = Date.now();
+        const storagePath = `media/admin upload photo/${timestamp}_${sanitizedFileName}`;
+        const storageFile = bucket.file(storagePath);
+
+        await new Promise((resolve, reject) => {
+            const stream = storageFile.createWriteStream({
+            metadata: { contentType: file.mimetype },
+            });
+
+            stream.on('error', reject);
+            stream.on('finish', async () => {
+            try {
+                const [url] = await storageFile.getSignedUrl({
+                action: 'read',
+                expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+                });
+
+                const mediaRef = await db.collection('admin upload photo').add({
+                storagePath,
+                url,
+                uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
+                mediaType: file.mimetype.startsWith('image') ? 'Image' : 'Video',
+                description: req.body.caption || '',
+                uploadedBy: req.user.email || 'Unknown',
+                postedToWebsite: true,
+                fileSize: file.size,
+                });
+
+                uploadedFiles.push({ id: mediaRef.id, storagePath, url, fileName: sanitizedFileName });
+                resolve();
+            } catch (err) {
+                reject(err);
+            }
+            });
+
+            stream.end(file.buffer);
+        });
+        }
+
+        res.status(200).json({
+        message: 'Media uploaded successfully',
+        files: uploadedFiles,
+        });
+    } catch (error) {
+        console.error('❌ Server error:', error.message);
+        res.status(500).json({ error: `Server error: ${error.message}` });
+    }
+    });
 
 app.get('/gallery', async (req, res) => {
   try {
-    const snapshot = await db.collection('admin upload photo').where('postedToWebsite', '==', true).get();
-    if (snapshot.empty) {
-      return res.status(200).json({ message: 'Images fetched successfully', images: [] });
-    }
+    const snapshot = await db.collection('gallery').get();
     const images = [];
-    snapshot.docs.forEach(doc => {
+    console.log("printing snapshotS",snapshot)
+    snapshot.forEach(doc => {
       images.push({ id: doc.id, ...doc.data() });
     });
-    res.status(200).json({ message: 'Images fetched successfully', images });
+    res.render('gallery', {
+      images,
+      error: null,
+      success: null
+    });
+    console.log("images",images);
   } catch (error) {
     console.error('❌ Error fetching gallery:', error);
-    res.status(500).json({ error: 'Server error', details: error.message });
+    res.render('gallery', {
+      images: [],
+      error: 'Failed to load gallery media. Please try again later.',
+      success: null
+    });
   }
 });
-  app.get('/gallery', (req, res) => {
-        res.render('gallery', { error: null, success: null });
-    });
 
-    app.post('/mark-media-seen/:mediaId', async (req, res) => {
+app.post('/mark-media-seen/:mediaId', async (req, res) => {
   const { mediaId } = req.params;
   const { seen } = req.body;
 

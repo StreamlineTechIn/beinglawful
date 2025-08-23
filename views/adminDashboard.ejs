@@ -2143,63 +2143,64 @@ async function saveLoginLog(ipData) {
             <% } %>
         </div>
 
-      <div id="students" class="tab-content hidden">
-    <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Students</h2>
-    <% if (participants && participants.length > 0) { %>
-        <div class="overflow-x-auto">
-            <table id="students" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-                <thead class="bg-gray-100 sticky top-0">
-                    <tr>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">Name<br><select class="filter-select text-sm w-full" data-column="studentName"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolNameDropdown">School<br><select class="filter-select text-sm w-full" data-column="schoolNameDropdown"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentClass">Class<br><select class="filter-select text-sm w-full" data-column="studentClass"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="parentEmail">Parent Email<br><select class="filter-select text-sm w-full" data-column="parentEmail"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 1</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 2</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Address</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Pincode</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Birthdate</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="hasCompletedMCQ">MCQ Completed<br><select class="filter-select text-sm w-full" data-column="hasCompletedMCQ"></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isChampion">Champ Status<br><select class="filter-select text-sm w-full" data-column="isChampion"><option value="">All</option><option value="Yes">Yes</option><option value="No">No</option></select></th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Score</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <% participants.forEach(participant => { %>
-                        <tr class="hover:bg-gray-50">
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= participant.id %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="studentName"><%= participant.studentName %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="schoolNameDropdown"><%= participant.schoolNameDropdown %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="studentClass"><%= participant.studentClass %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="parentEmail"><%= participant.parentEmail %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile1 || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile2 || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= participant.address || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= participant.city %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= participant.pincode || 'N/A' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700">
-                                <%= participant.birthdate ? new Date(participant.birthdate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' }) : 'N/A' %>
-                            </td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="hasCompletedMCQ">
-                                <%= participant.hasCompletedMCQ ? 'Yes' : 'No' %>
-                            </td>
-                            <td class="py-2 px-4 border-b text-gray-700" data-column="isChampion">
-                                <%= participant.isChampion ? 'Yes' : 'No' %>
-                            </td>
-                            <td class="py-2 px-4 border-b text-gray-700">
-                                <%= participant.score !== undefined ? participant.score : 'N/A' %>
-                            </td>
-                        </tr>
-                    <% }) %>
-                </tbody>
-            </table>
+        <div id="students" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Students</h2>
+            <% if (participants && participants.length > 0) { %>
+                <div class="overflow-x-auto">
+                    <table id="students" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                        <thead class="bg-gray-100 sticky top-0">
+                            <tr>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">Name<br><select class="filter-select text-sm w-full" data-column="studentName"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolNameDropdown">School<br><select class="filter-select text-sm w-full" data-column="schoolNameDropdown"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentClass">Class<br><select class="filter-select text-sm w-full" data-column="studentClass"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="parentEmail">Parent Email<br><select class="filter-select text-sm w-full" data-column="parentEmail"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 1</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Parent Mobile 2</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Address</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Pincode</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Birthdate</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="hasCompletedMCQ">MCQ Completed<br><select class="filter-select text-sm w-full" data-column="hasCompletedMCQ"></select></th>
+                                        <th class="py-2 px-4 border-b text-left text-gray-600">Champ Status</th>
+                                <th class="py-2 px-4 border-b text-left text-gray-600">Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% participants.forEach(participant => { %>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= participant.id %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="studentName"><%= participant.studentName %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolNameDropdown"><%= participant.schoolNameDropdown %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="studentClass"><%= participant.studentClass %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="parentEmail"><%= participant.parentEmail %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile1 || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.parentMobile2 || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.address || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= participant.city %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700"><%= participant.pincode || 'N/A' %></td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= participant.birthdate ? new Date(participant.birthdate).toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata' }) : 'N/A' %>
+                                    </td>
+                                    
+                                    <td class="py-2 px-4 border-b text-gray-700" data-column="hasCompletedMCQ">
+                                        <%= participant.hasCompletedMCQ ? 'Yes' : 'No' %>
+                                    </td>
+                                      <td class="py-2 px-4 border-b text-gray-700">
+                <%= participant.isChampion ? 'Yes' : 'No' %>
+            </td>
+                                    <td class="py-2 px-4 border-b text-gray-700">
+                                        <%= participant.score !== undefined ? participant.score : 'N/A' %>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <p class="text-gray-700">No students registered yet.</p>
+            <% } %>
         </div>
-    <% } else { %>
-        <p class="text-gray-700">No students registered yet.</p>
-    <% } %>
-</div>
 
 <div id="detail-summary" class="tab-content hidden bg-white p-4 rounded shadow">
     <h2 class="text-xl font-bold mb-4 text-gray-700">Training Schedule: Detailed Summary</h2>
@@ -2693,16 +2694,11 @@ async function saveLoginLog(ipData) {
                         Class<br>
                         <select class="filter-select text-sm w-full" data-column="className"></select>
                     </th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">How would you rate todays workshop?
-</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">Would you recommend this workshop to your friends?
-</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">Which part of the workshop did you enjoy the most?
-</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">What did you learn today that you didn`t know before?
-</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">Do you have any suggestions to make this workshop better?
-</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 1</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 2</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 3</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 4</th>
+                    <th class="py-2 px-4 border-b text-left text-gray-600">Question 5</th>
                     <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="createdAt">
                         Submission Date (IST)<br>
                         <select class="filter-select text-sm w-full" data-column="createdAt"></select>

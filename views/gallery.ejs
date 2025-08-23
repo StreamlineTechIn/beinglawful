@@ -99,8 +99,9 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transition: transform 0.3s ease;
+      transition: transform 0.2s ease;
       cursor: pointer;
+      loading: lazy;
     }
     .gallery-item:hover img, .gallery-item:hover video {
       transform: scale(1.1);
@@ -117,7 +118,7 @@
       align-items: center;
       justify-content: center;
       opacity: 0;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.2s ease;
     }
     .gallery-item:hover .gallery-overlay {
       opacity: 1;
@@ -243,134 +244,129 @@
   </nav>
   <!-- Gallery Section -->
   <section class="bg-white min-h-screen flex flex-col items-center justify-center py-8 px-4" id="activities" data-aos="fade-up">
-    <section class="bg-white min-h-screen flex flex-col items-center justify-center py-8 px-4" id="activities" data-aos="fade-up">
-    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="200">Gallery</h2>
+    <h2 class="text-lg sm:text-xl md:text-2xl font-bold text-center mb-4" data-aos="fade-up" data-aos-delay="100">Gallery</h2>
     <div class="gallery-grid">
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="300">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="150">
         <img src="./Assets/Activities/Activity1.jpg" alt="Being Lawful's First Workshop" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Being Lawful's First Workshop</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="350">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="175">
         <img src="./Assets/Activities/Activity2.jpg" alt="Students Writing About Local Issues" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Students Writing About Local Issues</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="400">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="200">
         <img src="./Assets/Activities/Activity3.jpg" alt="Being Lawful Workshop Activity" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Being Lawful Workshop Activity</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="450">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="225">
         <img src="./Assets/Activities/Activity4.jpg" alt="Workshop Conducted by the Author" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Workshop Conducted by the Author</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="500">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="250">
         <img src="./Assets/Activities/Activity5.jpg" alt="Workshop Group Activity" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Workshop Group Activity</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="550">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="275">
         <img src="./Assets/Activities/Activity6.jpg" alt="Workshop Setup and Arrangements" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Workshop Setup and Arrangements</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="600">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="300">
         <img src="./Assets/Activities/Activity7.jpg" alt="Being Lawful Book Display" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Being Lawful Book Display</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="650">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="325">
         <img src="./Assets/Activities/Activity8.jpg" alt="Workshop Kit Arrangement" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Workshop Kit Arrangement</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="700">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="350">
         <img src="./Assets/Activities/Activity9.jpg" alt="Student Gift Crafting Activity" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Student Gift Crafting Activity</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="750">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="375">
         <img src="./Assets/Activities/Activity10.jpg" alt="Gifts for Being Lawful Champions" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Gifts for Being Lawful Champions</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="800">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="400">
         <img src="./Assets/Activities/Activity11.jpg" alt="Author with Principal of Lord Ganesha School" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Author with Principal of Lord Ganesha School</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="850">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="425">
         <img src="./Assets/Activities/Activity12.jpg" alt="Being Lawful Group Activity" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Being Lawful Group Activity</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="900">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="450">
         <img src="./Assets/Activities/Activity13.jpg" alt="Students Participating in Being Lawful" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Students Participating in Being Lawful</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="950">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="475">
         <img src="./Assets/Activities/Activity14.jpg" alt="Online Trainer Orientation Session" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Online Trainer Orientation Session</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="500">
         <img src="./Assets/Activities/Activity16.JPG" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="525">
         <img src="./Assets/Activities/Activity17.JPG" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="550">
         <img src="./Assets/Activities/Activity18.JPG" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="575">
         <img src="./Assets/Activities/Activity19.JPG" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="600">
         <img src="./Assets/Activities/Activity20.jpg" alt="Train the trainer workshop pune" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Train the trainer workshop pune</span>
         </div>
       </div>
-      <div class="gallery-item" data-aos="fade-up" data-aos-delay="1000">
+      <div class="gallery-item" data-aos="fade-up" data-aos-delay="625">
         <img src="./Assets/Activities/Activity21.JPG" alt="Adv. S.K Jain addressed the trainers" onclick="openModal(this)">
         <div class="gallery-overlay">
           <span class="gallery-title">Adv. S.K Jain addressed the trainers</span>
         </div>
       </div>
     </div>
-    </div>
-</section>
-
-
     <% if (error) { %>
       <div id="error-gallery" class="error-message max-w-md mx-auto" style="display: block;"><%= error %></div>
     <% } %>
@@ -378,8 +374,8 @@
       <% images.forEach((media, index) => { %>
         <% let fileName = media.storagePath ? media.storagePath.split('/').pop().replace(/^\d+_/, '') : ''; %>
         <% let title = media.description || (fileName ? fileName.replace(/\.[^/.]+$/, '') : 'Uploaded Media'); %>
-        <div class="gallery-item" data-aos="fade-up" data-aos-delay="<%= index * 50 %>">
-            <img src="<%= media.url %>" alt="<%= title %>" loading="lazy">
+        <div class="gallery-item" data-aos="fade-up" data-aos-delay="<%= (index * 25) + 100 %>">
+          <img src="<%= media.url %>" alt="<%= title %>" loading="lazy" onclick="openModal(this)">
           <div class="gallery-overlay">
             <span class="gallery-title"><%= title %></span>
           </div>
@@ -403,7 +399,7 @@
   <!-- Footer Section -->
   <footer class="bg-gray-800 text-white py-6 px-4" id="footer" data-aos="fade-up">
     <div class="flex flex-col md:flex-row gap-4 justify-center max-w-3xl mx-auto mb-4">
-      <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="200">
+      <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="100">
         <h5 class="font-semibold text-sm sm:text-base mb-3">Quick Links</h5>
         <ul class="space-y-2">
           <li><a href="/" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Home</a></li>
@@ -412,14 +408,14 @@
           <li><a href="/#activities" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Gallery</a></li>
         </ul>
       </div>
-      <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="300">
+      <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="150">
         <h5 class="font-semibold text-sm sm:text-base mb-3">Contact Us</h5>
         <ul class="space-y-2">
           <li class="text-xs sm:text-sm">Email: info@beinglawful.in</li>
           <li class="text-xs sm:text-sm">Phone: +91 75884 21375</li>
         </ul>
       </div>
-      <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="400">
+      <div class="flex-1 text-center md:text-left" data-aos="fade-up" data-aos-delay="200">
         <h5 class="font-semibold text-sm sm:text-base mb-3">Follow Us</h5>
         <ul class="space-y-2">
           <li><a href="https://www.facebook.com/profile.php?id=61576685499937" class="text-gray-400 hover:text-blue-400 text-xs sm:text-sm">Facebook</a></li>
@@ -429,7 +425,7 @@
         </ul>
       </div>
     </div>
-    <div class="text-center text-gray-400 text-xs sm:text-sm" data-aos="fade-up" data-aos-delay="500">
+    <div class="text-center text-gray-400 text-xs sm:text-sm" data-aos="fade-up" data-aos-delay="250">
       <p>© 2025 Being Lawful. All Rights Reserved.</p>
     </div>
   </footer>
@@ -456,7 +452,7 @@
 
     // AOS Initialization
     AOS.init({
-      duration: 600,
+      duration: 300,
       easing: 'ease-in-out',
       once: true,
       mirror: false,

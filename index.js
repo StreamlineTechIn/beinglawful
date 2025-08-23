@@ -1323,76 +1323,88 @@ app.post('/admin/assign-event-date-school/:id', requireAdmin, async (req, res) =
     });
 
     // Backend: /post-to-website
-    app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
-    try {
-        const files = req.files;
-        if (!files || files.length === 0) {
-        return res.status(400).json({ error: 'No media files provided' });
-        }
-
-        // Validate file types and sizes
-        const allowedTypes = ['image/jpeg', 'image/png', 'video/mp4'];
-        const maxFileSize = 10 * 1024 * 1024; // 10MB
-        for (const file of files) {
-        if (!allowedTypes.includes(file.mimetype)) {
-            return res.status(400).json({ error: `Invalid file type: ${file.mimetype}` });
-        }
-        if (file.size > maxFileSize) {
-            return res.status(400).json({ error: `File too large: ${file.originalname}` });
-        }
-        }
-
-        const uploadedFiles = [];
-        for (const file of files) {
-        const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
-        const timestamp = Date.now();
-        const storagePath = `media/admin upload photo/${timestamp}_${sanitizedFileName}`;
-        const storageFile = bucket.file(storagePath);
-
-        await new Promise((resolve, reject) => {
-            const stream = storageFile.createWriteStream({
-            metadata: { contentType: file.mimetype },
-            });
-
-            stream.on('error', reject);
-            stream.on('finish', async () => {
-            try {
-                const [url] = await storageFile.getSignedUrl({
-                action: 'read',
-                expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-                });
-
-                const mediaRef = await db.collection('admin upload photo').add({
-                storagePath,
-                url,
-                uploadedAt: admin.firestore.FieldValue.serverTimestamp(),
-                mediaType: file.mimetype.startsWith('image') ? 'Image' : 'Video',
-                description: req.body.caption || '',
-                uploadedBy: req.user.email || 'Unknown',
-                postedToWebsite: true,
-                fileSize: file.size,
-                });
-
-                uploadedFiles.push({ id: mediaRef.id, storagePath, url, fileName: sanitizedFileName });
-                resolve();
-            } catch (err) {
-                reject(err);
-            }
-            });
-
-            stream.end(file.buffer);
-        });
-        }
-
-        res.status(200).json({
-        message: 'Media uploaded successfully',
-        files: uploadedFiles,
-        });
-    } catch (error) {
-        console.error('❌ Server error:', error.message);
-        res.status(500).json({ error: `Server error: ${error.message}` });
+app.post('/post-to-website', requireAdmin, uploadImages, async (req, res) => {
+  try {
+    const files = req.files;
+    if (!files || files.length === 0) {
+      return res.status(400).json({ error: 'No media files provided' });
     }
+
+    // Validate file types and sizes
+    const allowedTypes = ['image/jpeg', 'image/png', 'video/mp4'];
+    const maxFileSize = 10 * 1024 * 1024; // 10MB
+    for (const file of files) {
+      if (!allowedTypes.includes(file.mimetype)) {
+        return res.status(400).json({ error: `Invalid file type: ${file.mimetype}` });
+      }
+      if (file.size > maxFileSize) {
+        return res.status(400).json({ error: `File too large: ${file.originalname}` });
+      }
+    }
+
+    const uploadedFiles = [];
+    for (const file of files) {
+      const sanitizedFileName = file.originalname.replace(/[^a-zA-Z0-9.\-_]/g, '');
+      const timestamp = Date.now();
+      const storagePath = `gallery/${timestamp}_${sanitizedFileName}`;
+      const storageFile = bucket.file(storagePath);
+
+      await new Promise((resolve, reject) => {
+        const stream = storageFile.createWriteStream({
+          metadata: { contentType: file.mimetype },
+        });
+
+        stream.on('error', (err) => {
+          console.error('❌ Stream error:', err.message);
+          reject(err);
+        });
+
+        stream.on('finish', async () => {
+          try {
+            const [url] = await storageFile.getSignedUrl({
+              action: 'read',
+              expires: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1-year expiration
+            });
+
+            // Store in 'gallery' collection with validated fields
+            const mediaData = {
+              storagePath: storagePath, // Path in storage bucket
+              url: url, // Signed URL for accessing the file
+              uploadedAt: admin.firestore.FieldValue.serverTimestamp(), // Firestore server timestamp
+              fileType: file.mimetype, // Store file type for reference
+              fileName: sanitizedFileName, // Store sanitized file name
+            };
+
+            const mediaRef = await db.collection('gallery').add(mediaData);
+
+            uploadedFiles.push({
+              id: mediaRef.id, // Include document ID
+              storagePath: mediaData.storagePath,
+              url: mediaData.url,
+              uploadedAt: mediaData.uploadedAt,
+              fileType: mediaData.fileType,
+              fileName: mediaData.fileName,
+            });
+            resolve();
+          } catch (err) {
+            console.error('❌ Error generating signed URL or storing in Firestore:', err.message);
+            reject(err);
+          }
+        });
+
+        stream.end(file.buffer);
+      });
+    }
+
+    res.status(200).json({
+      message: 'Media uploaded successfully',
+      files: uploadedFiles,
     });
+  } catch (error) {
+    console.error('❌ Server error:', error.message);
+    res.status(500).json({ error: `Server error: ${error.message}` });
+  }
+});
 
 app.get('/gallery', async (req, res) => {
   try {
@@ -2975,16 +2987,19 @@ app.get('/admin/export-data', requireAdmin, async (req, res) => {
             }));
             console.log(`Fetched ${trainers.length} trainers`);
 
-            const trainerColumns = [
-                { header: 'Doc ID', key: 'id' },
-                { header: 'Name', key: 'trainerName' },
-                { header: 'Email', key: 'trainerEmail' },
-                { header: 'City', key: 'city' },
-                { header: 'Profession', key: 'profession' },
-                { header: 'Approved', key: 'isApproved', transform: (val) => val ? 'Yes' : 'No' },
-                { header: 'Registered At', key: 'registeredAt', transform: formatTimestamp }
-            ];
-
+          const trainerColumns = [
+    { header: 'Doc ID', key: 'id' },
+    { header: 'Name', key: 'trainerName' },
+    { header: 'Email', key: 'email' },
+    { header: 'City', key: 'city' },
+    { header: 'District', key: 'district', transform: (val) => val || 'N/A' }, // Added district field
+    { header: 'Profession', key: 'profession' },
+    { header: 'Mobile Number', key: 'mobileNumber', transform: (val) => val || 'N/A' },
+    { header: 'WhatsApp Number', key: 'whatsappNumber', transform: (val) => val || 'N/A' },
+    { header: 'Reference Name', key: 'referenceName', transform: (val) => val || 'N/A' },
+    { header: 'Approved', key: 'isApproved', transform: (val) => val ? 'Yes' : 'No' },
+    { header: 'Registered At', key: 'registeredAt', transform: formatTimestamp }
+];
             const trainerWorksheet = createWorksheet(trainers, trainerColumns);
             XLSX.utils.book_append_sheet(workbook, trainerWorksheet, 'Trainers');
         }

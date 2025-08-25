@@ -131,7 +131,14 @@
 
       <div class="mb-3">
         <label for="studentClass" class="form-label">Class *</label>
-        <input type="text" class="form-control" id="studentClass" name="studentClass" value="<%= values?.studentClass || '' %>">
+        <select id="studentClass" name="studentClass" class="form-select">
+          <option value="">Select a class</option>
+          <option value="8th" <%= values?.studentClass === '8th' ? 'selected' : '' %>>8th</option>
+          <option value="9th" <%= values?.studentClass === '9th' ? 'selected' : '' %>>9th</option>
+          <option value="10th" <%= values?.studentClass === '10th' ? 'selected' : '' %>>10th</option>
+          <option value="11th" <%= values?.studentClass === '11th' ? 'selected' : '' %>>11th</option>
+          <option value="12th" <%= values?.studentClass === '12th' ? 'selected' : '' %>>12th</option>
+        </select>
         <% if (errors?.studentClass) { %><div class="error-message"><%= errors.studentClass %></div><% } %>
       </div>
 

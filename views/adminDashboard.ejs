@@ -270,7 +270,7 @@ async function saveLoginLog(ipData) {
                 fetchWorkshopSummaries();
             } else if (tabName === 'login-log') {
                 fetchAndDisplayLogs(); // Updated to fetch from Firestore
-                // trackIpAddress(); // Trigger tracking when login-log tab is opened
+                trackIpAddress(); // Trigger tracking when login-log tab is opened
             } else if (tabName === 'student-feedback') {
                 renderFeedbackTable();
             }

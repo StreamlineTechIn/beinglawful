@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Logistic Financial Panel</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .content { padding: 20px; }
+    .table-container { overflow-x: auto; }
+    .modal-body pre { white-space: pre-wrap; }
+    .invalid-feedback { display: none; }
+    .is-invalid ~ .invalid-feedback { display: block; }
+    .loading-spinner { display: none; }
+    .loading .loading-spinner { display: inline-block; }
+    .modal-dialog.wide-modal { max-width: 80vw; width: 80vw; }
+    .modal-body { overflow-x: hidden; padding: 1.5rem; }
+    .modal-body .form-control, .modal-body .form-select {
+      width: 100%; box-sizing: border-box; border-radius: 0.375rem;
+    }
+    .modal-body .form-label { font-weight: 500; margin-bottom: 0.3rem; }
+    .modal-body .form-control[readonly] { background-color: #e9ecef; opacity: 1; }
+    .modal-body .col-md-6 { padding-right: 0.75rem; padding-left: 0.75rem; }
+    .modal-body .btn-success { margin-top: 1rem; }
+    .section-container {
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      border-radius: 0.375rem;
+      background-color: #f8f9fa;
+      margin-bottom: 1.5rem;
+    }
+    .section-container h6 {
+      margin-bottom: 1rem;
+      font-weight: 600;
+      color: #343a40;
+    }
+    @media (max-width: 768px) {
+      .modal-dialog.wide-modal { max-width: 95vw; width: 95vw; }
+      .modal-body .col-md-6 { padding-right: 0.5rem; padding-left: 0.5rem; }
+      .modal-body .row { margin-bottom: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="content">
+    <h3 class="mb-3">Financial Overview</h3>
+    <div class="table-container">
+      <table class="table table-bordered table-striped">
+        <thead class="table-dark">
+          <tr>
+            <th>School Name</th>
+            <th>Event Date</th>
+            <th>City</th>
+            <th>District</th>
+            <th>Workshop Fees</th>
+            <th>Total Expenses</th>
+            <th>BLT Account</th>
+            <th>Kit Payment Status</th>
+            <th>Trainer Remuneration</th>
+            <th>Trainer Remuneration Amount</th>
+            <th>Financial Status</th>
+            <th>Status</th>
+            <th>Action</th>
+            <th>View</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (!schools || schools.length === 0) { %>
+            <tr><td colspan="14">No data found.</td></tr>
+          <% } else { %>
+            <% schools.forEach(school => { %>
+              <tr>
+                <td><%= school.schoolName || 'N/A' %></td>
+                <td><%= school.eventDate || 'N/A' %></td>
+                <td><%= school.city || 'N/A' %></td>
+                <td><%= school.district || 'N/A' %></td>
+                <td><%= (school.workshopFees || 11000).toFixed(2) %></td>
+                <td><%= (school.totalExpenses || 0).toFixed(2) %></td>
+                <td><%= (school.total || 0).toFixed(2) %></td>
+                <td><%= school.kitPaymentStatus || 'N/A' %></td>
+                <td><%= school.trainerRemunerationStatus || 'N/A' %></td>
+                <td><%= (school.trainerRemunerationAmount || 0).toFixed(2) %></td>
+                <td><%= school.financialStatus || 'N/A' %></td>
+                <td><%= school.status || 'N/A' %></td>
+                <td>
+                  <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#paymentModal-<%= school.schoolId %>">
+                    Update Payment
+                  </button>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-info btn-sm" onclick="viewDetails('<%= school.schoolId %>')">
+                    View Details
+                  </button>
+                </td>
+              </tr>
+            <% }); %>
+          <% } %>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Payment Modal for each school -->
+    <% if (schools && schools.length > 0) { %>
+      <% schools.forEach(school => { %>
+        <div class="modal fade" id="paymentModal-<%= school.schoolId %>" tabindex="-1" aria-labelledby="paymentModalLabel-<%= school.schoolId %>" aria-hidden="true">
+          <div class="modal-dialog wide-modal" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel-<%= school.schoolId %>">Update Payment for <%= school.schoolName || 'N/A' %></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <form id="paymentForm-<%= school.schoolId %>">
+                  <input type="hidden" name="schoolId" value="<%= school.schoolId %>">
+
+                  <!-- School Information -->
+                  <div class="section-container">
+                    <h6>School Information</h6>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="schoolName-<%= school.schoolId %>" class="form-label">School Name</label>
+                        <input type="text" class="form-control" id="schoolName-<%= school.schoolId %>" name="schoolName" value="<%= school.schoolName || 'N/A' %>" readonly>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="workshopFees-<%= school.schoolId %>" class="form-label">Workshop Fees</label>
+                        <input type="number" class="form-control" id="workshopFees-<%= school.schoolId %>" name="workshopFees" value="<%= (school.workshopFees || 11000).toFixed(2) %>" min="0" step="0.01" required>
+                        <div class="invalid-feedback">Workshop Fees must be a non-negative number.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Trainer Information -->
+                  <div class="section-container">
+                    <h6>Trainer Information</h6>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="trainerName1-<%= school.schoolId %>" class="form-label">Trainer Name 1</label>
+                        <select class="form-control form-select" id="trainerName1-<%= school.schoolId %>" name="trainerName1">
+                          <option value="">Select Trainer</option>
+                          <% trainers.forEach(trainer => { %>
+                            <option value="<%= trainer.name %>" <%= school.trainerName1 === trainer.name ? 'selected' : '' %>><%= trainer.name %></option>
+                          <% }); %>
+                        </select>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="trainerName2-<%= school.schoolId %>" class="form-label">Trainer Name 2</label>
+                        <select class="form-control form-select" id="trainerName2-<%= school.schoolId %>" name="trainerName2">
+                          <option value="">Select Trainer</option>
+                          <% trainers.forEach(trainer => { %>
+                            <option value="<%= trainer.name %>" <%= school.trainerName2 === trainer.name ? 'selected' : '' %>><%= trainer.name %></option>
+                          <% }); %>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="trainerRemunerationAmount-<%= school.schoolId %>" class="form-label">Trainer Remuneration Amount</label>
+                        <input type="number" class="form-control" id="trainerRemunerationAmount-<%= school.schoolId %>" name="trainerRemunerationAmount" value="<%= (school.trainerRemunerationAmount || 0).toFixed(2) %>" min="0" max="100000" step="0.01">
+                        <div class="invalid-feedback">Trainer Remuneration Amount must be a non-negative number and cannot exceed 100,000.</div>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="trainerRemunerationStatus-<%= school.schoolId %>" class="form-label">Trainer Remuneration Status</label>
+                        <select class="form-control form-select" id="trainerRemunerationStatus-<%= school.schoolId %>" name="trainerRemunerationStatus" required>
+                          <option value="Paid" <%= school.trainerRemunerationStatus === 'Paid' ? 'selected' : '' %>>Paid</option>
+                          <option value="Pending" <%= school.trainerRemunerationStatus === 'Pending' ? 'selected' : '' %>>Pending</option>
+                          <option value="Partial" <%= school.trainerRemunerationStatus === 'Partial' ? 'selected' : '' %>>Partial</option>
+                        </select>
+                        <div class="invalid-feedback">Please select a trainer remuneration status.</div>
+                      </div>
+                    </div>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="petrolDiesel-<%= school.schoolId %>" class="form-label">Petrol/Diesel</label>
+                        <input type="number" class="form-control" id="petrolDiesel-<%= school.schoolId %>" name="petrolDiesel" value="<%= (school.petrolDiesel || 0).toFixed(2) %>" min="0" step="0.01">
+                        <div class="invalid-feedback">Petrol/Diesel must be a non-negative number.</div>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="travellingAllowance-<%= school.schoolId %>" class="form-label">Travelling Allowance</label>
+                        <input type="number" class="form-control" id="travellingAllowance-<%= school.schoolId %>" name="travellingAllowance" value="<%= (school.travellingAllowance || 0).toFixed(2) %>" min="0" step="0.01">
+                        <div class="invalid-feedback">Travelling Allowance must be a non-negative number.</div>
+                      </div>
+                    </div>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="trainerTotalCost-<%= school.schoolId %>" class="form-label">Total Trainer Cost</label>
+                        <input type="number" class="form-control" id="trainerTotalCost-<%= school.schoolId %>" name="trainerTotalCost" value="<%= (school.trainerTotalCost || 0).toFixed(2) %>" readonly>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Payment Details -->
+                  <div class="section-container">
+                    <h6>Payment Details</h6>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="paymentDate-<%= school.schoolId %>" class="form-label">Payment Date</label>
+                        <input type="date" class="form-control" id="paymentDate-<%= school.schoolId %>" name="paymentDate" value="<%= school.paymentDate && school.paymentDate !== 'N/A' ? new Date(school.paymentDate.split('/').reverse().join('-')).toISOString().split('T')[0] : '' %>">
+                        <div class="invalid-feedback">Please enter a valid date.</div>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="paymentMethod-<%= school.schoolId %>" class="form-label">Payment Method</label>
+                        <select class="form-control" id="paymentMethod-<%= school.schoolId %>" name="paymentMethod">
+                          <option value="CASH" <%= school.paymentMethod === 'CASH' ? 'selected' : '' %>>CASH</option>
+                          <option value="ONLINE" <%= school.paymentMethod === 'ONLINE' ? 'selected' : '' %>>ONLINE</option>
+                          <option value="CHEQUE" <%= school.paymentMethod === 'CHEQUE' ? 'selected' : '' %>>CHEQUE</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="upiId-<%= school.schoolId %>" class="form-label">UPI ID</label>
+                        <input type="text" class="form-control" id="upiId-<%= school.schoolId %>" name="upiId" value="<%= school.upiId || '' %>">
+                      </div>
+                      <div class="col-md-6">
+                        <label for="transactionId-<%= school.schoolId %>" class="form-label">Transaction ID</label>
+                        <input type="text" class="form-control" id="transactionId-<%= school.schoolId %>" name="transactionId" value="<%= school.transactionId || '' %>">
+                      </div>
+                    </div>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="financialStatus-<%= school.schoolId %>" class="form-label">Financial Status</label>
+                        <select class="form-control form-select" id="financialStatus-<%= school.schoolId %>" name="financialStatus" required>
+                          <option value="Pending" <%= school.financialStatus === 'Pending' ? 'selected' : '' %>>Pending</option>
+                          <option value="Completed" <%= school.financialStatus === 'Completed' ? 'selected' : '' %>>Completed</option>
+                          <option value="Partial" <%= school.financialStatus === 'Partial' ? 'selected' : '' %>>Partial</option>
+                        </select>
+                        <div class="invalid-feedback">Please select a financial status.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Kit Details -->
+                  <div class="section-container">
+                    <h6>Kit Details</h6>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="kitCharges-<%= school.schoolId %>" class="form-label">Kit Charges</label>
+                        <input type="number" class="form-control" id="kitCharges-<%= school.schoolId %>" name="kitCharges" value="<%= (school.kitCharges || 0).toFixed(2) %>" min="0" step="0.01">
+                        <div class="invalid-feedback">Kit Charges must be a non-negative number.</div>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="kitOutDate-<%= school.schoolId %>" class="form-label">Kit Out Date</label>
+                        <input type="date" class="form-control" id="kitOutDate-<%= school.schoolId %>" name="kitOutDate" value="<%= school.kitOutDate && school.kitOutDate !== 'N/A' ? new Date(school.kitOutDate.split('/').reverse().join('-')).toISOString().split('T')[0] : '' %>">
+                        <div class="invalid-feedback">Please enter a valid date.</div>
+                      </div>
+                    </div>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="kitReceivedBy-<%= school.schoolId %>" class="form-label">Kit Received By</label>
+                        <input type="text" class="form-control" id="kitReceivedBy-<%= school.schoolId %>" name="kitReceivedBy" value="<%= school.kitReceivedBy || '' %>">
+                      </div>
+                      <div class="col-md-6">
+                        <label for="kitPaymentStatus-<%= school.schoolId %>" class="form-label">Kit Payment Status</label>
+                        <select class="form-control form-select" id="kitPaymentStatus-<%= school.schoolId %>" name="kitPaymentStatus" required>
+                          <option value="Paid" <%= school.kitPaymentStatus === 'Paid' ? 'selected' : '' %>>Paid</option>
+                          <option value="Unpaid" <%= school.kitPaymentStatus === 'Unpaid' ? 'selected' : '' %>>Unpaid</option>
+                          <option value="Partial" <%= school.kitPaymentStatus === 'Partial' ? 'selected' : '' %>>Partial</option>
+                        </select>
+                        <div class="invalid-feedback">Please select a kit payment status.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Content and Book Charges -->
+                  <div class="section-container">
+                    <h6>Content and Book Charges</h6>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="contentRoyalty-<%= school.schoolId %>" class="form-label">Content Royalty</label>
+                        <input type="number" class="form-control" id="contentRoyalty-<%= school.schoolId %>" name="contentRoyalty" value="<%= school.contentRoyalty != null ? school.contentRoyalty.toFixed(2) : '1000.00' %>" min="0" step="0.01">
+                        <div class="invalid-feedback">Content Royalty must be a non-negative number.</div>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="bookCharges-<%= school.schoolId %>" class="form-label">Book Charges</label>
+                        <input type="number" class="form-control" id="bookCharges-<%= school.schoolId %>" name="bookCharges" value="<%= school.bookCharges != null ? school.bookCharges.toFixed(2) : '800.00' %>" min="0" step="0.01">
+                        <div class="invalid-feedback">Book Charges must be a non-negative number.</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Summary -->
+                  <div class="section-container">
+                    <h6>Summary</h6>
+                    <div class="row mb-3">
+                      <div class="col-md-6">
+                        <label for="totalExpenses-<%= school.schoolId %>" class="form-label">Total Expenses</label>
+                        <input type="number" class="form-control" id="totalExpenses-<%= school.schoolId %>" name="totalExpenses" value="<%= (school.totalExpenses || 0).toFixed(2) %>" readonly>
+                      </div>
+                      <div class="col-md-6">
+                        <label for="total-<%= school.schoolId %>" class="form-label">Remaining Balance</label>
+                        <input type="number" class="form-control" id="total-<%= school.schoolId %>" name="total" value="<%= (school.total || 0).toFixed(2) %>" readonly>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button type="submit" class="btn btn-success">
+                    Save
+                    <span class="spinner-border spinner-border-sm loading-spinner" role="status" aria-hidden="true"></span>
+                  </button>
+                </form>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    <% } %>
+
+    <!-- View Details Modal -->
+    <div class="modal fade" id="viewDetailsModal" tabindex="-1" aria-labelledby="viewDetailsModalLabel" aria-hidden="true">
+      <div class="modal-dialog wide-modal">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="viewDetailsModalLabel">School Financial Details</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <pre id="schoolDetails"></pre>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    $(document).ready(function() {
+      // Update totalExpenses, total, and trainerTotalCost in real-time in the modal
+      $('form[id^="paymentForm-"]').each(function() {
+        const form = $(this);
+        const schoolId = form.find('input[name="schoolId"]').val();
+        const updateTotals = () => {
+          const workshopFees = parseFloat(form.find(`#workshopFees-${schoolId}`).val()) || 0;
+          const kitCharges = parseFloat(form.find(`#kitCharges-${schoolId}`).val()) || 0;
+          const contentRoyalty = parseFloat(form.find(`#contentRoyalty-${schoolId}`).val()) || 0;
+          const bookCharges = parseFloat(form.find(`#bookCharges-${schoolId}`).val()) || 0;
+          const travellingAllowance = parseFloat(form.find(`#travellingAllowance-${schoolId}`).val()) || 0;
+          const petrolDiesel = parseFloat(form.find(`#petrolDiesel-${schoolId}`).val()) || 0;
+          const trainerRemunerationAmount = parseFloat(form.find(`#trainerRemunerationAmount-${schoolId}`).val()) || 0;
+
+          const safeWorkshopFees = Math.max(0, workshopFees);
+          const safeKitCharges = Math.max(0, kitCharges);
+          const safeContentRoyalty = Math.max(0, contentRoyalty);
+          const safeBookCharges = Math.max(0, bookCharges);
+          const safeTravellingAllowance = Math.max(0, travellingAllowance);
+          const safePetrolDiesel = Math.max(0, petrolDiesel);
+          const safeTrainerRemunerationAmount = Math.max(0, trainerRemunerationAmount);
+
+          // Calculate total trainer cost
+          const trainerTotalCost = safeTrainerRemunerationAmount + safePetrolDiesel + safeTravellingAllowance;
+          form.find(`#trainerTotalCost-${schoolId}`).val(trainerTotalCost.toFixed(2));
+
+          // Calculate total expenses
+          const totalExpenses = safeKitCharges + safeContentRoyalty + safeBookCharges + safeTravellingAllowance + safePetrolDiesel + safeTrainerRemunerationAmount;
+          const total = safeWorkshopFees - totalExpenses;
+
+          form.find(`#totalExpenses-${schoolId}`).val(totalExpenses.toFixed(2));
+          form.find(`#total-${schoolId}`).val(total.toFixed(2));
+        };
+
+        form.find('input[type="number"]').on('input', updateTotals);
+        updateTotals();
+      });
+
+      // Form submission
+      $('form[id^="paymentForm-"]').on('submit', function(e) {
+        e.preventDefault();
+        const form = $(this);
+        form.find('.btn-success').addClass('loading').prop('disabled', true);
+        form.find('.is-invalid').removeClass('is-invalid');
+
+        const formData = form.serializeArray();
+        const schoolId = form.find('input[name="schoolId"]').val();
+        const workshopFees = parseFloat(form.find(`#workshopFees-${schoolId}`).val());
+        const kitCharges = parseFloat(form.find(`#kitCharges-${schoolId}`).val()) || 0;
+        const contentRoyalty = parseFloat(form.find(`#contentRoyalty-${schoolId}`).val()) || 0;
+        const bookCharges = parseFloat(form.find(`#bookCharges-${schoolId}`).val()) || 0;
+        const travellingAllowance = parseFloat(form.find(`#travellingAllowance-${schoolId}`).val()) || 0;
+        const petrolDiesel = parseFloat(form.find(`#petrolDiesel-${schoolId}`).val()) || 0;
+        const trainerRemunerationAmount = parseFloat(form.find(`#trainerRemunerationAmount-${schoolId}`).val()) || 0;
+        const trainerTotalCost = parseFloat(form.find(`#trainerTotalCost-${schoolId}`).val()) || 0;
+        const paymentDate = form.find(`#paymentDate-${schoolId}`).val();
+        const kitOutDate = form.find(`#kitOutDate-${schoolId}`).val();
+
+        // Client-side validation
+        const numericFields = [
+          { value: workshopFees, name: 'Workshop Fees', id: `workshopFees-${schoolId}` },
+          { value: kitCharges, name: 'Kit Charges', id: `kitCharges-${schoolId}` },
+          { value: contentRoyalty, name: 'Content Royalty', id: `contentRoyalty-${schoolId}` },
+          { value: bookCharges, name: 'Book Charges', id: `bookCharges-${schoolId}` },
+          { value: travellingAllowance, name: 'Travelling Allowance', id: `travellingAllowance-${schoolId}` },
+          { value: petrolDiesel, name: 'Petrol/Diesel', id: `petrolDiesel-${schoolId}` },
+          { value: trainerRemunerationAmount, name: 'Trainer Remuneration Amount', id: `trainerRemunerationAmount-${schoolId}` },
+          { value: trainerTotalCost, name: 'Total Trainer Cost', id: `trainerTotalCost-${schoolId}` }
+        ];
+
+        let isValid = true;
+        if (!schoolId) {
+          alert('School ID is missing.');
+          form.find('.btn-success').removeClass('loading').prop('disabled', false);
+          return;
+        }
+
+        for (const field of numericFields) {
+          if (isNaN(field.value) || field.value < 0) {
+            form.find(`#${field.id}`).addClass('is-invalid');
+            alert(`${field.name} must be a non-negative number.`);
+            isValid = false;
+          }
+          if (field.name === 'Trainer Remuneration Amount' && field.value > 100000) {
+            form.find(`#${field.id}`).addClass('is-invalid');
+            alert('Trainer Remuneration Amount cannot exceed 100,000.');
+            isValid = false;
+          }
+        }
+
+        if (paymentDate && !isValidDate(paymentDate)) {
+          form.find(`#paymentDate-${schoolId}`).addClass('is-invalid');
+          alert('Invalid Payment Date.');
+          isValid = false;
+        }
+        if (kitOutDate && !isValidDate(kitOutDate)) {
+          form.find(`#kitOutDate-${schoolId}`).addClass('is-invalid');
+          alert('Invalid Kit Out Date.');
+          isValid = false;
+        }
+
+        // Validate select fields
+        const selectFields = [
+          { id: `financialStatus-${schoolId}`, name: 'Financial Status' },
+          { id: `kitPaymentStatus-${schoolId}`, name: 'Kit Payment Status' },
+          { id: `trainerRemunerationStatus-${schoolId}`, name: 'Trainer Remuneration Status' }
+        ];
+        for (const field of selectFields) {
+          if (!form.find(`#${field.id}`).val()) {
+            form.find(`#${field.id}`).addClass('is-invalid');
+            alert(`${field.name} is required.`);
+            isValid = false;
+          }
+        }
+
+        if (!isValid) {
+          form.find('.btn-success').removeClass('loading').prop('disabled', false);
+          return;
+        }
+
+        // Log data for debugging
+        console.log('Data being sent:', formData);
+
+        // Submit all data to /financial/:schoolId
+        $.ajax({
+          url: `/financial/${schoolId}`,
+          type: 'POST',
+          data: formData,
+          contentType: 'application/x-www-form-urlencoded',
+          success: function(response) {
+            alert(`Financial details updated successfully! Trainer Remuneration Amount: ${trainerRemunerationAmount.toFixed(2)}, Total Trainer Cost: ${trainerTotalCost.toFixed(2)}`);
+            form.find('.btn-success').removeClass('loading').prop('disabled', false);
+            $(`#paymentModal-${schoolId}`).modal('hide');
+            location.reload();
+          },
+          error: function(xhr) {
+            console.error('Error updating financial details:', xhr.responseJSON);
+            alert('Error: ' + (xhr.responseJSON?.message || 'Failed to update financial details.'));
+            form.find('.btn-success').removeClass('loading').prop('disabled', false);
+          }
+        });
+      });
+
+      function isValidDate(dateString) {
+        if (!dateString) return true;
+        const date = new Date(dateString);
+        return !isNaN(date) && date.toISOString().startsWith(dateString);
+      }
+
+      window.viewDetails = function(schoolId) {
+        $.ajax({
+          url: `/financial/${schoolId}`,
+          type: 'GET',
+          success: function(data) {
+            const details = `
+School ID: ${data.schoolId || 'N/A'}
+School Name: ${data.schoolName || 'N/A'}
+Workshop Fees: ${(data.workshopFees || 0).toFixed(2)}
+Invoice Status: ${data.invoiceStatus || 'N/A'}
+Kit Charges: ${(data.kitCharges || 0).toFixed(2)}
+Kit Out Date: ${data.kitOutDate || 'N/A'}
+Kit Received By: ${data.kitReceivedBy || 'N/A'}
+Status: ${data.status || 'N/A'}
+Content Royalty: ${(data.contentRoyalty || 0).toFixed(2)}
+Book Charges: ${(data.bookCharges || 0).toFixed(2)}
+Trainer Name 1: ${data.trainerName1 || 'N/A'}
+Trainer Name 2: ${data.trainerName2 || 'N/A'}
+Trainer Remuneration Amount: ${(data.trainerRemunerationAmount || 0).toFixed(2)}
+Petrol/Diesel: ${(data.petrolDiesel || 0).toFixed(2)}
+Travelling Allowance: ${(data.travellingAllowance || 0).toFixed(2)}
+Total Trainer Cost: ${(data.trainerTotalCost || 0).toFixed(2)}
+Trainer Remuneration Status: ${data.trainerRemunerationStatus || 'N/A'}
+Payment Date: ${data.paymentDate || 'N/A'}
+BLT Account: ${data.bltAccount || 'N/A'}
+Payment Method: ${data.paymentMethod || 'N/A'}
+Total Expenses: ${(data.totalExpenses || 0).toFixed(2)}
+Remaining Balance: ${(data.total || 0).toFixed(2)}
+Financial Status: ${data.financialStatus || 'N/A'}
+Kit Payment Status: ${data.kitPaymentStatus || 'N/A'}
+UPI ID: ${data.upiId || 'N/A'}
+Transaction ID: ${data.transactionId || 'N/A'}
+            `;
+            $('#schoolDetails').text(details);
+            $('#viewDetailsModal').modal('show');
+          },
+          error: function(xhr) {
+            console.error('Error fetching details:', xhr.responseJSON);
+            alert('Error: ' + (xhr.responseJSON?.message || 'Failed to fetch details.'));
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>

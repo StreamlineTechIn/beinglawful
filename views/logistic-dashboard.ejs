@@ -27,6 +27,18 @@
       font-weight: bold;
     }
 
+    .navbar-nav .nav-link {
+      color: #f8f9fa !important;
+      font-weight: 500;
+      margin-left: 15px;
+    }
+
+    .navbar-nav .nav-link:hover {
+      color: #ffffff !important;
+      background-color: #495057;
+      border-radius: 4px;
+    }
+
     .dropdown-menu {
       background-color: #343a40;
       border: none;
@@ -77,7 +89,7 @@
 
     .table-container {
       width: 100%;
-      height: calc(100vh - 150px); /* Adjusted for counter height */
+      height: calc(100vh - 150px);
       overflow-y: auto;
     }
 
@@ -140,6 +152,12 @@
       width: 100%;
     }
 
+    .kit-out-date-input {
+      width: 100%;
+      padding: 5px;
+      font-size: 0.875rem;
+    }
+
     .selected-text {
       position: fixed;
       bottom: 20px;
@@ -198,13 +216,22 @@
         right: 10px;
         font-size: 0.875rem;
       }
+
+      .navbar-nav .nav-link {
+        margin-left: 0;
+        padding: 10px;
+      }
     }
   </style>
 </head>
 <body>
-  <!-- Navbar with Three-Dot Menu -->
+  <!-- Navbar with Menubar -->
   <nav class="navbar navbar-expand">
     <a class="navbar-brand" href="#">Logistic Portal</a>
+    <div class="navbar-nav">
+      <a class="nav-link" href="/logistic-dashboard">Dashboard</a>
+      <a class="nav-link" href="/financial">Financial</a>
+    </div>
     <div class="ml-auto">
       <div class="dropdown">
         <button class="btn btn-dark dropdown-toggle" type="button" id="menuDropdown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
@@ -243,10 +270,10 @@
             <th>Status</th>
             <th>Delivery Mode</th>
             <th>Change Status</th>
+            <th>Kit Out Date</th>
             <th>Civics Sir Number</th>
             <th>School Phone Number</th>
             <th>Principal Number</th>
-            <!-- <th>Agency</th> -->
           </tr>
         </thead>
         <tbody>
@@ -282,10 +309,15 @@
                     <button type="submit" class="btn btn-sm btn-primary">Submit</button>
                   </form>
                 </td>
+                <td>
+                  <form method="POST" action="/update-kit-out-date" class="form-inline update-kit-out-date-form" data-id="<%= school.id %>">
+                    <input type="hidden" name="id" value="<%= school.id %>">
+                    <input type="date" name="kitOutDate" class="form-control kit-out-date-input" value="<%= school.kitOutDate || '' %>">
+                  </form>
+                </td>
                 <td><%= school.civicsSirNumber %></td>
                 <td><%= school.schoolPhoneNumber %></td>
                 <td><%= school.principalNumber %></td>
-                <!-- <td><%= school.agency || '' %></td> -->
               </tr>
             <% }); %>
           <% } %>
@@ -379,13 +411,47 @@
             }
 
             statusCell.innerHTML = statusHTML;
-            updateCounter(); // Update counter after status change
+            updateCounter();
           } else {
             alert('Failed to update status.');
           }
         } catch (err) {
           console.error('Error:', err);
           alert('Error updating status.');
+        }
+      });
+    });
+
+    // Handle kit out date updates
+    document.querySelectorAll('.update-kit-out-date-form').forEach(form => {
+      form.addEventListener('change', async function (e) {
+        e.preventDefault();
+
+        const id = this.getAttribute('data-id');
+        const kitOutDate = this.querySelector('input[name="kitOutDate"]').value;
+
+        try {
+          const response = await fetch('/update-kit-out-date', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: new URLSearchParams({ id, kitOutDate })
+          });
+
+          if (response.ok) {
+            const selectedTextDiv = document.getElementById('selectedText');
+            selectedTextDiv.textContent = `Selected Kit Out Date: ${kitOutDate}`;
+            selectedTextDiv.style.display = 'block';
+            setTimeout(() => {
+              selectedTextDiv.style.display = 'none';
+            }, 3000);
+          } else {
+            alert('Failed to update kit out date.');
+          }
+        } catch (err) {
+          console.error('Error:', err);
+          alert('Error updating kit out date.');
         }
       });
     });
@@ -397,16 +463,13 @@
         const deliveryMode = this.getAttribute('data-delivery-mode') || 'pending';
         const deliveryNumber = this.getAttribute('data-delivery-number') || '';
 
-        // Populate modal fields
         document.getElementById('modalSchoolId').value = id;
         document.getElementById('modalDeliveryMode').value = deliveryMode;
         document.getElementById('modalDeliveryNumber').value = deliveryNumber;
 
-        // Show/hide delivery number input based on selected mode
         const numberInput = document.getElementById('modalDeliveryNumber');
         numberInput.style.display = (deliveryMode === 'bus' || deliveryMode === 'train' || deliveryMode === 'post') ? 'block' : 'none';
 
-        // Update delivery number visibility on mode change
         document.getElementById('modalDeliveryMode').addEventListener('change', function () {
           numberInput.style.display = (this.value === 'bus' || this.value === 'train' || this.value === 'post') ? 'block' : 'none';
         });
@@ -447,8 +510,8 @@
       }
     });
 
-    // Handle table cell click to show text (excluding delivery mode cells)
-    document.querySelectorAll('.table td:not(.delivery-mode-cell)').forEach(cell => {
+    // Handle table cell click to show text (excluding delivery mode and kit out date cells)
+    document.querySelectorAll('.table td:not(.delivery-mode-cell):not(.update-kit-out-date-form)').forEach(cell => {
       cell.addEventListener('click', function (e) {
         if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON') {
           const text = this.textContent.trim();

@@ -1475,7 +1475,7 @@ app.get('/school-dashboard', async (req, res) => {
         const schoolEmail = req.query.username;
         console.log('Request query:', req.query); // Debug log
 
-        // ✅ Define formatTime to handle HH:mm strings and Firestore Timestamps
+        // Define formatTime to handle HH:mm strings and Firestore Timestamps
         const formatTime = (timeInput) => {
             if (!timeInput) return null;
 
@@ -1515,34 +1515,39 @@ app.get('/school-dashboard', async (req, res) => {
             return null; // Return null for invalid inputs
         };
 
+        // Initialize default response data
+        const defaultResponse = {
+            schoolName: 'Unknown',
+            schoolEmail: '',
+            city: '',
+            district: '',
+            pincode: '',
+            schoolPhoneNumber: '',
+            principalNumber: '',
+            principalEmail: '',
+            civicsTeacherNumber: '',
+            civicsTeacherEmail: '',
+            students: [],
+            eventDate: null,
+            eventDateMissing: true,
+            resourcesConfirmed: false,
+            selectedResources: [],
+            selectedTrainers: [],
+            workshopStartTime: null,
+            workshopEndTime: null,
+            error: null,
+            trialTests: [],
+            trainers: [],
+            mediaUploads: [],
+            totalStudents: 0,
+            mcqCompletedCount: 0,
+            championCount: 0,
+        };
+
         if (!schoolEmail) {
-            return res.render('schoolDashboard', {
-                schoolName: 'Unknown',
-                schoolEmail: '',
-                city: '',
-                district: '',
-                pincode: '',
-                schoolPhoneNumber: '',
-                principalNumber: '',
-                principalEmail: '',
-                civicsTeacherNumber: '',
-                civicsTeacherEmail: '',
-                students: [],
-                eventDate: null,
-                eventDateMissing: true,
-                resourcesConfirmed: false,
-                selectedResources: [],
-                selectedTrainers: [],
-                workshopStartTime: null,
-                workshopEndTime: null,
-                error: 'Please login first',
-                trialTests: [],
-                trainers: [],
-                mediaUploads: [],
-                totalStudents: 0, // Add default values
-                mcqCompletedCount: 0,
-                championCount: 0,
-            });
+            defaultResponse.error = 'Please login first';
+            console.log('No schoolEmail provided, rendering with defaults');
+            return res.render('schoolDashboard', defaultResponse);
         }
 
         const schoolSnapshot = await db.collection('schools')
@@ -1550,33 +1555,9 @@ app.get('/school-dashboard', async (req, res) => {
             .get();
 
         if (schoolSnapshot.empty || schoolSnapshot.docs.length === 0) {
-            return res.render('schoolDashboard', {
-                schoolName: 'Unknown',
-                schoolEmail: '',
-                city: '',
-                district: '',
-                pincode: '',
-                schoolPhoneNumber: '',
-                principalNumber: '',
-                principalEmail: '',
-                civicsTeacherNumber: '',
-                civicsTeacherEmail: '',
-                students: [],
-                eventDate: null,
-                eventDateMissing: true,
-                resourcesConfirmed: false,
-                selectedResources: [],
-                selectedTrainers: [],
-                workshopStartTime: null,
-                workshopEndTime: null,
-                error: 'School not found',
-                trialTests: [],
-                trainers: [],
-                mediaUploads: [],
-                totalStudents: 0, // Add default values
-                mcqCompletedCount: 0,
-                championCount: 0,
-            });
+            defaultResponse.error = 'School not found';
+            console.log('School not found for email:', schoolEmail);
+            return res.render('schoolDashboard', defaultResponse);
         }
 
         const schoolData = schoolSnapshot.docs[0].data();
@@ -1675,6 +1656,15 @@ app.get('/school-dashboard', async (req, res) => {
             return trainer ? { ...trainer, isOtherDistrict: trainer.district !== schoolData.district } : null;
         }).filter(trainer => trainer !== null);
 
+        // Log the data being sent to the template
+        console.log('Rendering schoolDashboard with data:', {
+            schoolName,
+            totalStudents,
+            mcqCompletedCount,
+            championCount,
+            studentsCount: students.length,
+        });
+
         res.render('schoolDashboard', {
             schoolName,
             schoolEmail: schoolData.schoolEmail || '',
@@ -1698,7 +1688,7 @@ app.get('/school-dashboard', async (req, res) => {
             trialTests: [], // Replace with actual trialTests data if available
             trainers,
             mediaUploads,
-            totalStudents, // Add calculated values
+            totalStudents,
             mcqCompletedCount,
             championCount,
         });
@@ -1724,11 +1714,11 @@ app.get('/school-dashboard', async (req, res) => {
             selectedTrainers: [],
             workshopStartTime: null,
             workshopEndTime: null,
-            error: 'Error loading school data.',
+            error: 'Error loading school data: ' + error.message,
             trialTests: [],
             trainers: [],
             mediaUploads: [],
-            totalStudents: 0, // Add default values
+            totalStudents: 0,
             mcqCompletedCount: 0,
             championCount: 0,
         });
@@ -2589,11 +2579,13 @@ app.post('/school-dashboard/approve-student/:id', async (req, res) => {
 
 
 // Route to mark a school as completed
+
+// Existing endpoint for completing a school
 app.post('/admin/complete-school/:schoolId', async (req, res) => {
     try {
         const { schoolId } = req.params;
 
-        // Validate schoolId format (basic check for non-empty string)
+        // Validate schoolId format
         if (!schoolId || typeof schoolId !== 'string' || schoolId.trim() === '') {
             return res.status(400).json({ error: 'Invalid school ID' });
         }
@@ -2622,14 +2614,14 @@ app.post('/admin/complete-school/:schoolId', async (req, res) => {
         await schoolRef.update({
             isCompleted: true,
             completedAt: admin.firestore.FieldValue.serverTimestamp(),
-            updatedBy: req.session.userId || 'admin' // Optional: Track who updated it
+            updatedBy: req.session.userId || 'admin'
         });
 
-        // Fetch updated document to return
+        // Fetch updated document
         const updatedSchoolDoc = await schoolRef.get();
         const updatedSchoolData = updatedSchoolDoc.data();
 
-        // Respond with success message and updated data
+        // Respond with success message
         res.status(200).json({
             message: 'School marked as completed',
             schoolId,
@@ -2639,11 +2631,10 @@ app.post('/admin/complete-school/:schoolId', async (req, res) => {
             }
         });
     } catch (error) {
-        // Enhanced error logging
         console.error(`Error in complete-school route for schoolId ${schoolId}:`, {
             message: error.message,
             stack: error.stack,
-            code: error.code // Firestore-specific error code, if available
+            code: error.code
         });
         res.status(500).json({
             error: 'Server error',
@@ -2651,6 +2642,7 @@ app.post('/admin/complete-school/:schoolId', async (req, res) => {
         });
     }
 });
+
     // School participation form (renders schoolParticipation.ejs)
     app.get('/school-participation', async (req, res) => {
         try {
@@ -3156,6 +3148,7 @@ app.get('/admin/export-data', requireAdmin, async (req, res) => {
 });
     
 // Admin dashboard (renders adminDashboard.ejs)
+
 app.get('/admin-dashboard', requireAdmin, async (req, res) => {
     try {
         console.log('---- Admin Dashboard Route Triggered ----');
@@ -3404,20 +3397,38 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             if (createdAt && isNaN(createdAt.getTime())) createdAt = null;
             return { id: doc.id, ...data, callDate, createdAt };
         });
-        
+
         /* ------------------- FETCH WORKSHOP SUMMARIES ------------------- */
-        const workshopSummariesSnapshot = await db.collection('workshopSummaries').get();
+        let workshopSummariesQuery = db.collection('workshopSummaries');
+        if (filters.coordinatorId) workshopSummariesQuery = workshopSummariesQuery.where('coordinatorId', '==', filters.coordinatorId);
+
+        const workshopSummariesSnapshot = await workshopSummariesQuery.get();
         if (workshopSummariesSnapshot.empty) console.warn('No workshop summaries found in Firestore');
 
-        const workshopSummaries = workshopSummariesSnapshot.docs.map(doc => ({
-            id: doc.id,
-            schoolName: doc.data().schoolName || '',
-            trainer1: doc.data().trainer1 || '',
-            trainer2: doc.data().trainer2 || '',
-            coordinator: doc.data().coordinatorName || '',
-            workshopDate: doc.data().workshopDate || '',
-            financialStatus: doc.data().financialStatus || ''
-        }));
+        const workshopSummaries = workshopSummariesSnapshot.docs.map(doc => {
+            const data = doc.data();
+            let createdAt = data.createdAt
+                ? data.createdAt.toDate
+                    ? data.createdAt.toDate()
+                    : new Date(data.createdAt)
+                : null;
+            if (createdAt && isNaN(createdAt.getTime())) createdAt = null;
+
+            return {
+                id: doc.id,
+                schoolName: data.schoolName || '',
+                trainer1: data.trainer1 || '',
+                trainer2: data.trainer2 || '',
+                coordinatorName: data.coordinatorName || '',
+                workshopDate: data.workshopDate || '',
+                financialStatus: data.financialStatus || '',
+                trainerFeedback: data.trainerFeedback || '', // Include trainerFeedback
+                paymentMode: data.paymentMode || '',
+                upiId: data.upiId || '',
+                transactionId: data.transactionId || '',
+                createdAt: createdAt ? createdAt.toLocaleDateString('en-IN') : 'N/A'
+            };
+        });
 
         /* ------------------- FETCH VISITED SCHOOLS ------------------- */
         const visitedSchoolsSnapshot = await db.collection('visitedSchools').get();
@@ -3447,7 +3458,7 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
         visitedSchools.forEach(vs => { vs.coordinatorName = vsCoordinatorsMap.get(vs.coordinatorId) || 'N/A'; });
 
         /* ------------------- FETCH STUDENT FEEDBACK ------------------- */
-     let feedbackEntries = [];
+        let feedbackEntries = [];
         try {
             let feedbackQuery = db.collection('studentFeedback');
             if (filters.coordinatorId) feedbackQuery = feedbackQuery.where('coordinatorId', '==', filters.coordinatorId);
@@ -3464,8 +3475,6 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
                     question4: data.question4 || 'N/A',
                     question5: data.question5 || 'N/A',
                     coordinatorId: data.coordinatorId || 'N/A',
-                    // createdAt: formatToIST(data.createdAt),
-                    // updatedAt: formatToIST(data.updatedAt),
                     status: data.status || 'N/A'
                 };
             });
@@ -3554,7 +3563,48 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
     }
 });
 
+//update-school-status
+app.post('/update-school-status', requireAdmin, async (req, res) => {
+    try {
+        const { schoolId, thinkingLetter, cotation } = req.body;
 
+        // Validate schoolId
+        if (!schoolId) {
+            return res.status(400).json({ error: 'Missing schoolId' });
+        }
+
+        const updateData = {};
+
+        // Validate and process thinkingLetter
+        if (thinkingLetter !== undefined) {
+            if (!['Yes', 'No'].includes(thinkingLetter)) {
+                return res.status(400).json({ error: 'thinkingLetter must be "Yes" or "No"' });
+            }
+            updateData.thinkingLetter = thinkingLetter === 'Yes';
+        }
+
+        // Validate and process cotation
+        if (cotation !== undefined) {
+            if (!['Yes', 'No'].includes(cotation)) {
+                return res.status(400).json({ error: 'cotation must be "Yes" or "No"' });
+            }
+            updateData.cotation = cotation === 'Yes';
+        }
+
+        // Check if there are fields to update
+        if (Object.keys(updateData).length === 0) {
+            return res.status(400).json({ error: 'No valid fields to update' });
+        }
+
+        // Update the Firestore document
+        await db.collection('schools').doc(schoolId).update(updateData);
+
+        res.status(200).json({ success: true });
+    } catch (err) {
+        console.error('Error updating school status:', err);
+        res.status(500).json({ error: 'Failed to update status' });
+    }
+});
 ///admin/assign-coordinator/:schoolId
 app.post('/admin/assign-coordinator/:schoolId', requireAdmin, async (req, res) => {
     try {
@@ -4881,6 +4931,346 @@ app.get('/logistic-dashboard', async (req, res) => {
   }
 });
 
+// Route to fetch financial overview
+app.get('/financial', async (req, res) => {
+  try {
+    // Fetch schools collection
+    const schoolSnapshot = await db.collection('schools').where('isApproved', '==', true).get();
+    const schools = [];
+    // Fetch payments collection
+    const paymentSnapshot = await db.collection('payments').get();
+    const payments = {};
+    // Fetch trainers collection
+    const trainerSnapshot = await db.collection('trainers').get();
+    const trainers = [];
+    // Fetch workshop summaries collection
+    const workshopSnapshot = await db.collection('workshopSummaries').get();
+    const workshops = {};
+
+    // Process trainers data
+    trainerSnapshot.forEach(doc => {
+      const data = doc.data();
+      trainers.push({
+        id: doc.id,
+        name: data.trainerName || 'N/A'
+      });
+    });
+
+    // Process payments data
+    paymentSnapshot.forEach(doc => {
+      const data = doc.data();
+      const totalExpenses = (data.kitCharges || 0) +
+                           (data.contentRoyalty || 0) +
+                           (data.bookCharges || 0) +
+                           (data.trainerHonorarium || 0) +
+                           (data.travellingAllowance || 0) +
+                           (data.petrolDiesel || 0);
+      payments[doc.id] = {
+        workshopFees: data.workshopFees || 11000,
+        invoiceStatus: data.invoiceStatus || 'N/A',
+        kitCharges: data.kitCharges || 0,
+        kitOutDate: data.kitOutDate?.toDate() ? data.kitOutDate.toDate().toLocaleDateString('en-IN') : 'N/A',
+        kitReceivedBy: data.kitReceivedBy || 'N/A',
+        status: data.status || 'N/A',
+        contentRoyalty: data.contentRoyalty || 0,
+        bookCharges: data.bookCharges || 800,
+        trainerName1: data.trainerName1 || 'N/A',
+        trainerName2: data.trainerName2 || 'N/A',
+        trainerHonorarium: data.trainerHonorarium || 0,
+        travellingAllowance: data.travellingAllowance || 0,
+        petrolDiesel: data.petrolDiesel || 0,
+        paid: data.paid || 0,
+        paymentDate: data.paymentDate?.toDate() ? data.paymentDate.toDate().toLocaleDateString('en-IN') : 'N/A',
+        bltAccount: data.bltAccount || 'N/A',
+        paymentMethod: data.paymentMethod || 'N/A', // Keep for backward compatibility
+        totalExpenses,
+        total: (data.workshopFees || 11000) - totalExpenses - (data.paid || 0)
+      };
+    });
+
+    // Process workshop summaries data
+    workshopSnapshot.forEach(doc => {
+      const data = doc.data();
+      workshops[data.schoolName] = {
+        financialStatus: data.financialStatus || 'N/A',
+        kitPaymentStatus: data.kitPaymentStatus || 'N/A',
+        trainerRemunerationStatus: data.trainerRemunerationStatus || 'N/A',
+        paymentMode: data.paymentMode || 'CASH', // Prioritize workshopSummaries paymentMode
+        upiId: data.upiId || 'N/A',
+        transactionId: data.transactionId || 'N/A',
+        trainer1: data.trainer1 || 'N/A',
+        trainer2: data.trainer2 || 'N/A'
+      };
+    });
+
+    // Process schools data
+    schoolSnapshot.forEach(doc => {
+      const data = doc.data();
+      const schoolId = doc.id;
+      const paymentData = payments[schoolId] || {};
+      const workshopData = workshops[data.schoolName] || {};
+      const rawEventDate = data.eventDate?.toDate();
+
+      schools.push({
+        schoolId,
+        schoolName: data.schoolName || 'N/A',
+        eventDate: rawEventDate ? rawEventDate.toLocaleDateString('en-IN') : 'N/A',
+        city: data.city || 'N/A',
+        district: data.district || 'N/A',
+        workshopFees: paymentData.workshopFees || 11000,
+        invoiceStatus: paymentData.invoiceStatus || 'N/A',
+        kitCharges: paymentData.kitCharges || 0,
+        kitOutDate: paymentData.kitOutDate || 'N/A',
+        kitReceivedBy: paymentData.kitReceivedBy || 'N/A',
+        status: paymentData.status || 'N/A',
+        contentRoyalty: paymentData.contentRoyalty || 0,
+        bookCharges: paymentData.bookCharges || 0,
+        trainerName1: paymentData.trainerName1 || workshopData.trainer1 || 'N/A',
+        trainerName2: paymentData.trainerName2 || workshopData.trainer2 || 'N/A',
+        trainerHonorarium: paymentData.trainerHonorarium || 0,
+        travellingAllowance: paymentData.travellingAllowance || 0,
+        petrolDiesel: paymentData.petrolDiesel || 0,
+        paid: paymentData.paid || 0,
+        paymentDate: paymentData.paymentDate || 'N/A',
+        bltAccount: paymentData.bltAccount || 'N/A',
+        paymentMode: workshopData.paymentMode || paymentData.paymentMethod || 'CASH', // Prioritize workshopSummaries
+        totalExpenses: paymentData.totalExpenses || 0,
+        total: paymentData.total || 0,
+        financialStatus: workshopData.financialStatus || 'N/A',
+        kitPaymentStatus: workshopData.kitPaymentStatus || 'N/A',
+        trainerRemunerationStatus: workshopData.trainerRemunerationStatus || 'N/A',
+        upiId: workshopData.upiId || 'N/A',
+        transactionId: workshopData.transactionId || 'N/A'
+      });
+    });
+
+    // Render the financial template with schools and trainers data
+    res.render('financial', { schools, trainers });
+  } catch (error) {
+    console.error('Error fetching school, payment, trainer, or workshop data:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// Route to update financial details
+// Route to update financial details
+
+// Route to update financial details
+app.post('/financial/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const formData = req.body;
+
+    if (!schoolId || typeof formData !== 'object') {
+      return res.status(400).json({ message: 'Invalid schoolId or form data' });
+    }
+
+    const sanitizedData = {
+      schoolId,
+      schoolName: String(formData.schoolName || 'N/A'),
+      workshopFees: Number(formData.workshopFees) || 11000,
+      invoiceStatus: String(formData.invoiceStatus || 'N/A'),
+      kitCharges: Number(formData.kitCharges) || 0,
+      kitOutDate: formData.kitOutDate ? new Date(formData.kitOutDate) : null,
+      kitReceivedBy: String(formData.kitReceivedBy || 'N/A'),
+      status: String(formData.status || 'N/A'),
+      contentRoyalty: Number(formData.contentRoyalty) || 0,
+      bookCharges: Number(formData.bookCharges) || 0,
+      trainerName1: String(formData.trainerName1 || 'N/A'),
+      trainerName2: String(formData.trainerName2 || 'N/A'),
+      trainerRemunerationAmount: Number(formData.trainerRemunerationAmount) || 0,
+      trainerTotalCost: Number(formData.trainerTotalCost) || 0,
+      trainerRemunerationStatus: String(formData.trainerRemunerationStatus || 'Pending'),
+      travellingAllowance: Number(formData.travellingAllowance) || 0,
+      paymentDate: formData.paymentDate ? new Date(formData.paymentDate) : null,
+      bltAccount: String(formData.bltAccount || 'N/A'),
+      paymentMethod: String(formData.paymentMethod || 'CASH'),
+      petrolDiesel: Number(formData.petrolDiesel) || 0,
+      financialStatus: String(formData.financialStatus || 'Pending'),
+      kitPaymentStatus: String(formData.kitPaymentStatus || 'Unpaid'),
+      upiId: String(formData.upiId || 'N/A'),
+      transactionId: String(formData.transactionId || 'N/A'),
+      trainer1: String(formData.trainer1 || formData.trainerName1 || 'N/A'),
+      trainer2: String(formData.trainer2 || formData.trainerName2 || 'N/A'),
+      updatedAt: new Date()
+    };
+
+    // Calculate total expenses and remaining balance
+    const totalExpenses = sanitizedData.kitCharges +
+                         sanitizedData.contentRoyalty +
+                         sanitizedData.bookCharges +
+                         sanitizedData.travellingAllowance +
+                         sanitizedData.petrolDiesel +
+                         sanitizedData.trainerRemunerationAmount;
+    sanitizedData.totalExpenses = totalExpenses;
+    sanitizedData.total = sanitizedData.workshopFees - totalExpenses;
+
+    // Validate numeric fields
+    const numericFields = [
+      'workshopFees',
+      'kitCharges',
+      'contentRoyalty',
+      'bookCharges',
+      'trainerRemunerationAmount',
+      'trainerTotalCost',
+      'travellingAllowance',
+      'petrolDiesel',
+      'totalExpenses'
+    ];
+    for (const field of numericFields) {
+      if (isNaN(sanitizedData[field]) || sanitizedData[field] < 0) {
+        return res.status(400).json({ message: `${field} must be a non-negative number` });
+      }
+      if (field === 'trainerRemunerationAmount' && sanitizedData[field] > 100000) {
+        return res.status(400).json({ message: 'Trainer Remuneration Amount cannot exceed 100,000' });
+      }
+    }
+
+    // Validate trainerTotalCost consistency
+    const calculatedTrainerTotalCost = sanitizedData.trainerRemunerationAmount + sanitizedData.petrolDiesel + sanitizedData.travellingAllowance;
+    if (sanitizedData.trainerTotalCost !== calculatedTrainerTotalCost) {
+      return res.status(400).json({ message: 'Total Trainer Cost does not match calculated value' });
+    }
+
+    // Validate dates
+    if (sanitizedData.kitOutDate && isNaN(sanitizedData.kitOutDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid Kit Out Date' });
+    }
+    if (sanitizedData.paymentDate && isNaN(sanitizedData.paymentDate.getTime())) {
+      return res.status(400).json({ message: 'Invalid Payment Date' });
+    }
+
+    // Validate select fields
+    const selectFields = [
+      { field: 'financialStatus', name: 'Financial Status' },
+      { field: 'kitPaymentStatus', name: 'Kit Payment Status' },
+      { field: 'trainerRemunerationStatus', name: 'Trainer Remuneration Status' }
+    ];
+    for (const { field, name } of selectFields) {
+      if (!sanitizedData[field] || sanitizedData[field] === 'N/A') {
+        return res.status(400).json({ message: `${name} is required` });
+      }
+    }
+
+    // Log sanitized data for debugging
+    console.log('Saving data to Firestore:', sanitizedData);
+    console.log(`Stored trainerRemunerationAmount: ${sanitizedData.trainerRemunerationAmount}, trainerTotalCost: ${sanitizedData.trainerTotalCost}`);
+
+    // Update Firestore
+    try {
+      await db.collection('payments').doc(schoolId).set(sanitizedData, { merge: true });
+      res.status(200).json({ message: 'Financial details updated successfully', data: sanitizedData });
+    } catch (error) {
+      console.error('Firestore error:', error);
+      res.status(500).json({ message: 'Failed to save financial details to Firestore', error: error.message });
+    }
+  } catch (error) {
+    console.error('Error updating financial details:', error);
+    res.status(500).json({ message: 'Failed to update financial details', error: error.message });
+  }
+});
+
+// Route to get financial details of a specific school
+app.get('/financial/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const doc = await db.collection('payments').doc(schoolId).get();
+    if (!doc.exists) {
+      return res.status(404).json({ message: 'School not found' });
+    }
+    const data = doc.data();
+
+    // Calculate total expenses and remaining balance
+    const totalExpenses = (data.kitCharges || 0) +
+                         (data.contentRoyalty || 0) +
+                         (data.bookCharges || 0) +
+                         (data.travellingAllowance || 0) +
+                         (data.petrolDiesel || 0) +
+                         (data.trainerRemunerationAmount || 0);
+    const total = (data.workshopFees || 11000) - totalExpenses;
+    const trainerTotalCost = (data.trainerRemunerationAmount || 0) +
+                            (data.petrolDiesel || 0) +
+                            (data.travellingAllowance || 0);
+
+    const responseData = {
+      schoolId,
+      schoolName: data.schoolName || 'N/A',
+      workshopFees: data.workshopFees || 11000,
+      invoiceStatus: data.invoiceStatus || 'N/A',
+      kitCharges: data.kitCharges || 0,
+      kitOutDate: data.kitOutDate?.toDate() ? data.kitOutDate.toDate().toISOString().split('T')[0] : 'N/A',
+      kitReceivedBy: data.kitReceivedBy || 'N/A',
+      status: data.status || 'N/A',
+      contentRoyalty: data.contentRoyalty || 0,
+      bookCharges: data.bookCharges || 0,
+      trainerName1: data.trainerName1 || 'N/A',
+      trainerName2: data.trainerName2 || 'N/A',
+      trainerRemunerationAmount: data.trainerRemunerationAmount || 0,
+      trainerTotalCost: data.trainerTotalCost || trainerTotalCost,
+      trainerRemunerationStatus: data.trainerRemunerationStatus || 'Pending',
+      travellingAllowance: data.travellingAllowance || 0,
+      paymentDate: data.paymentDate?.toDate() ? data.paymentDate.toDate().toISOString().split('T')[0] : 'N/A',
+      bltAccount: data.bltAccount || 'N/A',
+      paymentMethod: data.paymentMethod || 'CASH',
+      petrolDiesel: data.petrolDiesel || 0,
+      totalExpenses,
+      total,
+      financialStatus: data.financialStatus || 'Pending',
+      kitPaymentStatus: data.kitPaymentStatus || 'Unpaid',
+      upiId: data.upiId || 'N/A',
+      transactionId: data.transactionId || 'N/A'
+    };
+
+    // Log response data for debugging
+    console.log('Returning school data:', responseData);
+
+    res.status(200).json(responseData);
+  } catch (error) {
+    console.error('Error fetching school details:', error);
+    res.status(500).json({ message: 'Failed to fetch school details', error: error.message });
+  }
+});
+
+app.get('/financial/kit-out-date/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const doc = await db.collection('schools').doc(schoolId).get();
+    if (!doc.exists) {
+      return res.status(404).json({ message: 'School not found' });
+    }
+    const data = doc.data();
+    const kitOutDate = data.kitOutDate || 'N/A';
+    res.status(200).json({ kitOutDate });
+  } catch (error) {
+    console.error('Error fetching kit out date:', error);
+    res.status(500).json({ message: 'Failed to fetch kit out date' });
+  }
+});
+//update-kit-out-date on logistic dasshboard
+app.post('/update-kit-out-date', async (req, res) => {
+  const { id, kitOutDate } = req.body;
+
+  // Validate input
+  if (!id || !kitOutDate) {
+    return res.status(400).json({ error: 'Missing required fields: id and kitOutDate' });
+  }
+
+  try {
+    // Update the kitOutDate in the schools collection
+    await db.collection('schools').doc(id).update({
+      kitOutDate: kitOutDate
+    });
+
+    res.status(200).json({ message: 'Kit out date updated successfully' });
+  } catch (err) {
+    console.error('Error updating kit out date:', err);
+    if (err.code === 'not-found') {
+      return res.status(404).json({ error: 'School not found' });
+    }
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Update Delivery Details Route
 app.post('/update-delivery', async (req, res) => {
   try {
@@ -5623,7 +6013,6 @@ app.get('/download-feedback-template', (req, res) => {
 });
 
     // POST: Upload Student Feedback Excel File
-
 app.post('/upload-feedback-excel', isAuthenticated, uploadFeedback, async (req, res) => {
     try {
         if (!req.file) {
@@ -5702,8 +6091,434 @@ app.post('/upload-feedback-excel', isAuthenticated, uploadFeedback, async (req, 
     }
 });
 
-        // POST /submit-workshop-summary
-  app.post('/submit-workshop-summary', isAuthenticated, async (req, res) => {
+// Route to fetch school tracker data, including trainer financials
+// Route to fetch and display school tracker data
+app.get('/school-tracker', async (req, res) => {
+  try {
+    // Fetch data from Firestore collections
+    const schoolSnapshot = await db.collection('schools').get();
+    const paymentSnapshot = await db.collection('payments').get();
+    const participantSnapshot = await db.collection('participants').get();
+    const coordinatorSnapshot = await db.collection('coordinators').get();
+    const workshopSummarySnapshot = await db.collection('workshopSummaries').get();
+
+    const schools = [];
+    const payments = {};
+    const participants = [];
+    const coordinators = {};
+    const workshopSummaries = {};
+
+    // Process coordinators
+    coordinatorSnapshot.forEach(doc => {
+      coordinators[doc.id] = doc.data().name || 'N/A';
+    });
+
+    // Process workshop summaries
+    workshopSummarySnapshot.forEach(doc => {
+      const data = doc.data();
+      const key = `${data.schoolName}_${data.coordinatorId}`;
+      workshopSummaries[key] = {
+        civicTeachersFeedback: data.civicTeachersFeedback || 'N/A',
+        principalFeedback: data.principalFeedback || 'N/A',
+        socialMediaFeedback: data.socialMediaFeedback || 'N/A',
+        trainer1: data.trainer1 || 'N/A',
+        trainer2: data.trainer2 || 'N/A',
+      };
+    });
+
+    // Process payments
+    paymentSnapshot.forEach(doc => {
+      const data = doc.data();
+      payments[doc.id] = {
+        workshopFees: data.workshopFees || 11000,
+        invoiceStatus: data.invoiceStatus || 'N/A',
+        kitCharges: data.kitCharges || 0,
+        kitOutDate: data.kitOutDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
+        kitReceivedBy: data.kitReceivedBy || 'N/A',
+        status: data.status || 'N/A',
+        contentRoyalty: data.contentRoyalty || 0,
+        bookCharges: data.bookCharges || 0,
+        trainerName1: data.trainerName1 || 'N/A',
+        trainerName2: data.trainerName2 || 'N/A',
+        trainerRemuneration: data.trainerRemunerationAmount || data.trainerHonorarium || 0,
+        travellingAllowance: data.travellingAllowance || 0,
+        petrolDiesel: data.petrolDiesel || 0,
+        trainerRemunerationStatus: data.trainerRemunerationStatus || 'Pending',
+        paid: data.paid || 0,
+        paymentDate: data.paymentDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
+        bltAccount: data.bltAccount || 'N/A',
+        paymentMethod: data.paymentMethod || 'CASH',
+        total: Number(data.total) || 0,
+        trainerTotalCost: Number(data.trainerTotalCost) || 0,
+        totalExpenses: Number(data.totalExpenses) || 0,
+        total: Number(data.total) || 0,//remaining balance 
+        
+      };
+    });
+
+    // Process participants
+    participantSnapshot.forEach(doc => {
+      const data = doc.data();
+      participants.push({
+        schoolNameDropdown: data.schoolNameDropdown || 'N/A',
+        hasCompletedMCQ: data.hasCompletedMCQ || false,
+        isChampion: data.isChampion || false,
+        feedback: data.feedback || '',
+      });
+    });
+
+    // Process schools and merge data
+    schoolSnapshot.forEach(doc => {
+      const data = doc.data();
+      const schoolId = doc.id;
+      const paymentData = payments[schoolId] || {};
+      const coordinatorName = coordinators[data.coordinatorId] || 'N/A';
+      const feedbackKey = `${data.schoolName}_${data.coordinatorId}`;
+      const feedbackData = workshopSummaries[feedbackKey] || {
+        civicTeachersFeedback: 'N/A',
+        principalFeedback: 'N/A',
+        socialMediaFeedback: 'N/A',
+        trainer1: 'N/A',
+        trainer2: 'N/A',
+      };
+
+      // Handle eventDate
+      let eventDate = data.eventDate?.toDate?.() || (typeof data.eventDate === 'string' ? new Date(data.eventDate) : null);
+
+      // Combine trainer names
+      const trainerName = [
+        feedbackData.trainer1,
+        feedbackData.trainer2,
+      ].filter(t => t && t !== 'N/A').join(', ') || [
+        paymentData.trainerName1,
+        paymentData.trainerName2,
+      ].filter(t => t && t !== 'N/A').join(', ') || 'N/A';
+
+      // Calculate champFeedbackStatus
+      const champFeedbackStatus = participants.some(p =>
+        p.schoolNameDropdown === data.schoolName && p.feedback && p.feedback !== ''
+      ) ? 'Y' : 'N';
+
+      // Convert thinkingLetter and cotation
+      const thinkingLetter = data.thinkingLetter === true ? 'Yes' : data.thinkingLetter === false ? 'No' : 'N/A';
+      const cotation = data.cotation === true ? 'Yes' : data.cotation === false ? 'No' : 'N/A';
+
+      schools.push({
+        schoolId,
+        schoolName: data.schoolName || 'N/A',
+        city: data.city || 'N/A',
+        district: data.district || 'N/A',
+        eventDate: eventDate?.toLocaleDateString('en-IN') || 'N/A',
+        isApproved: data.isApproved || false,
+        deliveryMode: data.deliveryMode || 'pending',
+        coordinatorName,
+        workshopFees: paymentData.workshopFees || 11000,
+        invoiceStatus: paymentData.invoiceStatus || 'N/A',
+        kitCharges: paymentData.kitCharges || 0,
+        kitDispatchedDate: paymentData.kitOutDate || 'N/A',
+        kitReceivedBy: paymentData.kitReceivedBy || 'N/A',
+        status: paymentData.status || 'N/A',
+        contentRoyalty: paymentData.contentRoyalty || 0,
+        bookCharges: data.bookCharges || 0,
+        trainerName,
+        trainerRemuneration: paymentData.trainerRemuneration || 0,
+        travellingAllowance: paymentData.travellingAllowance || 0,
+        petrolDiesel: paymentData.petrolDiesel || 0,
+        totalTrainerCost: paymentData.trainerTotalCost || 0,
+        trainerRemunerationStatus: paymentData.trainerRemunerationStatus || 'Pending',
+        paid: paymentData.paid || 0,
+        paymentDate: paymentData.paymentDate || 'N/A',
+        bltAccount: paymentData.bltAccount || 'N/A',
+        paymentMethod: paymentData.paymentMethod || 'CASH',
+        total: paymentData.total || 0,
+        totalExpenses: paymentData.totalExpenses || 0,
+        civicTeachersFeedback: feedbackData.civicTeachersFeedback,
+        principalFeedback: feedbackData.principalFeedback !== 'N/A' && feedbackData.principalFeedback ? 'Y' : 'N',
+        feedbackSocialMedia: feedbackData.socialMediaFeedback,
+        centreCoordinationExpenses: paymentData.petrolDiesel || 0,
+        champFeedbackStatus,
+        thinkingLetter,
+        cotation,
+      });
+    });
+
+    // Calculate totals
+    const totalTrainerCost = schools.reduce((sum, school) => sum + (school.totalTrainerCost || 0), 0);
+    const totalAllExpenses = schools.reduce((sum, school) => sum + (school.totalExpenses || 0), 0);
+
+    // Render EJS template
+    res.render('tracker', {
+      schools,
+      participants,
+      error: null,
+      totalTrainerCost: totalTrainerCost.toLocaleString('en-IN'),
+      totalAllExpenses: totalAllExpenses.toLocaleString('en-IN'),
+    });
+  } catch (err) {
+    console.error('Error fetching data:', err);
+    res.render('tracker', {
+      schools: [],
+      participants: [],
+      error: err.message,
+      totalTrainerCost: 0,
+      totalAllExpenses: 0,
+    });
+  }
+});
+
+// New endpoint for exporting to Excel
+app.get('/school-tracker/export', async (req, res) => {
+  try {
+    // Fetch data (unchanged)
+    const schoolSnapshot = await db.collection('schools').get();
+    const paymentSnapshot = await db.collection('payments').get();
+    const participantSnapshot = await db.collection('participants').get();
+    const coordinatorSnapshot = await db.collection('coordinators').get();
+    const workshopSummarySnapshot = await db.collection('workshopSummaries').get();
+
+    const schools = [];
+    const payments = {};
+    const participants = [];
+    const coordinators = {};
+    const workshopSummaries = {};
+
+    // Process coordinators (unchanged)
+    coordinatorSnapshot.forEach(doc => {
+      const data = doc.data();
+      coordinators[doc.id] = data.name || 'N/A';
+    });
+
+    // Process workshop summaries (unchanged)
+    workshopSummarySnapshot.forEach(doc => {
+      const data = doc.data();
+      const key = `${data.schoolName}_${data.coordinatorId}`;
+      workshopSummaries[key] = {
+        civicTeachersFeedback: data.civicTeachersFeedback || 'N/A',
+        principalFeedback: data.principalFeedback || 'N/A',
+        socialMediaFeedback: data.socialMediaFeedback || 'N/A',
+        trainer1: data.trainer1 || 'N/A',
+        trainer2: data.trainer2 || 'N/A'
+      };
+    });
+
+    // Process payments (unchanged)
+    paymentSnapshot.forEach(doc => {
+      const data = doc.data();
+      const totalExpenses = (data.kitCharges || 0) +
+                           (data.contentRoyalty || 0) +
+                           (data.bookCharges || 0) +
+                           (data.trainerHonorarium || 0) +
+                           (data.travellingAllowance || 0) +
+                           (data.petrolDiesel || 0);
+      payments[doc.id] = {
+        workshopFees: data.workshopFees || 11000,
+        invoiceStatus: data.invoiceStatus || 'N/A',
+        kitCharges: data.kitCharges || 0,
+        kitOutDate: data.kitOutDate && data.kitOutDate.toDate
+          ? data.kitOutDate.toDate().toLocaleDateString('en-IN')
+          : 'N/A',
+        kitReceivedBy: data.kitReceivedBy || 'N/A',
+        status: data.status || 'N/A',
+        contentRoyalty: data.contentRoyalty || 0,
+        bookCharges: data.bookCharges || 0,
+        trainerName1: data.trainerName1 || 'N/A',
+        trainerName2: data.trainerName2 || 'N/A',
+        trainerHonorarium: data.trainerHonorarium || 0,
+        travellingAllowance: data.travellingAllowance || 0,
+        petrolDiesel: data.petrolDiesel || 0,
+        paid: data.paid || 0,
+        paymentDate: data.paymentDate && data.paymentDate.toDate
+          ? data.paymentDate.toDate().toLocaleDateString('en-IN')
+          : 'N/A',
+        bltAccount: data.bltAccount || 'N/A',
+        paymentMethod: data.paymentMethod || 'CASH',
+        totalExpenses,
+        total: (data.workshopFees || 11000) - totalExpenses - (data.paid || 0)
+      };
+    });
+
+    // Process participants (unchanged)
+    participantSnapshot.forEach(doc => {
+      const data = doc.data();
+      participants.push({
+        schoolNameDropdown: data.schoolNameDropdown || 'N/A',
+        hasCompletedMCQ: data.hasCompletedMCQ || false,
+        isChampion: data.isChampion || false,
+        feedback: data.feedback || ''
+      });
+    });
+
+    // Process schools (unchanged)
+    schoolSnapshot.forEach(doc => {
+      const data = doc.data();
+      const schoolId = doc.id;
+      const paymentData = payments[schoolId] || {};
+      const coordinatorName = coordinators[data.coordinatorId] || 'N/A';
+      const feedbackKey = `${data.schoolName}_${data.coordinatorId}`;
+      const feedbackData = workshopSummaries[feedbackKey] || {
+        civicTeachersFeedback: 'N/A',
+        principalFeedback: 'N/A',
+        socialMediaFeedback: 'N/A',
+        trainer1: 'N/A',
+        trainer2: 'N/A'
+      };
+
+      let eventDate = null;
+      if (data.eventDate) {
+        if (data.eventDate.toDate) {
+          eventDate = data.eventDate.toDate();
+        } else if (data.eventDate instanceof Date) {
+          eventDate = data.eventDate;
+        } else if (typeof data.eventDate === 'string') {
+          eventDate = new Date(data.eventDate);
+        }
+      }
+
+      const trainerName = [feedbackData.trainer1, feedbackData.trainer2].filter(t => t && t !== 'N/A').join(', ') || 
+                         [paymentData.trainerName1, paymentData.trainerName2].filter(t => t && t !== 'N/A').join(', ') || 'N/A';
+
+      const champFeedbackStatus = participants.some(p => p.schoolNameDropdown === data.schoolName && p.feedback && p.feedback !== '') ? 'Y' : 'N';
+
+      // Convert thinkingLetter and cotation to display-friendly format
+      const thinkingLetter = data.thinkingLetter === true ? 'Yes' : data.thinkingLetter === false ? 'No' : 'N/A';
+      const cotation = data.cotation === true ? 'Yes' : data.cotation === false ? 'No' : 'N/A';
+
+      schools.push({
+        schoolId,
+        schoolName: data.schoolName || 'N/A',
+        city: data.city || 'N/A',
+        district: data.district || 'N/A',
+        eventDate: eventDate ? eventDate.toLocaleDateString('en-IN') : 'N/A',
+        isApproved: data.isApproved || false,
+        deliveryMode: data.deliveryMode || 'pending',
+        coordinatorName,
+        workshopFees: paymentData.workshopFees || 11000,
+        invoiceStatus: paymentData.invoiceStatus || 'N/A',
+        kitCharges: paymentData.kitCharges || 0,
+        kitDispatchedDate: paymentData.kitOutDate || 'N/A',
+        kitReceivedBy: paymentData.kitReceivedBy || 'N/A',
+        status: paymentData.status || 'N/A',
+        contentRoyalty: paymentData.contentRoyalty || 0,
+        bookCharges: paymentData.bookCharges || 0,
+        trainerName,
+        trainerRemuneration: paymentData.trainerHonorarium || 0,
+        travellingAllowance: paymentData.travellingAllowance || 0,
+        petrolDiesel: paymentData.petrolDiesel || 0,
+        paid: paymentData.paid || 0,
+        paymentDate: paymentData.paymentDate || 'N/A',
+        bltAccount: paymentData.bltAccount || 'N/A',
+        paymentMethod: paymentData.paymentMethod || 'CASH',
+        totalExpenses: paymentData.totalExpenses || 0,
+        total: paymentData.total || 0,
+        civicTeachersFeedback: feedbackData.civicTeachersFeedback,
+        principalFeedback: feedbackData.principalFeedback !== 'N/A' && feedbackData.principalFeedback ? 'Y' : 'N',
+        feedbackSocialMedia: feedbackData.socialMediaFeedback,
+        centreCoordinationExpenses: paymentData.petrolDiesel || 0,
+        champFeedbackStatus,
+        thinkingLetter,
+        cotation
+      });
+    });
+
+    // Prepare data for Excel with all fields from schools array
+    const excelData = schools.map((school, index) => ({
+      'S. No': index + 1,
+      'School ID': school.schoolId || 'N/A', // Added schoolId
+      'School Name': school.schoolName || 'N/A',
+      'City': school.city || 'N/A',
+      'District': school.district || 'N/A',
+      'Event Date': school.eventDate || 'N/A',
+      'Is Approved': school.isApproved ? 'Yes' : 'No', // Added isApproved
+      'Delivery Mode': school.deliveryMode || 'pending',
+      'Event Coordinator': school.coordinatorName || 'N/A',
+      'Student Login': participants.filter(p => p.schoolNameDropdown === school.schoolName).length,
+      'MCQ Completed': participants.filter(p => p.schoolNameDropdown === school.schoolName && p.hasCompletedMCQ).length,
+      'Champ Status': participants.filter(p => p.schoolNameDropdown === school.schoolName && p.isChampion).length,
+      'Champ Feedback Status': school.champFeedbackStatus || 'N/A',
+      'Feedback for Social Media': school.feedbackSocialMedia || 'N/A',
+      'Principal Feedback (Y/N)': school.principalFeedback || 'N/A',
+      'Civic Teachers Feedback': school.civicTeachersFeedback || 'N/A',
+      'Workshop Fees': `₹${(school.workshopFees || 11000).toLocaleString('en-IN')}`,
+      'Invoice & Thanking Letter': school.invoiceStatus || 'N/A',
+      'Kit Charges': `₹${(school.kitCharges || 0).toLocaleString('en-IN')}`,
+      'Kit Dispatched Date': school.kitDispatchedDate || 'N/A',
+      'Kit Received By': school.kitReceivedBy || 'N/A',
+      'Status': school.status || 'N/A',
+      'Content Royalty': `₹${(school.contentRoyalty || 0).toLocaleString('en-IN')}`,
+      'Book Charges': `₹${(school.bookCharges || 0).toLocaleString('en-IN')}`,
+      'Centre Coordination Expenses': `₹${(school.centreCoordinationExpenses || 0).toLocaleString('en-IN')}`,
+      'Trainer Name': school.trainerName || 'N/A',
+      'Trainer Remuneration': `₹${(school.trainerRemuneration || 0).toLocaleString('en-IN')}`,
+      'Travelling Allowance': `₹${(school.travellingAllowance || 0).toLocaleString('en-IN')}`,
+      'Petrol/Diesel': `₹${(school.petrolDiesel || 0).toLocaleString('en-IN')}`, // Added petrolDiesel explicitly
+      'Total Expenses': `₹${(school.totalExpenses || 0).toLocaleString('en-IN')}`, // Added totalExpenses
+      'Total': `₹${(school.total || 0).toLocaleString('en-IN')}`,
+      'Paid': `₹${(school.paid || 0).toLocaleString('en-IN')}`,
+      'Payment Date': school.paymentDate || 'N/A',
+      'BLT Account': school.bltAccount || 'N/A',
+      'Payment Method': school.paymentMethod || 'CASH',
+      'Thinking Letter': school.thinkingLetter || 'N/A', // Added thinkingLetter
+      'Cotation': school.cotation || 'N/A' // Added cotation
+    }));
+
+    // Create a new workbook and worksheet
+    const XLSX = require('xlsx');
+    const ws = XLSX.utils.json_to_sheet(excelData);
+
+    // Define the header range (first row)
+    const range = XLSX.utils.decode_range(ws['!ref']);
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+      if (!ws[cellAddress]) continue;
+      ws[cellAddress].s = {
+        fill: {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { rgb: 'FFFF00' } // Yellow background
+        },
+        font: {
+          bold: true
+        },
+        alignment: {
+          horizontal: 'center',
+          vertical: 'center'
+        }
+      };
+    }
+
+    // Auto-resize columns for better readability
+    const colWidths = [];
+    Object.keys(excelData[0]).forEach((key, i) => {
+      const maxLength = Math.max(
+        key.length, // Header length
+        ...excelData.map(row => (row[key] || '').toString().length) // Max length of data in column
+      );
+      colWidths[i] = { wch: Math.min(maxLength + 2, 50) }; // Add padding, cap at 50
+    });
+    ws['!cols'] = colWidths;
+
+    // Create workbook and append sheet
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'School Tracker');
+
+    // Generate buffer for Excel file
+    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+
+    // Set headers for file download
+    res.setHeader('Content-Disposition', 'attachment; filename=School_Tracker.xlsx');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+
+    // Send the Excel file
+    res.send(buffer);
+  } catch (err) {
+    console.error('Error generating Excel:', err);
+    res.status(500).json({ error: 'Failed to generate Excel file' });
+  }
+});
+
+// POST endpoint for submitting workshop summary
+
+app.post('/submit-workshop-summary', isAuthenticated, async (req, res) => {
     try {
         console.log('Received form data:', req.body);
 
@@ -5711,43 +6526,180 @@ app.post('/upload-feedback-excel', isAuthenticated, uploadFeedback, async (req, 
             return res.status(400).json({ error: 'No form data provided' });
         }
 
+        // Prepare form data
         const formData = {
             schoolName: req.body.schoolName?.trim(),
             schoolAddress: req.body.schoolAddress?.trim(),
             workshopDate: req.body.workshopDate?.trim(),
             trainer1: req.body.trainer1?.trim(),
-            trainer2: req.body.trainer2?.trim() || null,
+            trainer2: req.body.trainer2?.trim() || '',
             coordinatorName: req.body.coordinatorName?.trim(),
-            techSupport: req.body.techSupport?.trim() || null,
+            techSupport: req.body.techSupport?.trim() || '',
             principalName: req.body.principalName?.trim(),
+            trainerFeedback: req.body.trainerFeedback?.trim() || '',
+            socialMediaFeedback: req.body.socialMediaFeedback?.trim() || '',
+            principalFeedback: req.body.principalFeedback?.trim(),
+            civicTeachersFeedback: req.body.civicTeachersFeedback?.trim(),
             financialStatus: req.body.financialStatus?.trim(),
-            kitPaymentStatus: req.body.kitPaymentStatus?.trim() || null,
-            trainerRemunerationStatus: req.body.trainerRemunerationStatus?.trim() || null,
-            paymentMode: req.body.paymentMode?.trim() || null,
-            transactionId: req.body.transactionId?.trim() || null,
-            coordinatorDeclaration: req.body.coordinatorDeclaration === 'on',
+            kitPaymentStatus: req.body.kitPaymentStatus?.trim(),
+            trainerRemunerationStatus: req.body.trainerRemunerationStatus?.trim(),
+            paymentMode: req.body.paymentMode?.trim(),
+            upiId: req.body.upiId?.trim() || '',
+            transactionId: req.body.transactionId?.trim() || '',
+            coordinatorDeclaration: req.body.coordinatorDeclaration === true || req.body.coordinatorDeclaration === 'true',
             coordinatorDate: req.body.coordinatorDate?.trim(),
-            coordinatorPlace: req.body.coordinatorPlace?.trim()
+            coordinatorPlace: req.body.coordinatorPlace?.trim(),
+            coordinatorId: req.session.coordinator.id,
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
-        // Save to Firestore
-        await db.collection('workshopSummaries').add({
-            ...formData,
-            coordinatorId: req.session.coordinator.id,
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        });
+        // Validate form data
+        const validationErrors = validateFormData(formData);
+        if (validationErrors.length > 0) {
+            return res.status(400).json({ error: 'Validation failed', details: validationErrors });
+        }
 
-        res.status(200).json({ message: 'Workshop Summary submitted successfully!' });
+        // Save to Firestore
+        const docRef = await db.collection('workshopSummaries').add(formData);
+
+        // Optionally update related collections
+        const schoolQuery = await db.collection('schools')
+            .where('name', '==', formData.schoolName)
+            .where('coordinatorId', '==', formData.coordinatorId)
+            .get();
+
+        if (!schoolQuery.empty) {
+            const schoolDoc = schoolQuery.docs[0];
+            await schoolDoc.ref.update({
+                status: 'completed',
+                workshopDate: formData.workshopDate,
+                updatedAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        res.status(200).json({ 
+            message: 'Workshop Summary submitted successfully!',
+            docId: docRef.id 
+        });
     } catch (error) {
         console.error('Error submitting workshop summary:', error);
-        res.status(500).json({ error: 'Failed to submit Workshop Summary form.' });
+        res.status(500).json({ 
+            error: 'Failed to submit Workshop Summary form',
+            details: error.message 
+        });
     }
 });
-        
-    app.get('/workshop-summaries', isAuthenticated, async (req, res) => {
+
+// Validation function
+function validateFormData(formData) {
+    const errors = [];
+
+    // Required fields validation
+    const requiredFields = [
+        'schoolName', 
+        'schoolAddress', 
+        'workshopDate', 
+        'trainer1', 
+        'coordinatorName', 
+        'principalName', 
+        'financialStatus', 
+        'kitPaymentStatus', 
+        'trainerRemunerationStatus', 
+        'paymentMode', 
+        'coordinatorDate', 
+        'coordinatorPlace',
+        'principalFeedback',
+        'civicTeachersFeedback'
+    ];
+
+    requiredFields.forEach(field => {
+        if (!formData[field] || formData[field].trim() === '') {
+            errors.push(`${field} is required`);
+        }
+    });
+
+    // Validate coordinatorDeclaration
+    if (!formData.coordinatorDeclaration) {
+        errors.push('Coordinator Declaration must be checked');
+    }
+
+    // Validate payment details for Online or Cheque
+    if (formData.paymentMode === 'Online' || formData.paymentMode === 'Cheque') {
+        if (!formData.upiId || formData.upiId.trim() === '') {
+            errors.push('UPI ID is required for Online or Cheque payments');
+        }
+        if (!formData.transactionId || formData.transactionId.trim() === '') {
+            errors.push('Transaction ID is required for Online or Cheque payments');
+        }
+    }
+
+    // Validate feedback dropdowns
+    if (formData.principalFeedback && !['Yes', 'No'].includes(formData.principalFeedback)) {
+        errors.push('Principal Feedback must be either Yes or No');
+    }
+    if (formData.civicTeachersFeedback && !['Yes', 'No'].includes(formData.civicTeachersFeedback)) {
+        errors.push('Civic Teachers Feedback must be either Yes or No');
+    }
+
+    return errors;
+}
+
+// Validation function
+function validateFormData(formData) {
+    const errors = [];
+
+    // Required fields validation
+    const requiredFields = [
+        'schoolName',
+        'schoolAddress',
+        'workshopDate',
+        'trainer1',
+        'coordinatorName',
+        'principalName',
+        'financialStatus',
+        'kitPaymentStatus',
+        'trainerRemunerationStatus',
+        'paymentMode',
+        'coordinatorDate',
+        'coordinatorPlace'
+    ];
+
+    requiredFields.forEach(field => {
+        if (!formData[field]) {
+            errors.push(`${field} is required`);
+        }
+    });
+
+    // Validate coordinatorDeclaration
+    if (!formData.coordinatorDeclaration) {
+        errors.push('Coordinator declaration is required');
+    }
+
+    // Validate payment details for Online/Cheque
+    if (formData.paymentMode === 'Online' || formData.paymentMode === 'Cheque') {
+        if (!formData.upiId) {
+            errors.push('UPI ID is required for Online or Cheque payment');
+        }
+        if (!formData.transactionId) {
+            errors.push('Transaction ID is required for Online or Cheque payment');
+        }
+    }
+
+    // Validate workshopDate
+    const today = new Date().toISOString().split('T')[0];
+    if (formData.workshopDate > today) {
+        errors.push('Workshop date cannot be in the future');
+    }
+
+    return errors;
+}
+
+// GET endpoint for fetching workshop summaries
+app.get('/workshop-summaries', isAuthenticated, async (req, res) => {
     try {
         const snapshot = await db.collection('workshopSummaries')
-            .where('coordinatorId', '==', req.session.coordinator.id) // filter by logged-in coordinator
+            .where('coordinatorId', '==', req.session.coordinator.id)
             .orderBy('createdAt', 'desc')
             .get();
 
@@ -5892,8 +6844,7 @@ app.post('/add-login-log', requireAdmin, async (req, res) => {
 });
 
 
-// Enable debug logging
-// admin.firestore.setLogLevel('debug');
+
 // Express route to fetch all login logs
 app.get('/get-login-logs', async (req, res) => {
   try {
@@ -5909,16 +6860,9 @@ app.get('/get-login-logs', async (req, res) => {
   }
 });
 
-app.get('/firebase-config', (req, res) => {
-  res.json({
-    apiKey: process.env.FIREBASE_API_KEY,
-    authDomain: process.env.FIREBASE_AUTH_DOMAIN,
-    projectId: process.env.FIREBASE_PROJECT_ID,
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: process.env.FIREBASE_MESSAGING_SENDER_ID,
-    appId: process.env.FIREBASE_APP_ID,
-  });
-});
+
+
+
 // server.js or app.js
 app.get('/api/impact-stats', async (req, res) => {
   try {
@@ -5986,6 +6930,8 @@ app.get('/api/impact-stats', async (req, res) => {
     res.status(500).json({ error: 'Failed to load stats' });
   }
 });
+
+
 // Start the server
     const PORT = process.env.PORT || 3000;
     app.listen(PORT, () => {

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>School Tracker Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+  <style>
+    .truncate {
+      max-width: 150px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    body {
+      background-color: #f8f9fa;
+    }
+    .table th, .table td {
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body class="p-4">
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4 rounded">
+    <div class="container-fluid">
+      <a class="navbar-brand" href="#">School Tracker</a>
+    </div>
+  </nav>
+
+  <!-- Error Alert -->
+  <% if (error) { %>
+    <div class="alert alert-danger">
+      <%= error %>
+    </div>
+  <% } %>
+
+  <!-- Dashboard Stats -->
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card text-center shadow-sm p-3">
+        <h6>Total Schools</h6>
+        <h3><%= schools.length %></h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center shadow-sm p-3">
+        <h6>Approved Schools</h6>
+        <h3><%= schools.filter(s => s.isApproved).length %></h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center shadow-sm p-3">
+        <h6>Pending Approval</h6>
+        <h3><%= schools.filter(s => !s.isApproved).length %></h3>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card text-center shadow-sm p-3">
+        <h6>Total Balance</h6>
+        <h3>₹<%= schools.reduce((sum, s) => sum + (s.total || 0), 0).toLocaleString('en-IN') %></h3>
+      </div>
+    </div>
+  </div>
+
+  <!-- School Table -->
+  <h4 class="mb-3">All Schools</h4>
+  <div class="mb-3">
+    <a href="/school-tracker/export" class="btn btn-success">Export to Excel</a>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-bordered table-hover align-middle shadow-sm bg-white" id="schoolTable">
+      <thead class="table-primary">
+        <tr>
+          <th>S. No</th>
+          <th>School Name</th>
+          <th>City</th>
+          <th>District</th>
+          <th>Event Date</th>
+          <th>Event Coordinator</th>
+          <th>Student Login</th>
+          <th>MCQ Completed</th>
+          <th>Champ Status</th>
+          <th>Champ Feedback Status</th>
+          <th>Feedback for Social Media</th>
+          <th>Principal Feedback (Y/N)</th>
+          <th>Civic Teachers Feedback</th>
+          <th>Workshop Fees</th>
+          <th>Status</th>
+          <th>Delivery Mode</th>
+          <th>Kit Dispatched Date</th>
+          <th>Kit Received By</th>
+          <th>Kit Charges</th>
+          <th>Content Royalty</th>
+          <th>Book Charges</th>
+          <th>Centre Coordination Expenses</th>
+          <th>Trainer Name</th>
+          <th>Trainer Remuneration</th>
+          <th>Travelling Allowance</th>
+          <th>Total Trainer Cost</th>
+          <th>Total Expenses</th>
+          <th>BLT Account</th>
+          <th>Payment Date</th>
+          <th>Thanking Letter</th>
+          <th>Cotation</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% schools.forEach((school, index) => { %>
+          <tr>
+            <td><%= index + 1 %></td>
+            <td><%= school.schoolName || 'N/A' %></td>
+            <td><%= school.city || 'N/A' %></td>
+            <td><%= school.district || 'N/A' %></td>
+            <td><%= school.eventDate || 'N/A' %></td>
+            <td><%= school.coordinatorName || 'N/A' %></td>
+            <td><%= participants.filter(p => p.schoolNameDropdown === school.schoolName).length %></td>
+            <td><%= participants.filter(p => p.schoolNameDropdown === school.schoolName && p.hasCompletedMCQ).length %></td>
+            <td><%= participants.filter(p => p.schoolNameDropdown === school.schoolName && p.isChampion).length %></td>
+            <td><%= school.champFeedbackStatus || 'N/A' %></td>
+            <td class="truncate" title="<%= school.feedbackSocialMedia || 'N/A' %>">
+              <%= school.feedbackSocialMedia.length > 50 ? school.feedbackSocialMedia.substring(0, 47) + '...' : school.feedbackSocialMedia || 'N/A' %>
+            </td>
+            <td><%= school.principalFeedback || 'N/A' %></td>
+            <td class="truncate" title="<%= school.civicTeachersFeedback || 'N/A' %>">
+              <%= school.civicTeachersFeedback.length > 50 ? school.civicTeachersFeedback.substring(0, 47) + '...' : school.civicTeachersFeedback || 'N/A' %>
+            </td>
+            <td>₹<%= (school.workshopFees || 11000).toLocaleString('en-IN') %></td>
+            <td><%= school.status || 'N/A' %></td>
+            <td><%= school.deliveryMode || 'N/A' %></td>
+            <td><%= school.kitDispatchedDate || 'N/A' %></td>
+            <td><%= school.kitReceivedBy || 'N/A' %></td>
+            <td>₹<%= (school.kitCharges || 0).toLocaleString('en-IN') %></td>
+            <td>₹<%= (school.contentRoyalty || 0).toLocaleString('en-IN') %></td>
+            <td>₹<%= (school.bookCharges || 0).toLocaleString('en-IN') %></td>
+            <td>₹<%= (school.centreCoordinationExpenses || 0).toLocaleString('en-IN') %></td>
+            <td><%= school.trainerName || 'N/A' %></td>
+            <td>₹<%= (school.trainerRemuneration || 0).toLocaleString('en-IN') %></td>
+            <td>₹<%= (school.travellingAllowance || 0).toLocaleString('en-IN') %></td>
+            <td>₹<%= (school.totalTrainerCost || 0).toLocaleString('en-IN') %></td>
+            <td><%= school.totalExpenses || 'N/A' %></td>
+            <td><%= school.total || 'N/A' %></td>
+            <td><%= school.paymentDate || 'N/A' %></td>
+            <td><%= school.thinkingLetter || 'N/A' %></td>
+            <td><%= school.cotation || 'N/A' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Scripts for DataTables -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+  <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+  <script>
+ 
+  </script>
+</body>
+</html>

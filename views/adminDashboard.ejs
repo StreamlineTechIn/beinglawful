@@ -10,448 +10,490 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script>
-        // Firebase configuration (replace with your own config from Firebase Console)
-       const firebaseConfig = {
-            apiKey: "your-api-key", 
-            authDomain: "beinglawful-ee5a4.firebaseapp.com",
-            projectId: "beinglawful-ee5a4",
-            storageBucket: "beinglawful-ee5a4.firebasestorage.app",
-            messagingSenderId: "your-messaging-sender-id", 
-            appId: "your-app-id"
-        };
+// Firebase configuration (replace with your own config from Firebase Console)
+// Firebase configuration (replace with your own config from Firebase Console)
+const firebaseConfig = {
+    apiKey: "your-api-key",
+    authDomain: "beinglawful-ee5a4.firebaseapp.com",
+    projectId: "beinglawful-ee5a4",
+    storageBucket: "beinglawful-ee5a4.firebasestorage.app",
+    messagingSenderId: "your-messaging-sender-id",
+    appId: "your-app-id"
+};
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
-        // Initialize callLogs and loginLogs arrays
-        let callLogs = [];
-        let loginLogs = [];
-        let feedbackEntries = [];
-        const tbody = document.getElementById('student-feedback-body');
-        const button = document.getElementById('exportExcelBtn');
-        const buttonText = document.getElementById('exportButtonText');
-        const loadingText = document.getElementById('loadingText');
+// Initialize callLogs, loginLogs, and feedbackEntries arrays
+let callLogs = [];
+let loginLogs = [];
+let feedbackEntries = [];
+const tbody = document.getElementById('student-feedback-body');
+const button = document.getElementById('exportExcelBtn');
+const buttonText = document.getElementById('exportButtonText');
+const loadingText = document.getElementById('loadingText');
 
-        // Format date to IST
-        function formatDateIST(date) {
-            return new Date(date).toLocaleString('en-US', {
-                timeZone: 'Asia/Kolkata',
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
+function filterTable(columnIndex) {
+    const input = document.getElementsByClassName('filter-input')[columnIndex - 1];
+    const filter = input.value.toLowerCase();
+    const table = document.getElementById('detailedSummaryTable');
+    const tbody = document.getElementById('tableBody');
+    const rows = tbody.getElementsByTagName('tr');
+
+    for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName('td');
+        if (cells.length > 1) { // Skip 'No schools available' row
+            const cellText = cells[columnIndex].textContent.toLowerCase();
+            rows[i].style.display = cellText.includes(filter) ? '' : 'none';
         }
-async function saveLoginLog(ipData) {
-  if (!auth.currentUser) {
-    console.warn("No authenticated user found, login data not saved");
-    return;
-  }
-  try {
-    await addDoc(collection(db, "adminLoginLogs"), {
-      userId: auth.currentUser.uid,
-      ipAddress: ipData.ip,
-      timestamp: new Date(),
-      userAgent: navigator.userAgent,
-    });
-    console.log("Successfully saved to /adminLoginLogs");
-  } catch (error) {
-    console.error("Error writing to /adminLoginLogs:", error);
-  }
+    }
 }
-        // Track IP address and location for https://beinglawful.in/admin-login
-        async function trackIpAddress() {
-            try {
-                // Fetch IP address
-                const ipResponse = await fetch('https://api.ipify.org?format=json');
-                if (!ipResponse.ok) throw new Error('Failed to fetch IP address');
-                const { ip } = await ipResponse.json();
 
-                // Fetch geolocation data
-                const geoResponse = await fetch(`https://ipapi.co/${ip}/json/`);
-                if (!geoResponse.ok) throw new Error('Failed to fetch geolocation');
-                const geoData = await geoResponse.json();
+// Sort table by date on load
+window.onload = function() {
+    const table = document.getElementById('detailedSummaryTable');
+    const tbody = document.getElementById('tableBody');
+    const rows = Array.from(tbody.getElementsByTagName('tr'));
 
-                const loginData = {
-                    ipAddress: ip,
-                    latitude: geoData.latitude ? parseFloat(geoData.latitude).toFixed(6) : 'N/A',
-                    longitude: geoData.longitude ? parseFloat(geoData.longitude).toFixed(6) : 'N/A',
-                    loginTime: new Date().toISOString()
-                };
-                console.log('IP Tracking:', loginData);
+    rows.sort((a, b) => {
+        const dateA = a.cells[1].textContent === 'Not assigned' ? new Date(0) : new Date(a.cells[1].textContent);
+        const dateB = b.cells[1].textContent === 'Not assigned' ? new Date(0) : new Date(b.cells[1].textContent);
+        return dateB - dateA; // Sort descending (most recent first)
+    });
 
-                // Save to Firestore with authentication check
-                if (typeof firebase !== 'undefined' && firebase.auth) {
-                    const user = firebase.auth().currentUser;
-                    if (user) {
-                        const idToken = await user.getIdToken();
-                        const saveResponse = await fetch('/add-login-log', {
-                            method: 'POST',
-                            headers: {
-                                'Authorization': `Bearer ${idToken}`,
-                                'Content-Type': 'application/json'
-                            },
-                            body: JSON.stringify(loginData)
-                        });
-                        if (!saveResponse.ok) throw new Error('Failed to save login log to server');
-                        const result = await saveResponse.json();
-                        console.log('Login data saved to Firestore:', result);
-                    } else {
-                        console.warn('No authenticated user found, login data not saved');
-                        if (typeof db !== 'undefined') {
-                            await db.collection('adminLoginLogs').add(loginData); // Fallback to direct Firestore save
-                        } else {
-                            console.error('Firestore not initialized, data not saved');
-                        }
-                    }
-                } else {
-                    console.error('Firebase not loaded, data not saved');
-                }
-            } catch (error) {
-                console.error('Error tracking IP address:', error);
-                // Optional: Notify admin or log to a separate error collection if needed
-            }
+    tbody.innerHTML = '';
+    rows.forEach((row, index) => {
+        if (row.cells.length > 1) { // Update Sr Number
+            row.cells[0].textContent = index + 1;
         }
+        tbody.appendChild(row);
+    });
 
-        async function fetchAndDisplayLogs() {
-            try {
-                const snapshot = await db.collection('adminLoginLogs').orderBy('loginTime', 'desc').get();
-                loginLogs = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }));
-                renderLoginLogTable();
-            } catch (error) {
-                console.error('Error fetching logs:', error);
-            }
-        }
+    // Initialize filters for completed schools table
+    initializeFilters('completed-schools');
+};
 
-        function renderLoginLogTable() {
-            const tableBody = document.getElementById('login-logs-body');
-            if (!tableBody) return;
+// Format date to IST
+function formatDateIST(date) {
+    return new Date(date).toLocaleString('en-US', {
+        timeZone: 'Asia/Kolkata',
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+    });
+}
 
-            tableBody.innerHTML = ''; // Clear existing rows
-            loginLogs.forEach(log => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${log.ipAddress}</td>
-                    <td>${log.latitude}</td>
-                    <td>${log.longitude}</td>
-                    <td>${new Date(log.loginTime).toLocaleString()}</td>
-                `;
-                tableBody.appendChild(row);
-            });
-            updateLoginLogFilters();
-        }
+async function saveLoginLog(ipData) {
+    if (!auth.currentUser) {
+        console.warn("No authenticated user found, login data not saved");
+        return;
+    }
+    try {
+        await addDoc(collection(db, "adminLoginLogs"), {
+            userId: auth.currentUser.uid,
+            ipAddress: ipData.ip,
+            timestamp: new Date(),
+            userAgent: navigator.userAgent,
+        });
+        console.log("Successfully saved to /adminLoginLogs");
+    } catch (error) {
+        console.error("Error writing to /adminLoginLogs:", error);
+    }
+}
 
-        async function fetchCallLogs() {
-            try {
-                const response = await fetch('/call-logs');
-                if (!response.ok) {
-                    throw new Error('Failed to fetch call logs');
-                }
-                callLogs = await response.json();
-                renderCallLogTable(callLogs);
-            } catch (error) {
-                console.error('Error fetching call logs:', error);
-                const tbody = document.getElementById('call-logs-body');
-                if (tbody) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">Error loading call logs.</td></tr>';
-                }
-            }
-        }   
+// Track IP address and location for https://beinglawful.in/admin-login
+async function trackIpAddress() {
+    try {
+        // Fetch IP address
+        const ipResponse = await fetch('https://api.ipify.org?format=json');
+        if (!ipResponse.ok) throw new Error('Failed to fetch IP address');
+        const { ip } = await ipResponse.json();
 
-        document.addEventListener('DOMContentLoaded', fetchCallLogs);
+        // Fetch geolocation data
+        const geoResponse = await fetch(`https://ipapi.co/${ip}/json/`);
+        if (!geoResponse.ok) throw new Error('Failed to fetch geolocation');
+        const geoData = await geoResponse.json();
 
-        // Update filter dropdowns for call logs
-        function updateCallLogFilters() {
-            const columns = ['id', 'callDate', 'caller', 'recipient'];
-            columns.forEach(column => {
-                const select = document.querySelector(`#call-logs select[data-column="${column}"]`);
-                if (!select) return;
-                select.innerHTML = '<option value="All">All</option>';
-                const values = new Set();
-                callLogs.forEach(log => {
-                    const value = column === 'callDate' ? formatDateIST(log[column]) : log[column];
-                    if (value && !values.has(value)) {
-                        values.add(value);
-                    }
-                });
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    select.appendChild(option);
-                });
-                select.addEventListener('change', () => applyFilters('call-logs'));
-            });
-        }
+        const loginData = {
+            ipAddress: ip,
+            latitude: geoData.latitude ? parseFloat(geoData.latitude).toFixed(6) : 'N/A',
+            longitude: geoData.longitude ? parseFloat(geoData.longitude).toFixed(6) : 'N/A',
+            loginTime: new Date().toISOString()
+        };
+        console.log('IP Tracking:', loginData);
 
-        // Update filter dropdowns for login logs
-        function updateLoginLogFilters() {
-            const columns = ['ipAddress', 'latitude', 'longitude'];
-            columns.forEach(column => {
-                const select = document.querySelector(`#login-logs select[data-column="${column}"]`);
-                if (!select) return;
-                select.innerHTML = '<option value="All">All</option>';
-                const values = new Set();
-                loginLogs.forEach(log => {
-                    const value = column === 'latitude' || column === 'longitude' ? 
-                        (log[column] ? parseFloat(log[column]).toFixed(6) : 'N/A') : 
-                        log[column] || 'N/A';
-                    if (value && !values.has(value)) {
-                        values.add(value);
-                    }
-                });
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    select.appendChild(option);
-                });
-                select.addEventListener('change', () => applyFilters('login-logs'));
-            });
-        }
-
-        // Render call log table
-        function renderCallLogTable(logs = callLogs) {
-            const tbody = document.getElementById('call-logs-body');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-            if (logs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">No call logs available yet.</td></tr>';
-                return;
-            }
-            logs.forEach(log => {
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50';
-                row.innerHTML = `
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="id">${log.id}</td>
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="callDate">${formatDateIST(log.callDate)}</td>
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="caller">${log.caller}</td>
-                    <td class="py-2 px-4 border-b text-gray-700" data-column="recipient">${log.recipient}</td>
-                    <td class="py-2 px-4 border-b text-gray-700">${log.duration || 'N/A'}</td>
-                    <td class="py-2 px-4 border-b text-gray-700">${log.notes}</td>
-                `;
-                tbody.appendChild(row);
-            });
-            updateCallLogFilters();
-        }
-
-        // Show notification
-        function showNotification(message) {
-            console.log('Notification:', message);
-            alert(message); // Replace with a toast notification if desired
-        }
-
-        // Tab navigation
-        function openTab(tabName) {
-            const tabContents = document.querySelectorAll('.tab-content');
-            tabContents.forEach(content => content.classList.add('hidden'));
-            const tabs = document.querySelectorAll('.tab');
-            tabs.forEach(tab => {
-                tab.classList.remove('bg-blue-600', 'text-white');
-                tab.classList.add('bg-gray-200', 'text-gray-700');
-            });
-            const targetTab = document.getElementById(tabName);
-            if (targetTab) {
-                targetTab.classList.remove('hidden');
-            }
-            const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
-            if (activeTab) {
-                activeTab.classList.remove('bg-gray-200', 'text-gray-700');
-                activeTab.classList.add('bg-blue-600', 'text-white');
-            }
-            if (tabName === 'workshop-form') {
-                fetchWorkshopSummaries();
-            } else if (tabName === 'login-log') {
-                fetchAndDisplayLogs(); // Updated to fetch from Firestore
-                trackIpAddress(); // Trigger tracking when login-log tab is opened
-            } else if (tabName === 'student-feedback') {
-                renderFeedbackTable();
-            }
-        }
-
-        // Apply filters to tables
-        function applyFilters(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) {
-                console.warn(`Table with ID ${tableId} not found`);
-                return;
-            }
-            const rows = table.querySelectorAll('tbody tr');
-            const filters = {};
-
-            table.querySelectorAll('.filter-select').forEach(select => {
-                filters[select.dataset.column] = select.value.trim();
-            });
-
-            rows.forEach(row => {
-                let show = true;
-                for (const [column, value] of Object.entries(filters)) {
-                    if (value && value !== 'All' && value !== '') {
-                        const cell = row.querySelector(`td[data-column="${column}"]`);
-                        if (cell) {
-                            let cellText = cell.textContent.trim();
-                            if (cellText !== value) {
-                                show = false;
-                                break;
-                            }
-                        }
-                    }
-                }
-                row.style.display = show ? '' : 'none';
-            });
-        }
-
-        // Initialize filters for tables
-        function initializeFilters(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) {
-                console.warn(`Table with ID ${tableId} not found`);
-                return;
-            }
-            const headers = table.querySelectorAll('th[data-filter]');
-            const rows = table.querySelectorAll('tbody tr');
-
-            headers.forEach(header => {
-                const column = header.dataset.filter;
-                const select = header.querySelector('.filter-select');
-                if (!select) {
-                    console.warn(`Filter select not found for column ${column} in table ${tableId}`);
-                    return;
-                }
-
-                const values = new Set(['All']);
-                rows.forEach(row => {
-                    const cell = row.querySelector(`td[data-column="${column}"]`);
-                    if (cell) {
-                        let cellText = cell.textContent.trim();
-                        if (cellText && !values.has(cellText)) {
-                            values.add(cellText);
-                        }
-                    }
-                });
-
-                select.innerHTML = '';
-                let isAllSet = false;
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    if (value === 'All' && !isAllSet) {
-                        option.selected = true;
-                        isAllSet = true;
-                    }
-                    select.appendChild(option);
-                });
-
-                select.addEventListener('change', () => applyFilters(tableId));
-            });
-        }
-
-        // Confirm trainer deletion
-        function confirmDelete(name) {
-            return confirm(`Are you sure you want to delete trainer "${name}"?`);
-        }
-
-        // Handle trainer actions
-        async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
-            event.preventDefault();
-            const form = event.target.closest('form');
-            const formData = new FormData(form);
-            try {
-                const response = await fetch(url.replace(':schoolId', schoolId), {
+        // Save to Firestore with authentication check
+        if (typeof firebase !== 'undefined' && firebase.auth) {
+            const user = firebase.auth().currentUser;
+            if (user) {
+                const idToken = await user.getIdToken();
+                const saveResponse = await fetch('/add-login-log', {
                     method: 'POST',
-                    body: formData
+                    headers: {
+                        'Authorization': `Bearer ${idToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(loginData)
                 });
-                const redirectUrl = new URL(window.location.href);
-                if (response.ok) {
-                    redirectUrl.searchParams.set('success', successMessage);
+                if (!saveResponse.ok) throw new Error('Failed to save login log to server');
+                const result = await saveResponse.json();
+                console.log('Login data saved to Firestore:', result);
+            } else {
+                console.warn('No authenticated user found, login data not saved');
+                if (typeof db !== 'undefined') {
+                    await db.collection('adminLoginLogs').add(loginData); // Fallback to direct Firestore save
                 } else {
-                    const result = await response.json();
-                    redirectUrl.searchParams.set('error', result.message || errorMessage);
+                    console.error('Firestore not initialized, data not saved');
                 }
-                window.location.href = redirectUrl.toString();
-            } catch (error) {
-                console.error('Trainer action error:', error);
-                const redirectUrl = new URL(window.location.href);
-                redirectUrl.searchParams.set('error', 'Error processing trainer action');
-                window.location.href = redirectUrl.toString();
             }
+        } else {
+            console.error('Firebase not loaded, data not saved');
         }
+    } catch (error) {
+        console.error('Error tracking IP address:', error);
+    }
+}
 
-        // Mark school as completed
-        async function markSchoolCompleted(schoolId, button, row) {
-            try {
-                const response = await fetch(`/admin/complete-school/${schoolId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
+async function fetchAndDisplayLogs() {
+    try {
+        const snapshot = await db.collection('adminLoginLogs').orderBy('loginTime', 'desc').get();
+        loginLogs = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        renderLoginLogTable();
+    } catch (error) {
+        console.error('Error fetching logs:', error);
+    }
+}
 
-                if (response.ok) {
-                    const completedTable = document.querySelector('#completed-schools tbody');
-                    if (completedTable) {
-                        const completedStatusCell = row.querySelector('td[data-column="isCompleted"]');
-                        if (completedStatusCell) {
-                            completedStatusCell.textContent = 'Yes';
-                        }
-                        if (button) {
-                            button.remove();
-                        }
-                        completedTable.appendChild(row);
-                        applyFilters('completed-schools');
-                        console.log(`School ${schoolId} marked as completed`);
+function renderLoginLogTable() {
+    const tableBody = document.getElementById('login-logs-body');
+    if (!tableBody) return;
+
+    tableBody.innerHTML = ''; // Clear existing rows
+    loginLogs.forEach(log => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${log.ipAddress}</td>
+            <td>${log.latitude}</td>
+            <td>${log.longitude}</td>
+            <td>${new Date(log.loginTime).toLocaleString()}</td>
+        `;
+        tableBody.appendChild(row);
+    });
+    updateLoginLogFilters();
+}
+
+async function fetchCallLogs() {
+    try {
+        const response = await fetch('/call-logs');
+        if (!response.ok) {
+            throw new Error('Failed to fetch call logs');
+        }
+        callLogs = await response.json();
+        renderCallLogTable(callLogs);
+    } catch (error) {
+        console.error('Error fetching call logs:', error);
+        const tbody = document.getElementById('call-logs-body');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">Error loading call logs.</td></tr>';
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', fetchCallLogs);
+
+// Update filter dropdowns for call logs
+function updateCallLogFilters() {
+    const columns = ['id', 'callDate', 'caller', 'recipient'];
+    columns.forEach(column => {
+        const select = document.querySelector(`#call-logs select[data-column="${column}"]`);
+        if (!select) return;
+        select.innerHTML = '<option value="All">All</option>';
+        const values = new Set();
+        callLogs.forEach(log => {
+            const value = column === 'callDate' ? formatDateIST(log[column]) : log[column];
+            if (value && !values.has(value)) {
+                values.add(value);
+            }
+        });
+        [...values].sort().forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.appendChild(option);
+        });
+        select.addEventListener('change', () => applyFilters('call-logs'));
+    });
+}
+
+// Update filter dropdowns for login logs
+function updateLoginLogFilters() {
+    const columns = ['ipAddress', 'latitude', 'longitude'];
+    columns.forEach(column => {
+        const select = document.querySelector(`#login-logs select[data-column="${column}"]`);
+        if (!select) return;
+        select.innerHTML = '<option value="All">All</option>';
+        const values = new Set();
+        loginLogs.forEach(log => {
+            const value = column === 'latitude' || column === 'longitude' ?
+                (log[column] ? parseFloat(log[column]).toFixed(6) : 'N/A') :
+                log[column] || 'N/A';
+            if (value && !values.has(value)) {
+                values.add(value);
+            }
+        });
+        [...values].sort().forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            select.appendChild(option);
+        });
+        select.addEventListener('change', () => applyFilters('login-logs'));
+    });
+}
+
+// Render call log table
+function renderCallLogTable(logs = callLogs) {
+    const tbody = document.getElementById('call-logs-body');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-gray-700 text-center py-4">No call logs available yet.</td></tr>';
+        return;
+    }
+    logs.forEach(log => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50';
+        row.innerHTML = `
+            <td class="py-2 px-4 border-b text-gray-700" data-column="id">${log.id}</td>
+            <td class="py-2 px-4 border-b text-gray-700" data-column="callDate">${formatDateIST(log.callDate)}</td>
+            <td class="py-2 px-4 border-b text-gray-700" data-column="caller">${log.caller}</td>
+            <td class="py-2 px-4 border-b text-gray-700" data-column="recipient">${log.recipient}</td>
+            <td class="py-2 px-4 border-b text-gray-700">${log.duration || 'N/A'}</td>
+            <td class="py-2 px-4 border-b text-gray-700">${log.notes}</td>
+        `;
+        tbody.appendChild(row);
+    });
+    updateCallLogFilters();
+}
+
+// Show notification
+function showNotification(message) {
+    console.log('Notification:', message);
+    alert(message); // Replace with a toast notification if desired
+}
+
+// Tab navigation
+function openTab(tabName) {
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => content.classList.add('hidden'));
+    const tabs = document.querySelectorAll('.tab');
+    tabs.forEach(tab => {
+        tab.classList.remove('bg-blue-600', 'text-white');
+        tab.classList.add('bg-gray-200', 'text-gray-700');
+    });
+    const targetTab = document.getElementById(tabName);
+    if (targetTab) {
+        targetTab.classList.remove('hidden');
+    }
+    const activeTab = document.querySelector(`button[onclick="openTab('${tabName}')"]`);
+    if (activeTab) {
+        activeTab.classList.remove('bg-gray-200', 'text-gray-700');
+        activeTab.classList.add('bg-blue-600', 'text-white');
+    }
+    if (tabName === 'workshop-form') {
+        fetchWorkshopSummaries();
+    } else if (tabName === 'login-log') {
+        fetchAndDisplayLogs(); // Updated to fetch from Firestore
+        trackIpAddress(); // Trigger tracking when login-log tab is opened
+    } else if (tabName === 'student-feedback') {
+        renderFeedbackTable();
+    }
+}
+
+// Apply filters to tables
+function applyFilters(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) {
+        console.warn(`Table with ID ${tableId} not found`);
+        return;
+    }
+    const rows = table.querySelectorAll('tbody tr');
+    const filters = {};
+
+    table.querySelectorAll('.filter-select').forEach(select => {
+        filters[select.dataset.column] = select.value.trim();
+    });
+
+    rows.forEach(row => {
+        let show = true;
+        for (const [column, value] of Object.entries(filters)) {
+            if (value && value !== 'All' && value !== '') {
+                const cell = row.querySelector(`td[data-column="${column}"]`);
+                if (cell) {
+                    let cellText = cell.textContent.trim();
+                    if (cellText !== value) {
+                        show = false;
+                        break;
                     }
-                } else {
-                    const errorData = await response.json();
-                    console.error('Failed to mark school as completed:', errorData.error);
-                    alert(`Failed to mark school as completed: ${errorData.error}`);
                 }
-            } catch (err) {
-                console.error('Error marking school:', err);
-                alert('Error marking school. Please check your connection and try again.');
             }
         }
+        row.style.display = show ? '' : 'none';
+    });
+}
 
-        // Filter media cards
-        function filterMedia() {
-            const uploaderFilter = document.getElementById('uploaderFilter');
-            const seenFilter = document.getElementById('seenFilter');
-            if (!uploaderFilter || !seenFilter) {
-                console.warn('uploaderFilter or seenFilter not found');
-                return;
-            }
-            const uploaderValue = uploaderFilter.value;
-            const seenValue = seenFilter.value;
-            const mediaCards = document.querySelectorAll('#mediaSection .media-card');
+// Initialize filters for tables
+function initializeFilters(tableId) {
+    const table = document.getElementById(tableId);
+    if (!table) {
+        console.warn(`Table with ID ${tableId} not found`);
+        return;
+    }
+    const headers = table.querySelectorAll('th[data-filter]');
+    const rows = table.querySelectorAll('tbody tr');
 
-            mediaCards.forEach(card => {
-                const uploader = card.dataset.uploaderType;
-                const seen = card.dataset.seen === 'true';
-                let show = true;
-
-                if (uploaderValue !== 'All' && uploader !== uploaderValue) {
-                    show = false;
-                }
-
-                if (seenValue === 'Seen' && !seen) {
-                    show = false;
-                } else if (seenValue === 'Unseen' && seen) {
-                    show = false;
-                }
-
-                card.style.display = show ? '' : 'none';
-            });
+    headers.forEach(header => {
+        const column = header.dataset.filter;
+        const select = header.querySelector('.filter-select');
+        if (!select) {
+            console.warn(`Filter select not found for column ${column} in table ${tableId}`);
+            return;
         }
 
-        // Mark media as seen
-       async function markMediaSeen(mediaId, checkbox, cardElement) {
+        const values = new Set(['All']);
+        rows.forEach(row => {
+            const cell = row.querySelector(`td[data-column="${column}"]`);
+            if (cell) {
+                let cellText = cell.textContent.trim();
+                if (cellText && !values.has(cellText)) {
+                    values.add(cellText);
+                }
+            }
+        });
+
+        select.innerHTML = '';
+        let isAllSet = false;
+        [...values].sort().forEach(value => {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            if (value === 'All' && !isAllSet) {
+                option.selected = true;
+                isAllSet = true;
+            }
+            select.appendChild(option);
+        });
+
+        select.addEventListener('change', () => applyFilters(tableId));
+    });
+}
+
+// Confirm trainer deletion
+function confirmDelete(name) {
+    return confirm(`Are you sure you want to delete trainer "${name}"?`);
+}
+
+// Handle trainer actions
+async function handleTrainerAction(event, url, schoolId, successMessage, errorMessage) {
+    event.preventDefault();
+    const form = event.target.closest('form');
+    const formData = new FormData(form);
+    try {
+        const response = await fetch(url.replace(':schoolId', schoolId), {
+            method: 'POST',
+            body: formData
+        });
+        const redirectUrl = new URL(window.location.href);
+        if (response.ok) {
+            redirectUrl.searchParams.set('success', successMessage);
+        } else {
+            const result = await response.json();
+            redirectUrl.searchParams.set('error', result.message || errorMessage);
+        }
+        window.location.href = redirectUrl.toString();
+    } catch (error) {
+        console.error('Trainer action error:', error);
+        const redirectUrl = new URL(window.location.href);
+        redirectUrl.searchParams.set('error', 'Error processing trainer action');
+        window.location.href = redirectUrl.toString();
+    }
+}
+
+// Mark school as completed
+async function markSchoolCompleted(schoolId, button, row) {
+    try {
+        const response = await fetch(`/admin/complete-school/${schoolId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({})
+        });
+
+        if (response.ok) {
+            const completedTable = document.querySelector('#completed-schools tbody');
+            if (completedTable) {
+                const completedStatusCell = row.querySelector('td[data-column="isCompleted"]');
+                if (completedStatusCell) {
+                    completedStatusCell.textContent = 'Yes';
+                }
+                if (button) {
+                    button.remove();
+                }
+                completedTable.appendChild(row);
+                applyFilters('completed-schools');
+                console.log(`School ${schoolId} marked as completed`);
+            }
+        } else {
+            const errorData = await response.json();
+            console.error('Failed to mark school as completed:', errorData.error);
+            alert(`Failed to mark school as completed: ${errorData.error}`);
+        }
+    } catch (err) {
+        console.error('Error marking school:', err);
+        alert('Error marking school. Please check your connection and try again.');
+    }
+}
+
+// Filter media cards
+function filterMedia() {
+    const uploaderFilter = document.getElementById('uploaderFilter');
+    const seenFilter = document.getElementById('seenFilter');
+    if (!uploaderFilter || !seenFilter) {
+        console.warn('uploaderFilter or seenFilter not found');
+        return;
+    }
+    const uploaderValue = uploaderFilter.value;
+    const seenValue = seenFilter.value;
+    const mediaCards = document.querySelectorAll('#mediaSection .media-card');
+
+    mediaCards.forEach(card => {
+        const uploader = card.dataset.uploaderType;
+        const seen = card.dataset.seen === 'true';
+        let show = true;
+
+        if (uploaderValue !== 'All' && uploader !== uploaderValue) {
+            show = false;
+        }
+
+        if (seenValue === 'Seen' && !seen) {
+            show = false;
+        } else if (seenValue === 'Unseen' && seen) {
+            show = false;
+        }
+
+        card.style.display = show ? '' : 'none';
+    });
+}
+
+// Mark media as seen
+async function markMediaSeen(mediaId, checkbox, cardElement) {
     const isSeen = checkbox.checked;
     try {
         const response = await fetch(`/admin-dashboard/mark-media-seen/${mediaId}`, {
@@ -485,200 +527,201 @@ async function saveLoginLog(ipData) {
         alert('Error marking media. Please check your connection and try again.');
     }
 }
-        // Open media modal
-        function openMediaModal(mediaId, mediaUrl, mediaType) {
-            const modal = document.getElementById('mediaModal');
-            const content = document.getElementById('mediaContent');
-            if (!modal || !content) {
-                console.warn('mediaModal or mediaContent not found');
-                return;
-            }
 
-            content.innerHTML = '';
-            if (mediaType === 'image') {
-                content.innerHTML = `<img src="${mediaUrl}" alt="Media" class="w-full rounded shadow">`;
-            } else if (mediaType === 'video') {
-                content.innerHTML = `
-                    <video controls class="w-full rounded shadow">
-                        <source src="${mediaUrl}" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                `;
-            }
-            modal.classList.remove('hidden');
+// Open media modal
+function openMediaModal(mediaId, mediaUrl, mediaType) {
+    const modal = document.getElementById('mediaModal');
+    const content = document.getElementById('mediaContent');
+    if (!modal || !content) {
+        console.warn('mediaModal or mediaContent not found');
+        return;
+    }
+
+    content.innerHTML = '';
+    if (mediaType === 'image') {
+        content.innerHTML = `<img src="${mediaUrl}" alt="Media" class="w-full rounded shadow">`;
+    } else if (mediaType === 'video') {
+        content.innerHTML = `
+            <video controls class="w-full rounded shadow">
+                <source src="${mediaUrl}" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+        `;
+    }
+    modal.classList.remove('hidden');
+}
+
+// Toggle description edit
+function toggleDescriptionEdit(button) {
+    const parentDiv = button.closest(".text-gray-700");
+    if (!parentDiv) return;
+    const span = parentDiv.querySelector(".description-text");
+    const input = parentDiv.querySelector(".edit-description-input");
+    const saveBtn = parentDiv.querySelector(".save-description-btn");
+    if (span && input && saveBtn) {
+        span.classList.add("hidden");
+        input.classList.remove("hidden");
+        button.classList.add("hidden");
+        saveBtn.classList.remove("hidden");
+    }
+}
+
+// Save description
+async function saveDescription(button) {
+    const parentDiv = button.closest(".text-gray-700");
+    if (!parentDiv) return;
+    const span = parentDiv.querySelector(".description-text");
+    const input = parentDiv.querySelector(".edit-description-input");
+    const editBtn = parentDiv.querySelector(".edit-description-btn");
+    if (!span || !input || !editBtn) return;
+    const mediaId = input.dataset.mediaId;
+    const newDescription = input.value.trim();
+
+    try {
+        const response = await fetch(`/update-description/${mediaId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ description: newDescription })
+        });
+
+        if (response.ok) {
+            span.textContent = newDescription || 'No description provided';
+            span.classList.remove("hidden");
+            input.classList.add("hidden");
+            button.classList.add("hidden");
+            editBtn.classList.remove("hidden");
+        } else {
+            alert("Failed to update description.");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("An error occurred while updating description.");
+    }
+}
+
+// Download media
+async function downloadMedia(mediaId, type) {
+    try {
+        const response = await fetch(`/download-media/${mediaId}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch media: ${response.statusText}`);
+        }
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const extension = type === 'video' ? 'mp4' : 'jpg';
+        const filename = `${mediaId}.${extension}`;
+
+        const anchor = document.createElement('a');
+        anchor.href = blobUrl;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+        console.error('Error downloading media:', err);
+        alert('Failed to download media. Please check your connection or try again.');
+    }
+}
+
+// Download Excel data
+async function downloadExcel() {
+    const button = document.getElementById('exportExcelButton');
+    const buttonText = document.getElementById('exportButtonText');
+    const loadingText = document.getElementById('exportLoadingText');
+
+    if (button && buttonText && loadingText) {
+        button.disabled = true;
+        buttonText.classList.add('hidden');
+        loadingText.classList.remove('hidden');
+    }
+
+    try {
+        const response = await fetch('/admin/export-data', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include'
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
         }
 
-        // Toggle description edit
-        function toggleDescriptionEdit(button) {
-            const parentDiv = button.closest(".text-gray-700");
-            if (!parentDiv) return;
-            const span = parentDiv.querySelector(".description-text");
-            const input = parentDiv.querySelector(".edit-description-input");
-            const saveBtn = parentDiv.querySelector(".save-description-btn");
-            if (span && input && saveBtn) {
-                span.classList.add("hidden");
-                input.classList.remove("hidden");
-                button.classList.add("hidden");
-                saveBtn.classList.remove("hidden");
-            }
+        const blob = await response.blob();
+        if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
+            throw new Error('Invalid response type: Expected Excel file');
         }
 
-        // Save description
-        async function saveDescription(button) {
-            const parentDiv = button.closest(".text-gray-700");
-            if (!parentDiv) return;
-            const span = parentDiv.querySelector(".description-text");
-            const input = parentDiv.querySelector(".edit-description-input");
-            const editBtn = parentDiv.querySelector(".edit-description-btn");
-            if (!span || !input || !editBtn) return;
-            const mediaId = input.dataset.mediaId;
-            const newDescription = input.value.trim();
+        const blobUrl = window.URL.createObjectURL(blob);
+        const filename = `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
 
-            try {
-                const response = await fetch(`/update-description/${mediaId}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ description: newDescription })
-                });
-
-                if (response.ok) {
-                    span.textContent = newDescription || 'No description provided';
-                    span.classList.remove("hidden");
-                    input.classList.add("hidden");
-                    button.classList.add("hidden");
-                    editBtn.classList.remove("hidden");
-                } else {
-                    alert("Failed to update description.");
-                }
-            } catch (error) {
-                console.error("Error:", error);
-                alert("An error occurred while updating description.");
-            }
+        const anchor = document.createElement('a');
+        anchor.href = blobUrl;
+        anchor.download = filename;
+        document.body.appendChild(anchor);
+        anchor.click();
+        document.body.removeChild(anchor);
+        window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+        console.error('Error downloading Excel:', err);
+        alert(`Failed to download Excel file: ${err.message}`);
+    } finally {
+        if (button && buttonText && loadingText) {
+            button.disabled = false;
+            buttonText.classList.remove('hidden');
+            loadingText.classList.add('hidden');
         }
+    }
+}
 
-        // Download media
-        async function downloadMedia(mediaId, type) {
-            try {
-                const response = await fetch(`/download-media/${mediaId}`);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch media: ${response.statusText}`);
-                }
-                const blob = await response.blob();
-                const blobUrl = window.URL.createObjectURL(blob);
-                const extension = type === 'video' ? 'mp4' : 'jpg';
-                const filename = `${mediaId}.${extension}`;
+// Toggle the visibility of the custom date input field based on the dropdown selection
+function toggleCustomDateInput(selectElem, schoolId) {
+    const customDateInput = document.getElementById(`custom-date-${schoolId}`);
+    const hiddenInput = document.getElementById(`eventDateFinal-${schoolId}`);
 
-                const anchor = document.createElement('a');
-                anchor.href = blobUrl;
-                anchor.download = filename;
-                document.body.appendChild(anchor);
-                anchor.click();
-                document.body.removeChild(anchor);
-                window.URL.revokeObjectURL(blobUrl);
-            } catch (err) {
-                console.error('Error downloading media:', err);
-                alert('Failed to download media. Please check your connection or try again.');
-            }
+    if (selectElem.value === 'other') {
+        customDateInput.classList.remove('hidden');
+        customDateInput.value = '';
+        hiddenInput.value = '';
+
+        // Update hidden input when user picks a date
+        customDateInput.onchange = () => {
+            hiddenInput.value = customDateInput.value;
+        };
+    } else {
+        customDateInput.classList.add('hidden');
+        hiddenInput.value = selectElem.value;
+    }
+}
+
+// Validate the event date form before submission
+function validateEventDateForm(form, schoolId) {
+    const selectElem = form.querySelector('select[name="eventDate"]');
+    const customDateInput = form.querySelector(`#custom-date-${schoolId}`);
+    const hiddenInput = form.querySelector(`#eventDateFinal-${schoolId}`);
+
+    if (!selectElem.value) {
+        alert('Please select an event date or "Other" to choose a custom date.');
+        return false;
+    }
+
+    if (selectElem.value === 'other') {
+        if (!customDateInput.value) {
+            alert('Please select a custom event date.');
+            return false;
         }
+        hiddenInput.value = customDateInput.value;
+    } else {
+        hiddenInput.value = selectElem.value;
+    }
 
-        // Download Excel data
-        async function downloadExcel() {
-            const button = document.getElementById('exportExcelButton');
-            const buttonText = document.getElementById('exportButtonText');
-            const loadingText = document.getElementById('exportLoadingText');
+    return true;
+}
 
-            if (button && buttonText && loadingText) {
-                button.disabled = true;
-                buttonText.classList.add('hidden');
-                loadingText.classList.remove('hidden');
-            }
-
-            try {
-                const response = await fetch('/admin/export-data', {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    credentials: 'include'
-                });
-
-                if (!response.ok) {
-                    const errorData = await response.json().catch(() => ({}));
-                    throw new Error(`Failed to fetch Excel data: ${errorData.error || response.statusText}`);
-                }
-
-                const blob = await response.blob();
-                if (!response.headers.get('content-type').includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) {
-                    throw new Error('Invalid response type: Expected Excel file');
-                }
-
-                const blobUrl = window.URL.createObjectURL(blob);
-                const filename = `admin_dashboard_data_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-                const anchor = document.createElement('a');
-                anchor.href = blobUrl;
-                anchor.download = filename;
-                document.body.appendChild(anchor);
-                anchor.click();
-                document.body.removeChild(anchor);
-                window.URL.revokeObjectURL(blobUrl);
-            } catch (err) {
-                console.error('Error downloading Excel:', err);
-                alert(`Failed to download Excel file: ${err.message}`);
-            } finally {
-                if (button && buttonText && loadingText) {
-                    button.disabled = false;
-                    buttonText.classList.remove('hidden');
-                    loadingText.classList.add('hidden');
-                }
-            }
-        }
-
-        // Toggle the visibility of the custom date input field based on the dropdown selection
-        function toggleCustomDateInput(selectElem, schoolId) {
-            const customDateInput = document.getElementById(`custom-date-${schoolId}`);
-            const hiddenInput = document.getElementById(`eventDateFinal-${schoolId}`);
-
-            if (selectElem.value === 'other') {
-                customDateInput.classList.remove('hidden');
-                customDateInput.value = '';
-                hiddenInput.value = '';
-
-                // Update hidden input when user picks a date
-                customDateInput.onchange = () => {
-                    hiddenInput.value = customDateInput.value;
-                };
-            } else {
-                customDateInput.classList.add('hidden');
-                hiddenInput.value = selectElem.value;
-            }
-        }
-
-        // Validate the event date form before submission
-        function validateEventDateForm(form, schoolId) {
-            const selectElem = form.querySelector('select[name="eventDate"]');
-            const customDateInput = form.querySelector(`#custom-date-${schoolId}`);
-            const hiddenInput = form.querySelector(`#eventDateFinal-${schoolId}`);
-
-            if (!selectElem.value) {
-                alert('Please select an event date or "Other" to choose a custom date.');
-                return false;
-            }
-
-            if (selectElem.value === 'other') {
-                if (!customDateInput.value) {
-                    alert('Please select a custom event date.');
-                    return false;
-                }
-                hiddenInput.value = customDateInput.value;
-            } else {
-                hiddenInput.value = selectElem.value;
-            }
-
-            return true;
-        }
-
-        // Post to Website
+// Post to Website
 async function postToWebsite(button) {
     console.log('postToWebsite called with button:', button);
     event.stopPropagation();
@@ -730,8 +773,6 @@ async function postToWebsite(button) {
             seen: false,
         });
         console.log('Firestore doc created with ID:', docRef.id);
-
-        // uploadStatus.innerHTML = `<span class="bg-green-100 text-green-700 p-2 rounded">✅ Successfully posted to gallery! <a href="${url}" target="_blank" class="underline">View</a></span>`;
     } catch (error) {
         console.error('Post failed:', error.code, error.message);
         uploadStatus.innerHTML = `<span class="bg-red-100 text-red-700 p-2 rounded">❌ Failed to post to gallery: ${error.code} - ${error.message}</span>`;
@@ -743,673 +784,733 @@ async function postToWebsite(button) {
         }
     }
 }
-// Consolidated DOMContentLoaded listener
-        document.addEventListener('DOMContentLoaded', () => {
-            // Initialize dialog polyfill for call log dialog
-            const callLogDialog = document.getElementById('callLogDialog');
-            if (callLogDialog && window.dialogPolyfill) {
-                console.log('Registering dialog polyfill for callLogDialog');
-                dialogPolyfill.registerDialog(callLogDialog);
-            } else if (!callLogDialog) {
-                console.warn('callLogDialog not found');
-            } else if (!window.dialogPolyfill) {
-                console.warn('Dialog polyfill not loaded');
-            }
 
-            // Call Log Dialog Controls
-            const openCallLogDialog = document.getElementById('openCallLogDialog');
-            const cancelCallLogButton = document.getElementById('cancelCallLogButton');
-            if (openCallLogDialog && callLogDialog) {
-                console.log('Found openCallLogDialog and callLogDialog, attaching event listener');
-                openCallLogDialog.addEventListener('click', () => {
-                    console.log('Add Call button clicked');
-                    callLogDialog.showModal();
-                });
-            } else {
-                console.error('openCallLogDialog or callLogDialog not found');
-            }
-            if (cancelCallLogButton && callLogDialog) {
-                console.log('Found cancelCallLogButton, attaching event listener');
-                cancelCallLogButton.addEventListener('click', () => {
-                    console.log('Cancel button clicked');
-                    callLogDialog.close();
-                });
-            } else {
-                console.warn('cancelCallLogButton or callLogDialog not found');
-            }
+// Update school status (thinkingLetter or cotation)
+async function updateSchoolStatus({ schoolId, thinkingLetter, cotation }) {
+    const errorContainer = document.querySelector('#error-container');
+    if (errorContainer) errorContainer.textContent = ''; // Clear previous errors
 
-            // Coordinator Form Submission
-            const coordinatorForm = document.getElementById('coordinatorForm');
-            const coordinatorMessage = document.getElementById('coordinatorMessage');
-            const submitButton = document.getElementById('submitButton');
-            const buttonText = document.getElementById('buttonText');
-            const loadingText = document.getElementById('loadingText');
+    try {
+        // Prepare payload: only include defined fields
+        const payload = { schoolId };
+        if (thinkingLetter !== undefined) payload.thinkingLetter = thinkingLetter;
+        if (cotation !== undefined) payload.cotation = cotation;
 
-            console.log('Checking coordinatorForm elements:');
-            console.log('coordinatorForm:', coordinatorForm);
-            console.log('coordinatorMessage:', coordinatorMessage);
-            console.log('submitButton:', submitButton);
-            console.log('buttonText:', buttonText);
-            console.log('loadingText:', loadingText);
-
-            if (coordinatorForm && coordinatorMessage && submitButton && buttonText && loadingText) {
-                coordinatorForm.addEventListener('submit', async function(event) {
-                    event.preventDefault();
-                    const form = event.target;
-                    const messageDiv = coordinatorMessage;
-                    const name = form.querySelector('#name')?.value.trim();
-                    const email = form.querySelector('#email')?.value.trim();
-                    const number = form.querySelector('#number')?.value.trim();
-                    const password = form.querySelector('#password')?.value.trim();
-                    const organization = form.querySelector('#organization')?.value.trim();
-
-                    console.log('Form data:', { name, email, number, password, organization });
-
-                    const nameRegex = /^[a-zA-Z\s]+$/;
-                    if (!name || !nameRegex.test(name)) {
-                        showMessage('Name can only contain letters and spaces', 'error', messageDiv);
-                        return;
-                    }
-
-                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                    if (!email || !emailRegex.test(email)) {
-                        showMessage('Please enter a valid email address', 'error', messageDiv);
-                        return;
-                    }
-
-                    const phoneRegex = /^[0-9]{10}$/;
-                    if (!number || !phoneRegex.test(number)) {
-                        showMessage('Phone number must be 10 digits', 'error', messageDiv);
-                        return;
-                    }
-
-                    if (!password || password.length < 6) {
-                        showMessage('Password must be at least 6 characters', 'error', messageDiv);
-                        return;
-                    }
-
-                    const orgRegex = /^[a-zA-Z0-9\s]+$/;
-                    if (!organization || !orgRegex.test(organization)) {
-                        showMessage('Organization can only contain letters, numbers, and spaces', 'error', messageDiv);
-                        return;
-                    }
-
-                    submitButton.disabled = true;
-                    buttonText.classList.add('hidden');
-                    loadingText.classList.remove('hidden');
-
-                    try {
-                        const formData = new FormData(form);
-                        for (const [key, value] of formData.entries()) {
-                            console.log(`FormData: ${key}=${value}`);
-                        }
-
-                        const response = await fetch('http://localhost:3000/co-ordinator-register', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        let result;
-                        if (response.headers.get('content-type')?.includes('application/json')) {
-                            result = await response.json();
-                        } else {
-                            result = { error: await response.text() || 'Unknown server error' };
-                        }
-
-                        if (response.ok) {
-                            showMessage(result.message || 'Registration successful', 'success', messageDiv);
-                            form.reset();
-                            setTimeout(() => location.reload(), 1000);
-                        } else {
-                            showMessage(result.error || result.message || 'Registration failed', 'error', messageDiv);
-                            console.error('Server response:', result);
-                        }
-                    } catch (error) {
-                        showMessage('Network error. Please check your connection and try again.', 'error', messageDiv);
-                        console.error('Submission error:', error);
-                    } finally {
-                        submitButton.disabled = false;
-                        buttonText.classList.remove('hidden');
-                        loadingText.classList.add('hidden');
-                    }
-                });
-            } else {
-                console.error('Required DOM elements not found for coordinatorForm', {
-                    coordinatorForm: !!coordinatorForm,
-                    coordinatorMessage: !!coordinatorMessage,
-                    submitButton: !!submitButton,
-                    buttonText: !!buttonText,
-                    loadingText: !!loadingText
-                });
-            }
-
-            // Call Log Form Submission
-            const callLogForm = document.getElementById('callLogForm');
-            if (callLogForm) {
-                callLogForm.addEventListener('submit', async function(event) {
-                    event.preventDefault();
-                    const form = event.target;
-                    const messageDiv = document.getElementById('callLogMessage');
-                    const submitButton = document.getElementById('submitCallLogButton');
-                    const buttonText = document.getElementById('callLogButtonText');
-                    const loadingText = document.getElementById('callLogLoadingText');
-
-                    const callDate = form.querySelector('#callDate')?.value.trim();
-                    const caller = form.querySelector('#caller')?.value.trim();
-                    const recipient = form.querySelector('#recipient')?.value.trim();
-                    const notes = form.querySelector('#notes')?.value.trim();
-                    const schoolName = form.querySelector('#schoolName')?.value.trim();
-                    const contactPerson = form.querySelector('#contactPerson')?.value.trim();
-
-                    if (!callDate || !caller || !recipient || !notes || !schoolName || !contactPerson) {
-                        showMessage('All required fields must be filled', 'error', messageDiv);
-                        return;
-                    }
-
-                    submitButton.disabled = true;
-                    buttonText.classList.add('hidden');
-                    loadingText.classList.remove('hidden');
-
-                    try {
-                        const response = await fetch('/add-call-log', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                callDate: new Date(callDate).toISOString(),
-                                caller,
-                                recipient,
-                                notes,
-                                schoolName,
-                                contactPerson
-                            })
-                        });
-
-                        let result;
-                        if (response.headers.get('content-type')?.includes('application/json')) {
-                            result = await response.json();
-                        } else {
-                            result = { message: await response.text() };
-                        }
-
-                        if (response.ok) {
-                            // Fetch updated call logs from the server
-                            const logsResponse = await fetch('/call-logs');
-                            if (!logsResponse.ok) {
-                                throw new Error('Failed to fetch updated call logs');
-                            }
-                            callLogs = await logsResponse.json();
-                            renderCallLogTable(callLogs);
-                            showMessage(result.message || 'Call log added successfully', 'success', messageDiv);
-                            form.reset();
-                            document.getElementById('callLogDialog').close();
-                        } else {
-                            showMessage(result.error || 'Failed to add call log', 'error', messageDiv);
-                            console.error('Server error response:', result);
-                        }
-                    } catch (error) {
-                        showMessage('Error adding call log. Please try again.', 'error', messageDiv);
-                        console.error('Submission error:', error);
-                    } finally {
-                        submitButton.disabled = false;
-                        buttonText.classList.remove('hidden');
-                        loadingText.classList.remove('hidden');
-                    }
-                });
-            } else {
-                console.warn('callLogForm not found');
-            }
-
-            // Upload photo form submission
-            const uploadForm = document.getElementById('upload-form');
-            if (uploadForm) {
-                uploadForm.addEventListener('submit', async function(event) {
-                    event.preventDefault();
-                    const form = event.target;
-                    const formData = new FormData(form);
-                    const successMessageDiv = document.getElementById('success-message');
-
-                    try {
-                        const response = await fetch(form.action, {
-                            method: form.method,
-                            body: formData
-                        });
-
-                        let result;
-                        if (response.headers.get('content-type')?.includes('application/json')) {
-                            result = await response.json();
-                        } else {
-                            result = { message: await response.text() };
-                        }
-
-                        if (successMessageDiv) {
-                            successMessageDiv.textContent = result.message;
-                            successMessageDiv.classList.remove('hidden');
-                            if (!response.ok) {
-                                successMessageDiv.classList.add('bg-red-100', 'text-red-700');
-                            }
-                            form.reset();
-                            setTimeout(() => {
-                                successMessageDiv.classList.add('hidden');
-                                successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
-                            }, 5000);
-                        }
-                    } catch (error) {
-                        if (successMessageDiv) {
-                            successMessageDiv.textContent = 'Error uploading files. Please try again.';
-                            successMessageDiv.classList.remove('hidden');
-                            successMessageDiv.classList.add('bg-red-100', 'text-red-700');
-                            setTimeout(() => {
-                                successMessageDiv.classList.add('hidden');
-                                successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
-                            }, 5000);
-                        }
-                        console.error('Upload error:', error);
-                    }
-                });
-            } else {
-                console.warn('upload-form not found');
-            }
-
-            // Media upload form
-            const mediaUploadForm = document.getElementById('mediaUploadForm');
-            if (mediaUploadForm) {
-                mediaUploadForm.addEventListener('submit', async function(e) {
-                    e.preventDefault();
-                    const uploadStatus = document.getElementById('uploadStatus');
-                    const file = document.getElementById('mediaFile')?.files[0];
-                    const formData = new FormData();
-                    formData.append('mediaFile', file);
-                    const button = document.getElementById('uploadButton');
-
-                    if (uploadStatus) {
-                        uploadStatus.innerHTML = 'Uploading...';
-                    }
-                    if (button) {
-                        button.disabled = true;
-                    }
-
-                    try {
-                        const res = await fetch('/upload-image', {
-                            method: 'POST',
-                            body: formData
-                        });
-
-                        let result;
-                        if (res.headers.get('content-type')?.includes('application/json')) {
-                            result = await res.json();
-                        } else {
-                            result = { error: await res.text() };
-                        }
-
-                        if (res.ok && uploadStatus) {
-                            uploadStatus.innerHTML = `✅ Upload successful! <a href="${result.files[0].downloadUrl}" target="_blank">View</a>`;
-                        } else if (uploadStatus) {
-                            uploadStatus.innerHTML = `❌ Upload failed: ${result.error}`;
-                        }
-                    } catch (err) {
-                        if (uploadStatus) {
-                            uploadStatus.innerHTML = '❌ Upload error.';
-                        }
-                        console.error('Media upload error:', err);
-                    } finally {
-                        if (button) {
-                            button.disabled = false;
-                        }
-                    }
-                });
-            } else {
-                console.warn('mediaUploadForm not found');
-            }
-
-            // Initialize media filters and checkboxes
-            const uploaderFilter = document.getElementById('uploaderFilter');
-            const seenFilter = document.getElementById('seenFilter');
-            if (uploaderFilter && seenFilter) {
-                uploaderFilter.addEventListener('change', filterMedia);
-                seenFilter.addEventListener('change', filterMedia);
-                filterMedia();
-            } else {
-                console.warn('uploaderFilter or seenFilter not found');
-            }
-
-            const markSeenCheckboxes = document.querySelectorAll('.mark-seen-checkbox');
-            markSeenCheckboxes.forEach(checkbox => {
-                checkbox.addEventListener('change', (event) => {
-                    event.stopPropagation();
-                    const mediaId = checkbox.dataset.mediaId;
-                    const cardElement = checkbox.closest('.media-card');
-                    if (mediaId && cardElement) {
-                        markMediaSeen(mediaId, checkbox, cardElement);
-                    }
-                });
-                checkbox.addEventListener('click', (event) => {
-                    event.stopPropagation();
-                });
-            });
-
-            const closeModal = document.getElementById('closeModal');
-            if (closeModal) {
-                closeModal.addEventListener('click', () => {
-                    const mediaModal = document.getElementById('mediaModal');
-                    if (mediaModal) {
-                        mediaModal.classList.add('hidden');
-                    }
-                });
-            }
-
-            // Complete school buttons
-            const completeSchoolButtons = document.querySelectorAll('.complete-school-btn');
-            completeSchoolButtons.forEach(button => {
-                button.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    const schoolId = button.dataset.schoolId;
-                    const row = button.closest('tr');
-                    if (!row) return;
-                    const isApproved = row.querySelector('[data-column="isApproved"]')?.textContent.trim() === 'Yes';
-                    const eventDate = row.querySelector('[data-column="eventDate"]')?.textContent.trim();
-                    const isCompleted = row.querySelector('[data-column="isCompleted"]')?.textContent.trim() === 'Yes';
-
-                    if (!isApproved) {
-                        alert('Cannot complete: School is not approved.');
-                        return;
-                    }
-                    if (eventDate === 'Not assigned') {
-                        alert('Cannot complete: Event date is not assigned.');
-                        return;
-                    }
-                    if (isCompleted) {
-                        alert('School is already marked as completed.');
-                        return;
-                    }
-
-                    markSchoolCompleted(schoolId, button, row);
-                });
-            });
-
-            // Export Excel button
-            const exportExcelButton = document.getElementById('exportExcelButton');
-            if (exportExcelButton) {
-                exportExcelButton.addEventListener('click', downloadExcel);
-            }
-
-            // Initialize IP tracking
-            trackIpAddress();
-            setInterval(trackIpAddress, 60000); // Track every 60 seconds
-            // setupWebSocket(); // Initialize WebSocket
+        // Send request
+        const response = await fetch('/update-school-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
         });
 
-        // Window onload for initialization
-        window.onload = function () {
-            openTab('visualization');
-            trackIpAddress();
-            renderCallLogTable();
-            updateCallLogFilters();
-            renderLoginLogTable();
-            updateLoginLogFilters();
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to update status');
+        }
 
-            const tableIds = ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students', 'call-logs', 'login-logs','student-feedback','visited-school'];
-            tableIds.forEach(tableId => {
-                const table = document.getElementById(tableId);
-                if (table) {
-                    initializeFilters(tableId);
+        return true; // Indicate success
+    } catch (err) {
+        console.error('Error updating school status:', err);
+        if (errorContainer) {
+            errorContainer.textContent = `Error: ${err.message}`;
+        } else {
+            alert(`Error updating status: ${err.message}`);
+        }
+        return false; // Indicate failure
+    }
+}
+
+async function saveSchoolData(button) {
+    const schoolId = button.getAttribute('data-school-id');
+    const row = button.closest('tr');
+    const thinkingLetterSelect = row.querySelector('.thinking-select');
+    const cotationSelect = row.querySelector('.cotation-select');
+    
+    // Store original values
+    const originalThinkingLetter = thinkingLetterSelect.value;
+    const originalCotation = cotationSelect.value;
+
+    // Disable inputs during request
+    button.disabled = true;
+    thinkingLetterSelect.disabled = true;
+    cotationSelect.disabled = true;
+
+    const success = await updateSchoolStatus({
+        schoolId,
+        thinkingLetter: originalThinkingLetter,
+        cotation: originalCotation
+    });
+
+    if (!success) {
+        // Revert dropdowns on failure
+        thinkingLetterSelect.value = thinkingLetterSelect.getAttribute('data-previous-value') || originalThinkingLetter;
+        cotationSelect.value = cotationSelect.getAttribute('data-previous-value') || originalCotation;
+    }
+
+    // Update previous values after successful change
+    thinkingLetterSelect.setAttribute('data-previous-value', thinkingLetterSelect.value);
+    cotationSelect.setAttribute('data-previous-value', cotationSelect.value);
+
+    // Re-enable inputs
+    button.disabled = false;
+    thinkingLetterSelect.disabled = false;
+    cotationSelect.disabled = false;
+
+    if (success) {
+        const errorContainer = document.querySelector('#error-container');
+        if (errorContainer) {
+            errorContainer.textContent = 'School data updated successfully!';
+            setTimeout(() => errorContainer.textContent = '', 3000); // Clear success message after 3s
+        } else {
+            alert('School data updated successfully!');
+        }
+    }
+}
+
+async function handleDropdownChange(select, column) {
+    const schoolId = select.getAttribute('data-school-id');
+    const originalValue = select.value; // Current value ('Yes' or 'No')
+    select.disabled = true; // Disable dropdown during request
+
+    const success = await updateSchoolStatus({ schoolId, [column]: originalValue });
+
+    if (!success) {
+        // Revert to previous value (stored in data attribute or default to opposite)
+        const previousValue = select.getAttribute('data-previous-value') || (originalValue === 'Yes' ? 'No' : 'Yes');
+        select.value = previousValue;
+    }
+    // Update previous value after successful change
+    select.setAttribute('data-previous-value', select.value);
+    select.disabled = false; // Re-enable dropdown
+}
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize dialog polyfill for call log dialog
+    const callLogDialog = document.getElementById('callLogDialog');
+    if (callLogDialog && window.dialogPolyfill) {
+        console.log('Registering dialog polyfill for callLogDialog');
+        dialogPolyfill.registerDialog(callLogDialog);
+    } else if (!callLogDialog) {
+        console.warn('callLogDialog not found');
+    } else if (!window.dialogPolyfill) {
+        console.warn('Dialog polyfill not loaded');
+    }
+
+    // Call Log Dialog Controls
+    const openCallLogDialog = document.getElementById('openCallLogDialog');
+    const cancelCallLogButton = document.getElementById('cancelCallLogButton');
+    if (openCallLogDialog && callLogDialog) {
+        console.log('Found openCallLogDialog and callLogDialog, attaching event listener');
+        openCallLogDialog.addEventListener('click', () => {
+            console.log('Add Call button clicked');
+            callLogDialog.showModal();
+        });
+    } else {
+        console.error('openCallLogDialog or callLogDialog not found');
+    }
+    if (cancelCallLogButton && callLogDialog) {
+        console.log('Found cancelCallLogButton, attaching event listener');
+        cancelCallLogButton.addEventListener('click', () => {
+            console.log('Cancel button clicked');
+            callLogDialog.close();
+        });
+    } else {
+        console.warn('cancelCallLogButton or callLogDialog not found');
+    }
+
+    // Coordinator Form Submission
+    const coordinatorForm = document.getElementById('coordinatorForm');
+    const coordinatorMessage = document.getElementById('coordinatorMessage');
+    const submitButton = document.getElementById('submitButton');
+    const buttonText = document.getElementById('buttonText');
+    const loadingText = document.getElementById('loadingText');
+
+    console.log('Checking coordinatorForm elements:');
+    console.log('coordinatorForm:', coordinatorForm);
+    console.log('coordinatorMessage:', coordinatorMessage);
+    console.log('submitButton:', submitButton);
+    console.log('buttonText:', buttonText);
+    console.log('loadingText:', loadingText);
+
+    if (coordinatorForm && coordinatorMessage && submitButton && buttonText && loadingText) {
+        coordinatorForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const form = event.target;
+            const messageDiv = coordinatorMessage;
+            const name = form.querySelector('#name')?.value.trim();
+            const email = form.querySelector('#email')?.value.trim();
+            const number = form.querySelector('#number')?.value.trim();
+            const password = form.querySelector('#password')?.value.trim();
+            const organization = form.querySelector('#organization')?.value.trim();
+
+            console.log('Form data:', { name, email, number, password, organization });
+
+            const nameRegex = /^[a-zA-Z\s]+$/;
+            if (!name || !nameRegex.test(name)) {
+                showMessage('Name can only contain letters and spaces', 'error', messageDiv);
+                return;
+            }
+
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!email || !emailRegex.test(email)) {
+                showMessage('Please enter a valid email address', 'error', messageDiv);
+                return;
+            }
+
+            const phoneRegex = /^[0-9]{10}$/;
+            if (!number || !phoneRegex.test(number)) {
+                showMessage('Phone number must be 10 digits', 'error', messageDiv);
+                return;
+            }
+
+            if (!password || password.length < 6) {
+                showMessage('Password must be at least 6 characters', 'error', messageDiv);
+                return;
+            }
+
+            const orgRegex = /^[a-zA-Z0-9\s]+$/;
+            if (!organization || !orgRegex.test(organization)) {
+                showMessage('Organization can only contain letters, numbers, and spaces', 'error', messageDiv);
+                return;
+            }
+
+            submitButton.disabled = true;
+            buttonText.classList.add('hidden');
+            loadingText.classList.remove('hidden');
+
+            try {
+                const formData = new FormData(form);
+                for (const [key, value] of formData.entries()) {
+                    console.log(`FormData: ${key}=${value}`);
+                }
+
+                const response = await fetch('http://localhost:3000/co-ordinator-register', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                let result;
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    result = await response.json();
                 } else {
-                    console.warn(`Table with ID ${tableId} not found`);
+                    result = { error: await response.text() || 'Unknown server error' };
                 }
-            });
 
-            const districtData = <%- JSON.stringify(
-                schools ? schools.reduce((acc, school) => {
-                    acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
-                    acc[school.district].schools += 1;
-                    acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
-                    acc[school.district].trainers += (school.trainerId1 || school.trainerId2 ? (school.trainerId1 && school.trainerId2 ? 2 : 1) : 0);
-                    return acc;
-                }, {}) : {}
-            ) %>;
-            const districtChartCanvas = document.getElementById('districtChart');
-            if (districtChartCanvas) {
-                const districtChart = new Chart(districtChartCanvas, {
-                    type: 'bar',
-                    data: {
-                        labels: Object.keys(districtData),
-                        datasets: [
-                            { label: 'Schools', data: Object.values(districtData).map(d => d.schools), backgroundColor: 'rgba(54, 162, 235, 0.5)' },
-                            { label: 'Students', data: Object.values(districtData).map(d => d.students), backgroundColor: 'rgba(75, 192, 192, 0.5)' },
-                            { label: 'Trainers', data: Object.values(districtData).map(d => d.trainers), backgroundColor: 'rgba(255, 99, 132, 0.5)' }
-                        ]
-                    },
-                    options: { scales: { y: { beginAtZero: true }, x: { stacked: false } } }
-                });
-            }
-
-            const professionData = <%- JSON.stringify(
-                trainers ? trainers.reduce((acc, trainer) => {
-                    acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
-                    return acc;
-                }, {}) : {}
-            ) %>;
-            const professionChartCanvas = document.getElementById('professionChart');
-            if (professionChartCanvas) {
-                const professionChart = new Chart(professionChartCanvas, {
-                    type: 'pie',
-                    data: {
-                        labels: Object.keys(professionData),
-                        datasets: [{ data: Object.values(professionData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
-                    },
-                    options: { responsive: true, plugins: { legend: { position: 'top' } } }
-                });
-            }
-
-            let workshopDataList = [];
-
-            async function fetchWorkshopSummaries() {
-                const tableBody = document.getElementById('workshopTableBody');
-                tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">Loading...</td></tr>`;
-
-                try {
-                    const res = await fetch('/workshop-summaries');
-                    if (!res.ok) throw new Error('Failed to fetch');
-
-                    workshopDataList = await res.json();
-
-                    if (!workshopDataList.length) {
-                        tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No workshop summaries found</td></tr>`;
-                        return;
-                    }
-
-                    tableBody.innerHTML = workshopDataList.map((s, index) => `
-                        <tr>
-                            <td class="border border-gray-300 px-4 py-2">${s.schoolName || ''}</td>
-                            <td class="border border-gray-300 px-4 py-2">${s.coordinatorName || ''}</td>
-                            <td class="border border-gray-300 px-4 py-2">${s.workshopDate ? formatDate(s.workshopDate) : ''}</td>
-                            <td class="border border-gray-300 px-4 py-2">${s.financialStatus || ''}</td>
-                            <td class="border border-gray-300 px-4 py-2 text-center">
-                                <button 
-                                    class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-                                    onclick="showDetails(${index})">
-                                    View
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('');
-                } catch (err) {
-                    console.error(err);
-                    tableBody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-red-500">Error loading data</td></tr>`;
+                if (response.ok) {
+                    showMessage(result.message || 'Registration successful', 'success', messageDiv);
+                    form.reset();
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showMessage(result.error || result.message || 'Registration failed', 'error', messageDiv);
+                    console.error('Server response:', result);
                 }
+            } catch (error) {
+                showMessage('Network error. Please check your connection and try again.', 'error', messageDiv);
+                console.error('Submission error:', error);
+            } finally {
+                submitButton.disabled = false;
+                buttonText.classList.remove('hidden');
+                loadingText.classList.add('hidden');
+            }
+        });
+    } else {
+        console.error('Required DOM elements not found for coordinatorForm', {
+            coordinatorForm: !!coordinatorForm,
+            coordinatorMessage: !!coordinatorMessage,
+            submitButton: !!submitButton,
+            buttonText: !!buttonText,
+            loadingText: !!loadingText
+        });
+    }
+
+    // Call Log Form Submission
+    const callLogForm = document.getElementById('callLogForm');
+    if (callLogForm) {
+        callLogForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const form = event.target;
+            const messageDiv = document.getElementById('callLogMessage');
+            const submitButton = document.getElementById('submitCallLogButton');
+            const buttonText = document.getElementById('callLogButtonText');
+            const loadingText = document.getElementById('callLogLoadingText');
+
+            const callDate = form.querySelector('#callDate')?.value.trim();
+            const caller = form.querySelector('#caller')?.value.trim();
+            const recipient = form.querySelector('#recipient')?.value.trim();
+            const notes = form.querySelector('#notes')?.value.trim();
+            const schoolName = form.querySelector('#schoolName')?.value.trim();
+            const contactPerson = form.querySelector('#contactPerson')?.value.trim();
+
+            if (!callDate || !caller || !recipient || !notes || !schoolName || !contactPerson) {
+                showMessage('All required fields must be filled', 'error', messageDiv);
+                return;
             }
 
-            function formatDate(dateObj) {
-                if (dateObj._seconds) {
-                    return new Date(dateObj._seconds * 1000).toLocaleDateString();
-                }
-                return new Date(dateObj).toLocaleDateString();
-            }
+            submitButton.disabled = true;
+            buttonText.classList.add('hidden');
+            loadingText.classList.remove('hidden');
 
-            function showDetails(index) {
-                const data = workshopDataList[index];
-                const modalContent = document.getElementById('modalContent');
-                modalContent.innerHTML = Object.entries(data)
-                    .map(([key, value]) => {
-                        if (value && value._seconds) value = formatDate(value);
-                        return `<div><strong>${key}:</strong></div><div>${value ?? '-'}</div>`;
+            try {
+                const response = await fetch('/add-call-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        callDate: new Date(callDate).toISOString(),
+                        caller,
+                        recipient,
+                        notes,
+                        schoolName,
+                        contactPerson
                     })
-                    .join('');
-                document.getElementById('detailsModal').classList.remove('hidden');
-            }
+                });
 
-            function closeModal() {
-                document.getElementById('detailsModal').classList.add('hidden');
-            }
-
-            function toggleCustomDateInput(select, schoolId) {
-                const customDateInput = document.getElementById(`custom-date-${schoolId}`);
-                if (select.value === 'other') {
-                    customDateInput.classList.remove('hidden');
-                    customDateInput.setAttribute('required', 'required');
+                let result;
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    result = await response.json();
                 } else {
-                    customDateInput.classList.add('hidden');
-                    customDateInput.removeAttribute('required');
-                }
-            }
-
-            // Toggle the visibility of the custom date input field based on the dropdown selection
-            function toggleCustomDateInput(selectElement, schoolId) {
-                const customDateInput = document.getElementById(`custom-date-${schoolId}`);
-                
-                if (selectElement.value === 'other') {
-                    customDateInput.classList.remove('hidden'); // Show the date input
-                    customDateInput.focus(); // Optionally focus on the date input for better UX
-                } else {
-                    customDateInput.classList.add('hidden'); // Hide the date input
-                    customDateInput.value = ''; // Clear the custom date input
-                }
-            }
-
-            // Validate the event date form before submission
-            function validateEventDateForm(form, schoolId) {
-                const selectElem = form.querySelector('select[name="eventDate"]');
-                const customDateInput = form.querySelector(`#custom-date-${schoolId}`);
-                const hiddenInput = form.querySelector(`#eventDateFinal-${schoolId}`);
-
-                if (!selectElem.value) {
-                    alert('Please select an event date or "Other" to choose a custom date.');
-                    return false;
+                    result = { message: await response.text() };
                 }
 
-                if (selectElem.value === 'other') {
-                    if (!customDateInput.value) {
-                        alert('Please select a custom event date.');
-                        return false;
+                if (response.ok) {
+                    // Fetch updated call logs from the server
+                    const logsResponse = await fetch('/call-logs');
+                    if (!logsResponse.ok) {
+                        throw new Error('Failed to fetch updated call logs');
                     }
-                    hiddenInput.value = customDateInput.value;
+                    callLogs = await logsResponse.json();
+                    renderCallLogTable(callLogs);
+                    showMessage(result.message || 'Call log added successfully', 'success', messageDiv);
+                    form.reset();
+                    document.getElementById('callLogDialog').close();
                 } else {
-                    hiddenInput.value = selectElem.value;
+                    showMessage(result.error || 'Failed to add call log', 'error', messageDiv);
+                    console.error('Server error response:', result);
+                }
+            } catch (error) {
+                showMessage('Error adding call log. Please try again.', 'error', messageDiv);
+                console.error('Submission error:', error);
+            } finally {
+                submitButton.disabled = false;
+                buttonText.classList.remove('hidden');
+                loadingText.classList.remove('hidden');
+            }
+        });
+    } else {
+        console.warn('callLogForm not found');
+    }
+
+    // Upload photo form submission
+    const uploadForm = document.getElementById('upload-form');
+    if (uploadForm) {
+        uploadForm.addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            const successMessageDiv = document.getElementById('success-message');
+
+            try {
+                const response = await fetch(form.action, {
+                    method: form.method,
+                    body: formData
+                });
+
+                let result;
+                if (response.headers.get('content-type')?.includes('application/json')) {
+                    result = await response.json();
+                } else {
+                    result = { message: await response.text() };
                 }
 
-                return true;
-            }
-
-            // Initialize Filters
-            const uploaderFilter = document.getElementById('uploaderFilter');
-            const seenFilter = document.getElementById('seenFilter');
-            const mediaTypeFilter = document.getElementById('mediaTypeFilter');
-
-            if (uploaderFilter && seenFilter && mediaTypeFilter) {
-                uploaderFilter.addEventListener('change', filterCards);
-                seenFilter.addEventListener('change', filterCards);
-                mediaTypeFilter.addEventListener('change', filterCards);
-                filterCards();
-            }
-
-            // Filter Media Cards
-            function filterCards() {
-                const uploaderFilter = document.getElementById('uploaderFilter');
-                const seenFilter = document.getElementById('seenFilter');
-                const mediaTypeFilter = document.getElementById('mediaTypeFilter');
-                const mediaCards = document.querySelectorAll('.media-card');
-
-                if (!uploaderFilter || !seenFilter || !mediaTypeFilter) {
-                    console.warn('One or more filter elements not found');
-                    return;
-                }
-
-                const uploader = uploaderFilter.value.toLowerCase();
-                const seen = seenFilter.value.toLowerCase();
-                const mediaType = mediaTypeFilter.value.toLowerCase();
-
-                mediaCards.forEach(card => {
-                    const uploaderType = card.getAttribute('data-uploader-type')?.toLowerCase() || 'unknown';
-                    const seenStatus = card.getAttribute('data-seen') === 'true' ? 'seen' : 'unseen';
-                    const cardMediaType = card.getAttribute('data-media-type')?.toLowerCase() || '';
-
-                    const matchUploader = uploader === 'all' || uploaderType === uploader;
-                    const matchSeen = seen === 'all' || seenStatus === seen;
-                    const matchMediaType = mediaType === 'all' || cardMediaType === mediaType;
-
-                    card.style.display = matchUploader && matchSeen && matchMediaType ? 'block' : 'none';
-                });
-            }
-
-            // Feedback entries from server
-            const feedbackEntries = <%- JSON.stringify(feedbackEntries) %>;
-
-            // Function to populate filter dropdowns
-            function populateFilters() {
-                const filters = ['studentName', 'className', 'createdAt'];
-                filters.forEach(column => {
-                    const select = document.querySelector(`select[data-column="${column}"]`);
-                    const values = [...new Set(feedbackEntries.map(entry => entry[column]))].sort();
-                    select.innerHTML = '<option value="">All</option>' + 
-                        values.map(value => `<option value="${value}">${value}</option>`).join('');
-                });
-            }
-
-            // Function to filter table
-            function filterTable() {
-                const filters = {};
-                document.querySelectorAll('.filter-select').forEach(select => {
-                    if (select.value) {
-                        filters[select.dataset.column] = select.value;
+                if (successMessageDiv) {
+                    successMessageDiv.textContent = result.message;
+                    successMessageDiv.classList.remove('hidden');
+                    if (!response.ok) {
+                        successMessageDiv.classList.add('bg-red-100', 'text-red-700');
                     }
-                });
+                    form.reset();
+                    setTimeout(() => {
+                        successMessageDiv.classList.add('hidden');
+                        successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
+                    }, 5000);
+                }
+            } catch (error) {
+                if (successMessageDiv) {
+                    successMessageDiv.textContent = 'Error uploading files. Please try again.';
+                    successMessageDiv.classList.remove('hidden');
+                    successMessageDiv.classList.add('bg-red-100', 'text-red-700');
+                    setTimeout(() => {
+                        successMessageDiv.classList.add('hidden');
+                        successMessageDiv.classList.remove('bg-red-100', 'text-red-700');
+                    }, 5000);
+                }
+                console.error('Upload error:', error);
+            }
+        });
+    } else {
+        console.warn('upload-form not found');
+    }
 
-                const rows = document.querySelectorAll('#student-feedback-body tr');
-                rows.forEach(row => {
-                    let show = true;
-                    Object.keys(filters).forEach(column => {
-                        const cellValue = row.querySelector(`td:nth-child(${getColumnIndex(column)})`).textContent;
-                        if (cellValue !== filters[column]) {
-                            show = false;
-                        }
-                    });
-                    row.style.display = show ? '' : 'none';
-                });
+    // Media upload form
+    const mediaUploadForm = document.getElementById('mediaUploadForm');
+    if (mediaUploadForm) {
+        mediaUploadForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const uploadStatus = document.getElementById('uploadStatus');
+            const file = document.getElementById('mediaFile')?.files[0];
+            const formData = new FormData();
+            formData.append('mediaFile', file);
+            const button = document.getElementById('uploadButton');
+
+            if (uploadStatus) {
+                uploadStatus.innerHTML = 'Uploading...';
+            }
+            if (button) {
+                button.disabled = true;
             }
 
-            // Helper function to get column index
-            function getColumnIndex(columnName) {
-                const headers = Array.from(document.querySelectorAll('#student-feedback-table th'));
-                return headers.findIndex(th => th.dataset.filter === columnName) + 1 || 
-                       headers.findIndex(th => th.textContent.trim().toLowerCase().includes(columnName.toLowerCase())) + 1;
-            }
-
-            // Initialize
-            document.addEventListener('DOMContentLoaded', () => {
-                populateFilters();
-                document.querySelectorAll('.filter-select').forEach(select => {
-                    select.addEventListener('change', filterTable);
+            try {
+                const res = await fetch('/upload-image', {
+                    method: 'POST',
+                    body: formData
                 });
-            });
-        };
-       document.addEventListener('click', (event) => {
-        const button = event.target.closest('.post-to-website-btn');
-        if (button) {
-            console.log('Button clicked:', button.getAttribute('data-id'));
+
+                let result;
+                if (res.headers.get('content-type')?.includes('application/json')) {
+                    result = await res.json();
+                } else {
+                    result = { error: await res.text() };
+                }
+
+                if (res.ok && uploadStatus) {
+                    uploadStatus.innerHTML = `✅ Upload successful! <a href="${result.files[0].downloadUrl}" target="_blank">View</a>`;
+                } else if (uploadStatus) {
+                    uploadStatus.innerHTML = `❌ Upload failed: ${result.error}`;
+                }
+            } catch (err) {
+                if (uploadStatus) {
+                    uploadStatus.innerHTML = '❌ Upload error.';
+                }
+                console.error('Media upload error:', err);
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                }
+            }
+        });
+    } else {
+        console.warn('mediaUploadForm not found');
+    }
+
+    // Initialize media filters and checkboxes
+    const uploaderFilter = document.getElementById('uploaderFilter');
+    const seenFilter = document.getElementById('seenFilter');
+    if (uploaderFilter && seenFilter) {
+        uploaderFilter.addEventListener('change', filterMedia);
+        seenFilter.addEventListener('change', filterMedia);
+        filterMedia();
+    } else {
+        console.warn('uploaderFilter or seenFilter not found');
+    }
+
+    const markSeenCheckboxes = document.querySelectorAll('.mark-seen-checkbox');
+    markSeenCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', (event) => {
             event.stopPropagation();
-            postToWebsite(button);
+            const mediaId = checkbox.dataset.mediaId;
+            const cardElement = checkbox.closest('.media-card');
+            if (mediaId && cardElement) {
+                markMediaSeen(mediaId, checkbox, cardElement);
+            }
+        });
+        checkbox.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+    });
+
+    const closeModal = document.getElementById('closeModal');
+    if (closeModal) {
+        closeModal.addEventListener('click', () => {
+            const mediaModal = document.getElementById('mediaModal');
+            if (mediaModal) {
+                mediaModal.classList.add('hidden');
+            }
+        });
+    }
+
+    // Complete school buttons
+    const completeSchoolButtons = document.querySelectorAll('.complete-school-btn');
+    completeSchoolButtons.forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            const schoolId = button.dataset.schoolId;
+            const row = button.closest('tr');
+            if (!row) return;
+            const isApproved = row.querySelector('[data-column="isApproved"]')?.textContent.trim() === 'Yes';
+            const eventDate = row.querySelector('[data-column="eventDate"]')?.textContent.trim();
+            const isCompleted = row.querySelector('[data-column="isCompleted"]')?.textContent.trim() === 'Yes';
+
+            if (!isApproved) {
+                alert('Cannot complete: School is not approved.');
+                return;
+            }
+            if (eventDate === 'Not assigned') {
+                alert('Cannot complete: Event date is not assigned.');
+                return;
+            }
+            if (isCompleted) {
+                alert('School is already marked as completed.');
+                return;
+            }
+
+            markSchoolCompleted(schoolId, button, row);
+        });
+    });
+
+    // Export Excel button
+    const exportExcelButton = document.getElementById('exportExcelButton');
+    if (exportExcelButton) {
+        exportExcelButton.addEventListener('click', downloadExcel);
+    }
+
+    // Initialize IP tracking
+    trackIpAddress();
+    setInterval(trackIpAddress, 60000); // Track every 60 seconds
+
+    // Apply styling to thinkingLetter and cotation dropdowns
+    document.querySelectorAll('.thinking-select').forEach(select => {
+        select.addEventListener('change', function() {
+            this.classList.toggle('text-green-600', this.value === 'Yes');
+        });
+        if (select.value === 'Yes') select.classList.add('text-green-600');
+    });
+
+    document.querySelectorAll('.cotation-select').forEach(select => {
+        select.addEventListener('change', function() {
+            this.classList.toggle('text-green-600', this.value === 'Yes');
+        });
+        if (select.value === 'Yes') select.classList.add('text-green-600');
+    });
+});
+
+// Window onload for initialization
+window.onload = function () {
+    openTab('visualization');
+    trackIpAddress();
+    renderCallLogTable();
+    updateCallLogFilters();
+    renderLoginLogTable();
+    updateLoginLogFilters();
+
+    const tableIds = ['not-approved', 'approved-no-date', 'approved-with-date', 'completed-schools', 'trainers', 'students', 'call-logs', 'login-logs', 'student-feedback', 'visited-school'];
+    tableIds.forEach(tableId => {
+        const table = document.getElementById(tableId);
+        if (table) {
+            initializeFilters(tableId);
+        } else {
+            console.warn(`Table with ID ${tableId} not found`);
         }
     });
-    </script>
+
+    const districtData = <%- JSON.stringify(
+        schools ? schools.reduce((acc, school) => {
+            acc[school.district] = acc[school.district] || { schools: 0, students: 0, trainers: 0 };
+            acc[school.district].schools += 1;
+            acc[school.district].students += (participants ? participants.filter(p => p.schoolNameDropdown === school.schoolName).length : 0);
+            acc[school.district].trainers += (school.trainerId1 || school.trainerId2 ? (school.trainerId1 && school.trainerId2 ? 2 : 1) : 0);
+            return acc;
+        }, {}) : {}
+    ) %>;
+    const districtChartCanvas = document.getElementById('districtChart');
+    if (districtChartCanvas) {
+        const districtChart = new Chart(districtChartCanvas, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(districtData),
+                datasets: [
+                    { label: 'Schools', data: Object.values(districtData).map(d => d.schools), backgroundColor: 'rgba(54, 162, 235, 0.5)' },
+                    { label: 'Students', data: Object.values(districtData).map(d => d.students), backgroundColor: 'rgba(75, 192, 192, 0.5)' },
+                    { label: 'Trainers', data: Object.values(districtData).map(d => d.trainers), backgroundColor: 'rgba(255, 99, 132, 0.5)' }
+                ]
+            },
+            options: { scales: { y: { beginAtZero: true }, x: { stacked: false } } }
+        });
+    }
+
+    const professionData = <%- JSON.stringify(
+        trainers ? trainers.reduce((acc, trainer) => {
+            acc[trainer.profession] = (acc[trainer.profession] || 0) + 1;
+            return acc;
+        }, {}) : {}
+    ) %>;
+    const professionChartCanvas = document.getElementById('professionChart');
+    if (professionChartCanvas) {
+        const professionChart = new Chart(professionChartCanvas, {
+            type: 'pie',
+            data: {
+                labels: Object.keys(professionData),
+                datasets: [{ data: Object.values(professionData), backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40'] }]
+            },
+            options: { responsive: true, plugins: { legend: { position: 'top' } } }
+        });
+    }
+
+    let workshopDataList = [];
+    async function fetchWorkshopSummaries() {
+        const tableBody = document.getElementById('workshopTableBody');
+        tableBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">Loading...</td></tr>`;
+
+        try {
+            const res = await fetch('/workshop-summaries');
+            if (!res.ok) throw new Error('Failed to fetch');
+
+            workshopDataList = await res.json();
+
+            if (!workshopDataList.length) {
+                tableBody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-gray-500">No workshop summaries found</td></tr>`;
+                return;
+            }
+
+            tableBody.innerHTML = workshopDataList.map((s, index) => `
+                <tr class="hover:bg-gray-50">
+                    <td class="border border-gray-300 px-4 py-2">${s.schoolName || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2">${s.trainer1 || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2">${s.trainer2 || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2">${s.coordinator || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2">${s.workshopDate ? formatDate(s.workshopDate) : ''}</td>
+                    <td class="border border-gray-300 px-4 py-2">${s.financialStatus || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2">${s.trainerFeedback || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2">${s.paymentMode || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2">${s.upiId || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2">${s.transactionId || ''}</td>
+                    <td class="border border-gray-300 px-4 py-2 text-center">
+                        <button 
+                            class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+                            onclick="showDetails(${index})">
+                            View
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (err) {
+            console.error(err);
+            tableBody.innerHTML = `<tr><td colspan="11" class="text-center py-4 text-red-500">Error loading data</td></tr>`;
+        }
+    }
+
+    function formatDate(dateObj) {
+        if (dateObj._seconds) {
+            return new Date(dateObj._seconds * 1000).toLocaleDateString();
+        }
+        return new Date(dateObj).toLocaleDateString();
+    }
+
+    function showDetails(index) {
+        const data = workshopDataList[index];
+        const modalContent = document.getElementById('modalContent');
+        modalContent.innerHTML = Object.entries(data)
+            .map(([key, value]) => {
+                if (value && value._seconds) value = formatDate(value);
+                return `<div><strong>${key}:</strong></div><div>${value ?? '-'}</div>`;
+            })
+            .join('');
+        document.getElementById('detailsModal').classList.remove('hidden');
+    }
+
+    function closeModal() {
+        document.getElementById('detailsModal').classList.add('hidden');
+    }
+
+    // Filter Media Cards
+    function filterCards() {
+        const uploaderFilter = document.getElementById('uploaderFilter');
+        const seenFilter = document.getElementById('seenFilter');
+        const mediaTypeFilter = document.getElementById('mediaTypeFilter');
+        const mediaCards = document.querySelectorAll('.media-card');
+
+        if (!uploaderFilter || !seenFilter || !mediaTypeFilter) {
+            console.warn('One or more filter elements not found');
+            return;
+        }
+
+        const uploader = uploaderFilter.value.toLowerCase();
+        const seen = seenFilter.value.toLowerCase();
+        const mediaType = mediaTypeFilter.value.toLowerCase();
+
+        mediaCards.forEach(card => {
+            const uploaderType = card.getAttribute('data-uploader-type')?.toLowerCase() || 'unknown';
+            const seenStatus = card.getAttribute('data-seen') === 'true' ? 'seen' : 'unseen';
+            const cardMediaType = card.getAttribute('data-media-type')?.toLowerCase() || '';
+
+            const matchUploader = uploader === 'all' || uploaderType === uploader;
+            const matchSeen = seen === 'all' || seenStatus === seen;
+            const matchMediaType = mediaType === 'all' || cardMediaType === mediaType;
+
+            card.style.display = matchUploader && matchSeen && matchMediaType ? 'block' : 'none';
+        });
+    }
+
+    // Feedback entries from server
+    const feedbackEntries = <%- JSON.stringify(feedbackEntries) %>;
+
+    // Function to populate filter dropdowns
+    function populateFilters() {
+        const filters = ['studentName', 'className', 'createdAt'];
+        filters.forEach(column => {
+            const select = document.querySelector(`select[data-column="${column}"]`);
+            const values = [...new Set(feedbackEntries.map(entry => entry[column]))].sort();
+            select.innerHTML = '<option value="">All</option>' +
+                values.map(value => `<option value="${value}">${value}</option>`).join('');
+        });
+    }
+
+    // Function to filter table
+    function filterTable() {
+        const filters = {};
+        document.querySelectorAll('.filter-select').forEach(select => {
+            if (select.value) {
+                filters[select.dataset.column] = select.value;
+            }
+        });
+
+        const rows = document.querySelectorAll('#student-feedback-body tr');
+        rows.forEach(row => {
+            let show = true;
+            Object.keys(filters).forEach(column => {
+                const cellValue = row.querySelector(`td:nth-child(${getColumnIndex(column)})`).textContent;
+                if (cellValue !== filters[column]) {
+                    show = false;
+                }
+            });
+            row.style.display = show ? '' : 'none';
+        });
+    }
+
+    // Helper function to get column index
+    function getColumnIndex(columnName) {
+        const headers = Array.from(document.querySelectorAll('#student-feedback-table th'));
+        return headers.findIndex(th => th.dataset.filter === columnName) + 1 ||
+               headers.findIndex(th => th.textContent.trim().toLowerCase().includes(columnName.toLowerCase())) + 1;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+        populateFilters();
+        document.querySelectorAll('.filter-select').forEach(select => {
+            select.addEventListener('change', filterTable);
+        });
+    });
+};
+
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('.post-to-website-btn');
+    if (button) {
+        console.log('Button clicked:', button.getAttribute('data-id'));
+        event.stopPropagation();
+        postToWebsite(button);
+    }
+});
+</script>
     <style>
         .mark-seen-checkbox:checked {
             background-color: #10B981;
@@ -1456,6 +1557,14 @@ async function postToWebsite(button) {
         .logout-button:hover {
             background-color: #c0392b;
         }
+        .filter-input {
+        width: 100%;
+        padding: 2px;
+        margin-top: 4px;
+        font-size: 12px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+    }
     </style>
 </head>
 <body class="bg-gray-100 font-sans">
@@ -1485,20 +1594,20 @@ async function postToWebsite(button) {
 
         <div class="flex border-b border-gray-300 mb-6 overflow-x-auto">
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('visualization')">Visualization</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('detail-summary')">Detailed Summary</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('registered-school')">Registered Schools</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('event-date-assign')">Event Date Not Assign</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('approved-with-date')">Schools Approved and Event Date Assigned</button>
-            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('complete')">Complete Schools</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('complete')">Completed Schools</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('trainers')">Trainers</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('students')">Students</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('media')">View Media</button>
-            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('detail-summary')">Detailed Summary</button>
             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('upload-photo')">Upload Photo</button>
              <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('add-coordinator')">Add Coordinator</button>
              <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('call-log')">Call Log</button>
-             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('workshop-form')">Workshop Form</button>
-                   <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('login-log')">Login Log</button>
-                   <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('student-feedback')">Student Feedback</button>
+             <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('workshop-form')">After Workshop Summary Form</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('login-log')">Login Log</button>
+            <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('student-feedback')">Student Feedback</button>
     <button class="tab px-4 py-2 font-semibold bg-gray-200 text-gray-700 rounded-t-lg focus:outline-none" onclick="openTab('visited-school')">Visited Schools</button>
 </div>
                   
@@ -1586,7 +1695,7 @@ async function postToWebsite(button) {
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                                 <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
+                                <!-- <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th> -->
                                 <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="referenceName">Reference Name<br><select class="filter-select text-sm w-full" data-column="referenceName"></select></th>
                             </tr>
                         </thead>
@@ -1654,7 +1763,7 @@ async function postToWebsite(button) {
                                         <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                                     </td>
                                     <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources.join(', ') || 'None' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
+                                    <!-- <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td> -->
                                     <td class="py-2 px-4 border-b text-gray-700" data-column="referenceName"><%= school.referenceName || 'N/A' %></td>
                                 </tr>
                             <% }) %>
@@ -1693,7 +1802,7 @@ async function postToWebsite(button) {
                             <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
                             <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                             <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
+                            <!-- <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th> -->
                         </tr>
                     </thead>
                     <tbody>
@@ -1718,11 +1827,11 @@ async function postToWebsite(button) {
                                 <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode || 'N/A' %></td>
                                 <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">Not assigned</td>
                                 <td class="py-2 px-4 border-b text-gray-700">
-                                    <% if (school.workshopStartTime && school.workshopEndTime) { %>
-                                        <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
-                                    <% } else { %>
-                                        Not Assigned
-                                    <% } %>
+                                 <% if (school.workshopStartTime && school.workshopEndTime) { %>
+                                            <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
+                                        <% } else { %>
+                                            Not Assigned
+                                        <% } %>
                                 </td>
                                 <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
                                 <td class="py-2 px-4 border-b text-gray-700" data-column="coordinator">
@@ -1774,7 +1883,7 @@ async function postToWebsite(button) {
                                 <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail || 'N/A' %></td>
                                 <td class="py-2 px-4 border-b text-gray-700"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
                                 <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
+                                <!-- <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td> -->
                             </tr>
                         <% }) %>
                     </tbody>
@@ -1814,7 +1923,8 @@ async function postToWebsite(button) {
                         <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
+                        
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Total Students</th> <!-- New Column -->
                         <th class="py-2 px-4 border-b text-left text-gray-600">MCQ Completed Students</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Champions</th>
                     </tr>
@@ -1960,7 +2070,9 @@ async function postToWebsite(button) {
                                 <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                             </td>
                             <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
-                            <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
+                               <td class="py-2 px-4 border-b text-gray-700">
+                                <%= participants.filter(p => p.schoolNameDropdown === school.schoolName).length %>
+                            </td>
                             <td class="py-2 px-4 border-b text-gray-700">
                                 <%= participants.filter(p => p.schoolNameDropdown === school.schoolName && p.hasCompletedMCQ).length %>
                             </td>
@@ -1982,104 +2094,129 @@ async function postToWebsite(button) {
     <% } %>
 </div>
 
-        <div id="complete" class="tab-content hidden">
-            <h2 class="text-2xl font-bold mb-4 text-gray-700">Completed Schools</h2>
-            <% if (schools && schools.length > 0) { %>
-                <div class="overflow-x-auto mb-6">
-                    <table id="completed-schools" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-                        <thead class="bg-gray-100 sticky top-0">
-                            <tr>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Workshop Time</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer1">Trainer 1<br><select class="filter-select text-sm w-full" data-column="trainer1"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer2">Trainer 2<br><select class="filter-select text-sm w-full" data-column="trainer2"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isCompleted">Completed<br><select class="filter-select text-sm w-full" data-column="isCompleted"></select></th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                                <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th>
-                                   <th class="py-2 px-4 border-b text-left text-gray-600">MCQ Completed Students</th>
+<div id="complete" class="tab-content hidden">
+    <h2 class="text-2xl font-bold mb-4 text-gray-700">Completed Schools</h2>
+    <% if (schools && schools.length > 0) { %>
+        <div class="overflow-x-auto mb-6">
+            <table id="completed-schools" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                <thead class="bg-gray-100 sticky top-0">
+                    <tr>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Workshop Time</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer1">Trainer 1<br><select class="filter-select text-sm w-full" data-column="trainer1"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="trainer2">Trainer 2<br><select class="filter-select text-sm w-full" data-column="trainer2"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isCompleted">Completed<br><select class="filter-select text-sm w-full" data-column="isCompleted"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Total Students</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">MCQ Completed Students</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Champions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% schools.filter(school => school.isApproved && school.eventDate && school.isCompleted).forEach(school => { %>
-                                <tr class="hover:bg-gray-50">
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                    <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
-                                        timeZone: 'Asia/Kolkata',
-                                        weekday: 'long',
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    }) : 'N/A' %>
-                                </td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">
-                                        <%= school.eventDate ? school.eventDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
-                                    </td>
-                                          </td>
-                           <td class="py-2 px-4 border-b text-gray-700">
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="thinkingLetter">Thinking Letter<br><select class="filter-select text-sm w-full" data-column="thinkingLetter"><option value="">All</option><option value="Yes">Yes</option><option value="No">No</option></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="cotation">Cotation<br><select class="filter-select text-sm w-full" data-column="cotation"><option value="">All</option><option value="Yes">Yes</option><option value="No">No</option></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% 
+                        // Sort schools by eventDate in descending order (latest first)
+                        schools
+                            .filter(school => school.isApproved && school.eventDate && school.isCompleted)
+                            .sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate))
+                            .forEach(school => { 
+                    %>
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName %></td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+                                    timeZone: 'Asia/Kolkata',
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                }) : 'N/A' %>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">
+                                <%= school.eventDate ? school.eventDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not assigned' %>
+                            </td>
+                            <td class="py-3 px-4">
                                 <% if (school.workshopStartTime && school.workshopEndTime) { %>
                                     <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
                                 <% } else { %>
                                     Not Assigned
                                 <% } %>
                             </td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer1">
-                                        <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
-                                        <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city})` : 'Not Assigned' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="trainer2">
-                                        <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
-                                        <%= trainer2 ? `${trainer2.trainerName} (${trainer2.city})` : 'Not Assigned' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700" data-column="isCompleted">Yes</td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700">
-                                        <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
-                                    </td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
-                                    <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td>
-                                      <td class="py-2 px-4 border-b text-gray-700">
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="trainer1">
+                                <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
+                                <%= trainer1 ? `${trainer1.trainerName} (${trainer1.city})` : 'Not Assigned' %>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="trainer2">
+                                <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
+                                <%= trainer2 ? `${trainer2.trainerName} (${trainer2.city})` : 'Not Assigned' %>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="isCompleted">Yes</td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail %></td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <%= participants.filter(p => p.schoolNameDropdown === school.schoolName).length %>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700">
                                 <%= participants.filter(p => p.schoolNameDropdown === school.schoolName && p.hasCompletedMCQ).length %>
                             </td>
                             <td class="py-2 px-4 border-b text-gray-700">
                                 <%= participants.filter(p => p.schoolNameDropdown === school.schoolName && p.isChampion).length %>
                             </td>
-                                </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
-                </div>
-            <% } else { %>
-                <p class="text-gray-700">No completed schools yet.</p>
-            <% } %>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="thinkingLetter">
+                                <select class="thinking-select border rounded px-2 py-1" data-school-id="<%= school.id %>" data-previous-value="<%= school.thinkingLetter ? 'Yes' : 'No' %>">
+                                    <option value="Yes" <%= school.thinkingLetter ? "selected" : "" %>>Yes</option>
+                                    <option value="No" <%= !school.thinkingLetter ? "selected" : "" %>>No</option>
+                                </select>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="cotation">
+                                <select class="cotation-select border rounded px-2 py-1" data-school-id="<%= school.id %>" data-previous-value="<%= school.cotation ? 'Yes' : 'No' %>">
+                                    <option value="Yes" <%= school.cotation ? "selected" : "" %>>Yes</option>
+                                    <option value="No" <%= !school.cotation ? "selected" : "" %>>No</option>
+                                </select>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <button class="save-button bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded" data-school-id="<%= school.id %>" onclick="saveSchoolData(this)">Save</button>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
         </div>
+    <% } else { %>
+        <p class="text-gray-700">No completed schools yet.</p>
+    <% } %>
+</div>
 
         <div id="trainers" class="tab-content hidden">
             <h2 class="text-2xl font-bold mb-4 text-gray-700">Registered Trainers</h2>
@@ -2201,28 +2338,49 @@ async function postToWebsite(button) {
     <% } %>
 </div>
 
+
 <div id="detail-summary" class="tab-content hidden bg-white p-4 rounded shadow">
-    <h2 class="text-xl font-bold mb-4 text-gray-700">Training Schedule: Detailed Summary</h2>
+    <h2 class="text-xl font-bold mb-4 text-gray-700"> Detailed Summary</h2>
     <div class="overflow-x-auto">
         <table id="detailedSummaryTable" class="min-w-full bg-white border border-gray-300 rounded">
             <thead class="bg-gray-100">
                 <tr>
-                    <th class="px-3 py-2 border-b">Date</th>
-                    <th class="px-3 py-2 border-b">Day</th>
-                    <th class="px-3 py-2 border-b">School Name</th>
-                    <th class="px-3 py-2 border-b">Trainer Name</th>
-                    <th class="px-3 py-2 border-b">Time Slot</th>
-                    <th class="px-3 py-2 border-b">Trainer Occupied</th>
-                    <th class="px-3 py-2 border-b">School Confirmed?</th>
-                    <th class="px-3 py-2 border-b">Logistics Done?</th>
-                    <!-- <th class="px-3 py-2 border-b">Materials Sent?</th> -->
-                    <th class="px-3 py-2 border-b">Delivery Number</th>
+                    <th class="px-3 py-2 border-b">Sr Number</th>
+                    <th class="px-3 py-2 border-b">
+                        Date
+                        <input type="text" class="filter-input" placeholder="Filter Date" onkeyup="filterTable(1)">
+                    </th>
+                    <th class="px-3 py-2 border-b">
+                        Day
+                        <input type="text" class="filter-input" placeholder="Filter Day" onkeyup="filterTable(2)">
+                    </th>
+                    <th class="px-3 py-2 border-b">
+                        School Name
+                        <input type="text" class="filter-input" placeholder="Filter School" onkeyup="filterTable(3)">
+                    </th>
+                    <th class="px-3 py-2 border-b">
+                        Trainer Name
+                        <input type="text" class="filter-input" placeholder="Filter Trainer" onkeyup="filterTable(4)">
+                    </th>
+                    <th class="px-3 py-2 border-b">
+                        Logistics Done?
+                        <input type="text" class="filter-input" placeholder="Filter Logistics" onkeyup="filterTable(5)">
+                    </th>
+                    <th class="px-3 py-2 border-b">
+                        Delivery Number
+                        <input type="text" class="filter-input" placeholder="Filter Delivery" onkeyup="filterTable(6)">
+                    </th>
+                    <th class="px-3 py-2 border-b">
+                        Approved?
+                        <input type="text" class="filter-input" placeholder="Filter Approved" onkeyup="filterTable(7)">
+                    </th>
                 </tr>
             </thead>
-            <tbody>
+            <tbody id="tableBody">
                 <% if (schools && schools.length > 0) { %>
-                    <% schools.filter(school => school.isApproved && school.eventDate && school.isCompleted).forEach(school => { %>
+                    <% schools.sort((a, b) => new Date(b.eventDate) - new Date(a.eventDate)).forEach((school, index) => { %>
                         <tr>
+                            <td class="px-3 py-2 border-b text-gray-700"><%= index + 1 %></td>
                             <td class="px-3 py-2 border-b text-gray-700">
                                 <%= school.eventDate ? school.eventDate.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', year: 'numeric', month: 'long', day: 'numeric' }) : 'Not assigned' %>
                             </td>
@@ -2237,33 +2395,20 @@ async function postToWebsite(button) {
                                 <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
                                 <%= trainer1 ? trainer1.trainerName : 'Not Assigned' %><%= trainer2 ? ', ' + trainer2.trainerName : '' %>
                             </td>
-                            <td class="px-3 py-2 border-b text-gray-700">
-                                <% if (school.workshopStartTime && school.workshopEndTime) { %>
-                                    <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
-                                <% } else { %>
-                                    Not Assigned
-                                <% } %>
-                            </td>
-                            <td class="px-3 py-2 border-b text-gray-700">
-                                <%= (school.trainerId1 || school.trainerId2) ? 'Yes' : 'No' %>
-                            </td>
-                            <td class="px-3 py-2 border-b text-gray-700">
-                                Yes
-                            </td>
                             <td class="px-3 py-2 border-b text-gray-700 <%= school.deliveryMode === 'delivered' ? 'text-green-600' : school.deliveryMode === 'pending' ? 'text-yellow-600' : school.deliveryMode === 'shipped' ? 'text-blue-600' : '' %>">
                                 <%= school.deliveryMode || 'N/A' %>
                             </td>
-                            <!-- <td class="px-3 py-2 border-b text-gray-700">
-                                <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
-                            </td> -->
                             <td class="px-3 py-2 border-b text-gray-700">
                                 <%= school.deliveryNumber || 'N/A' %>
+                            </td>
+                            <td class="px-3 py-2 border-b text-gray-700">
+                                <%= school.isApproved ? 'Yes' : 'No' %>
                             </td>
                         </tr>
                     <% }) %>
                 <% } else { %>
                     <tr>
-                        <td class="px-3 py-2 border-b text-gray-700" colspan="10">No completed schools available.</td>
+                        <td class="px-3 py-2 border-b text-gray-700" colspan="8">No schools available.</td>
                     </tr>
                 <% } %>
             </tbody>
@@ -2532,46 +2677,78 @@ async function postToWebsite(button) {
 
    <!-- //upload by co ordinator Workshop Summaries -->
 
-    <div id="workshop-form" class="tab-content hidden p-4 bg-white rounded-b-lg">
+   <div id="workshop-form" class="tab-content hidden p-4 bg-white rounded-b-lg">
     <h2 class="text-lg font-bold mb-4">Workshop Summaries</h2>
     
     <table class="min-w-full border-collapse border border-gray-300" id="workshopTable">
         <thead class="bg-gray-100">
         <tr>
-          <th class="px-4 py-2 border text-left">School Name</th>
-          <th class="px-4 py-2 border text-left">Trainer 1</th>
-          <th class="px-4 py-2 border text-left">Trainer 2</th>
-          <th class="px-4 py-2 border text-left">Coordinator</th>
-          <th class="px-4 py-2 border text-left">Workshop Date</th>
-          <th class="px-4 py-2 border text-left">Financial Status</th>
+            <th class="px-4 py-2 border text-left">School Name</th>
+            <th class="px-4 py-2 border text-left">Trainer 1</th>
+            <th class="px-4 py-2 border text-left">Trainer 2</th>
+            <th class="px-4 py-2 border text-left">Coordinator</th>
+            <th class="px-4 py-2 border text-left">Workshop Date</th>
+            <th class="px-4 py-2 border text-left">Financial Status</th>
+            <th class="px-4 py-2 border text-left">Trainer Feedback</th>
+            <th class="px-4 py-2 border text-left">Payment Mode</th>
+            <th class="px-4 py-2 border text-left">UPI ID</th>
+            <th class="px-4 py-2 border text-left">Transaction ID</th>
         </tr>
-      </thead>
-          <tbody>
-        <% if (workshopSummaries && workshopSummaries.length > 0) { %>
-          <% workshopSummaries.forEach(ws => { %>
-            <tr class="hover:bg-gray-50">
-              <td class="border px-4 py-2"><%= ws.schoolName %></td>
-              <td class="border px-4 py-2"><%= ws.trainer1 %></td>
-              <td class="border px-4 py-2"><%= ws.trainer2 %></td>
-              <td class="border px-4 py-2"><%= ws.coordinator %></td>
-              <td class="border px-4 py-2">
+        </thead>
+       <tbody>
+<% if (workshopSummaries && workshopSummaries.length > 0) { %>
+    <% workshopSummaries.forEach(ws => { %>
+        <tr class="hover:bg-gray-50">
+            <td class="border px-4 py-2"><%= ws.schoolName %></td>
+            <td class="border px-4 py-2"><%= ws.trainer1 %></td>
+            <td class="border px-4 py-2"><%= ws.trainer2 %></td>
+            <td class="border px-4 py-2"><%= ws.coordinatorName %></td>
+            <td class="border px-4 py-2">
                 <% if (ws.workshopDate) { %>
-                  <%= ws.workshopDate %>
+                    <%= ws.workshopDate %>
                 <% } else { %>
-                  <span class="text-gray-400 italic">N/A</span>
+                    <span class="text-gray-400 italic">N/A</span>
                 <% } %>
-              </td>
-              <td class="border px-4 py-2"><%= ws.financialStatus %></td>
-            </tr>
-          <% }) %>
-        <% } else { %>
-          <tr>
-            <td colspan="6" class="text-center text-gray-500 py-4">
-              No workshop summaries found
             </td>
-          </tr>
-        <% } %>
-      </tbody>
+            <td class="border px-4 py-2"><%= ws.financialStatus %></td>
+            <td class="border px-4 py-2">
+                <% if (ws.trainerFeedback) { %>
+                    <%= ws.trainerFeedback %>
+                <% } else { %>
+                    <span class="text-gray-400 italic">N/A</span>
+                <% } %>
+            </td>
+            <td class="border px-4 py-2">
+                <% if (ws.paymentMode) { %>
+                    <%= ws.paymentMode %>
+                <% } else { %>
+                    <span class="text-gray-400 italic">N/A</span>
+                <% } %>
+            </td>
+            <td class="border px-4 py-2">
+                <% if (ws.upiId) { %>
+                    <%= ws.upiId %>
+                <% } else { %>
+                    <span class="text-gray-400 italic">N/A</span>
+                <% } %>
+            </td>
+            <td class="border px-4 py-2">
+                <% if (ws.transactionId) { %>
+                    <%= ws.transactionId %>
+                <% } else { %>
+                    <span class="text-gray-400 italic">N/A</span>
+                <% } %>
+            </td>
+        </tr>
+    <% }) %>
+<% } else { %>
+    <tr>
+        <td colspan="10" class="text-center text-gray-500 py-4">
+            No workshop summaries found
+        </td>
+    </tr>
+<% } %>
+</tbody>
     </table>
 </div>
 

@@ -55,11 +55,6 @@
             <th>Workshop Fees</th>
             <th>Total Expenses</th>
             <th>BLT Account</th>
-            <th>Kit Payment Status</th>
-            <th>Trainer Remuneration</th>
-            <th>Trainer Remuneration Amount</th>
-            <th>Financial Status</th>
-            <th>Status</th>
             <th>Action</th>
             <th>View</th>
           </tr>
@@ -77,11 +72,6 @@
                 <td><%= (school.workshopFees || 11000).toFixed(2) %></td>
                 <td><%= (school.totalExpenses || 0).toFixed(2) %></td>
                 <td><%= (school.total || 0).toFixed(2) %></td>
-                <td><%= school.kitPaymentStatus || 'N/A' %></td>
-                <td><%= school.trainerRemunerationStatus || 'N/A' %></td>
-                <td><%= (school.trainerRemunerationAmount || 0).toFixed(2) %></td>
-                <td><%= school.financialStatus || 'N/A' %></td>
-                <td><%= school.status || 'N/A' %></td>
                 <td>
                   <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#paymentModal-<%= school.schoolId %>">
                     Update Payment
@@ -155,7 +145,7 @@
                     <div class="row mb-3">
                       <div class="col-md-6">
                         <label for="trainerRemunerationAmount-<%= school.schoolId %>" class="form-label">Trainer Remuneration Amount</label>
-                        <input type="number" class="form-control" id="trainerRemunerationAmount-<%= school.schoolId %>" name="trainerRemunerationAmount" value="<%= (school.trainerRemunerationAmount || 0).toFixed(2) %>" min="0" max="100000" step="0.01">
+                        <input type="number" class="form-control" id="trainerRemunerationAmount-<%= school.schoolId %>" name="trainerRemunerationAmount" value="<%= (school.trainerRemunerationAmount || 0).toFixed(2) %>" min="0" max="100000" step="0.01" required>
                         <div class="invalid-feedback">Trainer Remuneration Amount must be a non-negative number and cannot exceed 100,000.</div>
                       </div>
                       <div class="col-md-6">
@@ -368,6 +358,44 @@
         updateTotals();
       });
 
+      // Fetch kitOutDate when the modal is shown
+      $('div[id^="paymentModal-"]').on('shown.bs.modal', function() {
+        const schoolId = $(this).attr('id').replace('paymentModal-', '');
+        const form = $(`#paymentForm-${schoolId}`);
+        const kitOutDateInput = form.find(`#kitOutDate-${schoolId}`);
+
+        // Fetch kitOutDate from the backend
+        $.ajax({
+          url: `/financial/kit-out-date/${schoolId}`,
+          type: 'GET',
+          success: function(data) {
+            if (data.kitOutDate && data.kitOutDate !== 'N/A') {
+              // Convert the kitOutDate to ISO format (YYYY-MM-DD) for the date input
+              try {
+                // Assuming backend returns date in DD/MM/YYYY format
+                const [day, month, year] = data.kitOutDate.split('/');
+                const date = new Date(`${year}-${month}-${day}`);
+                if (!isNaN(date)) {
+                  kitOutDateInput.val(date.toISOString().split('T')[0]);
+                } else {
+                  kitOutDateInput.val('');
+                }
+              } catch (e) {
+                console.error('Error parsing kitOutDate:', e);
+                kitOutDateInput.val('');
+              }
+            } else {
+              kitOutDateInput.val('');
+            }
+          },
+          error: function(xhr) {
+            console.error('Error fetching kitOutDate:', xhr.responseJSON);
+            kitOutDateInput.val('');
+            alert('Failed to fetch Kit Out Date: ' + (xhr.responseJSON?.message || 'Unknown error'));
+          }
+        });
+      });
+
       // Form submission
       $('form[id^="paymentForm-"]').on('submit', function(e) {
         e.preventDefault();
@@ -377,7 +405,7 @@
 
         const formData = form.serializeArray();
         const schoolId = form.find('input[name="schoolId"]').val();
-        const workshopFees = parseFloat(form.find(`#workshopFees-${schoolId}`).val());
+        const workshopFees = parseFloat(form.find(`#workshopFees-${schoolId}`).val()) || 0;
         const kitCharges = parseFloat(form.find(`#kitCharges-${schoolId}`).val()) || 0;
         const contentRoyalty = parseFloat(form.find(`#contentRoyalty-${schoolId}`).val()) || 0;
         const bookCharges = parseFloat(form.find(`#bookCharges-${schoolId}`).val()) || 0;
@@ -450,8 +478,17 @@
           return;
         }
 
+        // Ensure trainerRemunerationAmount is included in formData
+        const trainerRemunerationField = formData.find(field => field.name === 'trainerRemunerationAmount');
+        if (!trainerRemunerationField || isNaN(parseFloat(trainerRemunerationField.value))) {
+          formData.push({ name: 'trainerRemunerationAmount', value: trainerRemunerationAmount.toFixed(2) });
+        } else {
+          trainerRemunerationField.value = trainerRemunerationAmount.toFixed(2);
+        }
+
         // Log data for debugging
-        console.log('Data being sent:', formData);
+        console.log('Form Data:', formData);
+        console.log('Trainer Remuneration Amount:', trainerRemunerationAmount);
 
         // Submit all data to /financial/:schoolId
         $.ajax({
@@ -460,6 +497,8 @@
           data: formData,
           contentType: 'application/x-www-form-urlencoded',
           success: function(response) {
+            // Ensure the input field retains its value
+            form.find(`#trainerRemunerationAmount-${schoolId}`).val(trainerRemunerationAmount.toFixed(2));
             alert(`Financial details updated successfully! Trainer Remuneration Amount: ${trainerRemunerationAmount.toFixed(2)}, Total Trainer Cost: ${trainerTotalCost.toFixed(2)}`);
             form.find('.btn-success').removeClass('loading').prop('disabled', false);
             $(`#paymentModal-${schoolId}`).modal('hide');
@@ -488,7 +527,6 @@
 School ID: ${data.schoolId || 'N/A'}
 School Name: ${data.schoolName || 'N/A'}
 Workshop Fees: ${(data.workshopFees || 0).toFixed(2)}
-Invoice Status: ${data.invoiceStatus || 'N/A'}
 Kit Charges: ${(data.kitCharges || 0).toFixed(2)}
 Kit Out Date: ${data.kitOutDate || 'N/A'}
 Kit Received By: ${data.kitReceivedBy || 'N/A'}
@@ -503,7 +541,6 @@ Travelling Allowance: ${(data.travellingAllowance || 0).toFixed(2)}
 Total Trainer Cost: ${(data.trainerTotalCost || 0).toFixed(2)}
 Trainer Remuneration Status: ${data.trainerRemunerationStatus || 'N/A'}
 Payment Date: ${data.paymentDate || 'N/A'}
-BLT Account: ${data.bltAccount || 'N/A'}
 Payment Method: ${data.paymentMethod || 'N/A'}
 Total Expenses: ${(data.totalExpenses || 0).toFixed(2)}
 Remaining Balance: ${(data.total || 0).toFixed(2)}

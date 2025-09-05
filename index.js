@@ -4508,6 +4508,45 @@ app.post('/trainer-dashboard/add-dates', async (req, res) => {
     }
 });
 
+app.get('/api/trainers', async (req, res) => {
+  try {
+    const trainersSnapshot = await db.collection('trainers').get();
+    
+    const trainers = await Promise.all(trainersSnapshot.docs.map(async (doc) => {
+      const data = doc.data();
+      const trainerId = doc.id;
+
+      // Fetch completed schools for this trainer
+      const completedSnapshot1 = await db.collection('schools')
+        .where('trainerId1', '==', trainerId)
+        .where('isCompleted', '==', true)
+        .get();
+
+      const completedSnapshot2 = await db.collection('schools')
+        .where('trainerId2', '==', trainerId)
+        .where('isCompleted', '==', true)
+        .get();
+
+      const completedSchoolsCount = completedSnapshot1.docs.length + completedSnapshot2.docs.length;
+
+      return {
+        trainerName: data.trainerName || 'N/A',
+        city: data.city || 'N/A',
+        district: data.district || 'N/A',
+        profession: data.profession || 'N/A',
+        completedSchoolsCount // Add the count of completed schools
+      };
+    }));
+
+    // Render the ourtrainers.ejs template
+    // res.render('ourtrainers', { trainers });
+  } catch (error) {
+    console.error('Error fetching trainers:', error);
+    res.status(500).send('Error fetching trainers: ' + error.message);
+  }
+});
+
+
 app.get('/trainer-dashboard', async (req, res) => {
     try {
         const trainerEmail = req.query.username;
@@ -4934,16 +4973,12 @@ app.get('/logistic-dashboard', async (req, res) => {
 // Route to fetch financial overview
 app.get('/financial', async (req, res) => {
   try {
-    // Fetch schools collection
     const schoolSnapshot = await db.collection('schools').where('isApproved', '==', true).get();
     const schools = [];
-    // Fetch payments collection
     const paymentSnapshot = await db.collection('payments').get();
     const payments = {};
-    // Fetch trainers collection
     const trainerSnapshot = await db.collection('trainers').get();
     const trainers = [];
-    // Fetch workshop summaries collection
     const workshopSnapshot = await db.collection('workshopSummaries').get();
     const workshops = {};
 
@@ -4959,32 +4994,37 @@ app.get('/financial', async (req, res) => {
     // Process payments data
     paymentSnapshot.forEach(doc => {
       const data = doc.data();
-      const totalExpenses = (data.kitCharges || 0) +
-                           (data.contentRoyalty || 0) +
-                           (data.bookCharges || 0) +
-                           (data.trainerHonorarium || 0) +
-                           (data.travellingAllowance || 0) +
-                           (data.petrolDiesel || 0);
+      const totalExpenses = (Number(data.kitCharges) || 0) +
+                           (Number(data.contentRoyalty) || 0) +
+                           (Number(data.bookCharges) || 0) +
+                           (Number(data.trainerRemunerationAmount) || 0) +
+                           (Number(data.travellingAllowance) || 0) +
+                           (Number(data.petrolDiesel) || 0);
       payments[doc.id] = {
-        workshopFees: data.workshopFees || 11000,
+        workshopFees: Number(data.workshopFees) || 11000,
         invoiceStatus: data.invoiceStatus || 'N/A',
-        kitCharges: data.kitCharges || 0,
+        kitCharges: Number(data.kitCharges) || 0,
         kitOutDate: data.kitOutDate?.toDate() ? data.kitOutDate.toDate().toLocaleDateString('en-IN') : 'N/A',
         kitReceivedBy: data.kitReceivedBy || 'N/A',
         status: data.status || 'N/A',
-        contentRoyalty: data.contentRoyalty || 0,
-        bookCharges: data.bookCharges || 800,
+        contentRoyalty: Number(data.contentRoyalty) || 0,
+        bookCharges: Number(data.bookCharges) || 800,
         trainerName1: data.trainerName1 || 'N/A',
         trainerName2: data.trainerName2 || 'N/A',
-        trainerHonorarium: data.trainerHonorarium || 0,
-        travellingAllowance: data.travellingAllowance || 0,
-        petrolDiesel: data.petrolDiesel || 0,
-        paid: data.paid || 0,
+        trainerRemunerationAmount: Number(data.trainerRemunerationAmount) || 0,
+        trainerTotalCost: Number(data.trainerTotalCost) || 0,
+        travellingAllowance: Number(data.travellingAllowance) || 0,
+        petrolDiesel: Number(data.petrolDiesel) || 0,
         paymentDate: data.paymentDate?.toDate() ? data.paymentDate.toDate().toLocaleDateString('en-IN') : 'N/A',
         bltAccount: data.bltAccount || 'N/A',
-        paymentMethod: data.paymentMethod || 'N/A', // Keep for backward compatibility
+        paymentMethod: data.paymentMethod || 'CASH',
         totalExpenses,
-        total: (data.workshopFees || 11000) - totalExpenses - (data.paid || 0)
+        total: (Number(data.workshopFees) || 11000) - totalExpenses,
+        financialStatus: data.financialStatus || 'Pending',
+        kitPaymentStatus: data.kitPaymentStatus || 'Unpaid',
+        trainerRemunerationStatus: data.trainerRemunerationStatus || 'Pending',
+        upiId: data.upiId || 'N/A',
+        transactionId: data.transactionId || 'N/A'
       };
     });
 
@@ -4992,10 +5032,10 @@ app.get('/financial', async (req, res) => {
     workshopSnapshot.forEach(doc => {
       const data = doc.data();
       workshops[data.schoolName] = {
-        financialStatus: data.financialStatus || 'N/A',
-        kitPaymentStatus: data.kitPaymentStatus || 'N/A',
-        trainerRemunerationStatus: data.trainerRemunerationStatus || 'N/A',
-        paymentMode: data.paymentMode || 'CASH', // Prioritize workshopSummaries paymentMode
+        financialStatus: data.financialStatus && data.financialStatus !== 'N/A' ? data.financialStatus : 'Pending',
+        kitPaymentStatus: data.kitPaymentStatus && data.kitPaymentStatus !== 'N/A' ? data.kitPaymentStatus : 'Unpaid',
+        trainerRemunerationStatus: data.trainerRemunerationStatus && data.trainerRemunerationStatus !== 'N/A' ? data.trainerRemunerationStatus : 'Pending',
+        paymentMode: data.paymentMode || 'CASH',
         upiId: data.upiId || 'N/A',
         transactionId: data.transactionId || 'N/A',
         trainer1: data.trainer1 || 'N/A',
@@ -5024,36 +5064,41 @@ app.get('/financial', async (req, res) => {
         kitReceivedBy: paymentData.kitReceivedBy || 'N/A',
         status: paymentData.status || 'N/A',
         contentRoyalty: paymentData.contentRoyalty || 0,
-        bookCharges: paymentData.bookCharges || 0,
+        bookCharges: paymentData.bookCharges || 800,
         trainerName1: paymentData.trainerName1 || workshopData.trainer1 || 'N/A',
         trainerName2: paymentData.trainerName2 || workshopData.trainer2 || 'N/A',
-        trainerHonorarium: paymentData.trainerHonorarium || 0,
+        trainerRemunerationAmount: paymentData.trainerRemunerationAmount || 0,
+        trainerTotalCost: paymentData.trainerTotalCost || 0,
         travellingAllowance: paymentData.travellingAllowance || 0,
         petrolDiesel: paymentData.petrolDiesel || 0,
-        paid: paymentData.paid || 0,
         paymentDate: paymentData.paymentDate || 'N/A',
         bltAccount: paymentData.bltAccount || 'N/A',
-        paymentMode: workshopData.paymentMode || paymentData.paymentMethod || 'CASH', // Prioritize workshopSummaries
+        paymentMethod: workshopData.paymentMode || paymentData.paymentMethod || 'CASH',
         totalExpenses: paymentData.totalExpenses || 0,
         total: paymentData.total || 0,
-        financialStatus: workshopData.financialStatus || 'N/A',
-        kitPaymentStatus: workshopData.kitPaymentStatus || 'N/A',
-        trainerRemunerationStatus: workshopData.trainerRemunerationStatus || 'N/A',
-        upiId: workshopData.upiId || 'N/A',
-        transactionId: workshopData.transactionId || 'N/A'
+        financialStatus: workshopData.financialStatus || paymentData.financialStatus || 'Pending',
+        kitPaymentStatus: workshopData.kitPaymentStatus || paymentData.kitPaymentStatus || 'Unpaid',
+        trainerRemunerationStatus: workshopData.trainerRemunerationStatus || paymentData.trainerRemunerationStatus || 'Pending',
+        upiId: workshopData.upiId || paymentData.upiId || 'N/A',
+        transactionId: workshopData.transactionId || paymentData.transactionId || 'N/A'
       });
     });
 
-    // Render the financial template with schools and trainers data
+    // Log schools data for debugging
+    console.log('Schools data:', schools.map(s => ({
+      schoolId: s.schoolId,
+      trainerRemunerationAmount: s.trainerRemunerationAmount,
+      trainerTotalCost: s.trainerTotalCost,
+      totalExpenses: s.totalExpenses,
+      total: s.total
+    })));
+
     res.render('financial', { schools, trainers });
   } catch (error) {
     console.error('Error fetching school, payment, trainer, or workshop data:', error);
     res.status(500).send('Internal Server Error');
   }
 });
-
-// Route to update financial details
-// Route to update financial details
 
 // Route to update financial details
 app.post('/financial/:schoolId', async (req, res) => {
@@ -5128,8 +5173,8 @@ app.post('/financial/:schoolId', async (req, res) => {
 
     // Validate trainerTotalCost consistency
     const calculatedTrainerTotalCost = sanitizedData.trainerRemunerationAmount + sanitizedData.petrolDiesel + sanitizedData.travellingAllowance;
-    if (sanitizedData.trainerTotalCost !== calculatedTrainerTotalCost) {
-      return res.status(400).json({ message: 'Total Trainer Cost does not match calculated value' });
+    if (Math.abs(sanitizedData.trainerTotalCost - calculatedTrainerTotalCost) > 0.01) {
+      return res.status(400).json({ message: `Total Trainer Cost (${sanitizedData.trainerTotalCost}) does not match calculated value (${calculatedTrainerTotalCost})` });
     }
 
     // Validate dates
@@ -5153,23 +5198,31 @@ app.post('/financial/:schoolId', async (req, res) => {
     }
 
     // Log sanitized data for debugging
-    console.log('Saving data to Firestore:', sanitizedData);
-    console.log(`Stored trainerRemunerationAmount: ${sanitizedData.trainerRemunerationAmount}, trainerTotalCost: ${sanitizedData.trainerTotalCost}`);
+    console.log('Saving data to Firestore:', {
+      schoolId,
+      trainerRemunerationAmount: sanitizedData.trainerRemunerationAmount,
+      trainerTotalCost: sanitizedData.trainerTotalCost,
+      totalExpenses: sanitizedData.totalExpenses,
+      total: sanitizedData.total
+    });
 
     // Update Firestore
-    try {
-      await db.collection('payments').doc(schoolId).set(sanitizedData, { merge: true });
-      res.status(200).json({ message: 'Financial details updated successfully', data: sanitizedData });
-    } catch (error) {
-      console.error('Firestore error:', error);
-      res.status(500).json({ message: 'Failed to save financial details to Firestore', error: error.message });
-    }
+    await db.collection('payments').doc(schoolId).set(sanitizedData, { merge: true });
+    res.status(200).json({
+      message: 'Financial details updated successfully',
+      data: {
+        schoolId,
+        trainerRemunerationAmount: sanitizedData.trainerRemunerationAmount,
+        trainerTotalCost: sanitizedData.trainerTotalCost,
+        totalExpenses: sanitizedData.totalExpenses,
+        total: sanitizedData.total
+      }
+    });
   } catch (error) {
     console.error('Error updating financial details:', error);
     res.status(500).json({ message: 'Failed to update financial details', error: error.message });
   }
 });
-
 // Route to get financial details of a specific school
 app.get('/financial/:schoolId', async (req, res) => {
   try {
@@ -5181,38 +5234,38 @@ app.get('/financial/:schoolId', async (req, res) => {
     const data = doc.data();
 
     // Calculate total expenses and remaining balance
-    const totalExpenses = (data.kitCharges || 0) +
-                         (data.contentRoyalty || 0) +
-                         (data.bookCharges || 0) +
-                         (data.travellingAllowance || 0) +
-                         (data.petrolDiesel || 0) +
-                         (data.trainerRemunerationAmount || 0);
-    const total = (data.workshopFees || 11000) - totalExpenses;
-    const trainerTotalCost = (data.trainerRemunerationAmount || 0) +
-                            (data.petrolDiesel || 0) +
-                            (data.travellingAllowance || 0);
+    const totalExpenses = (Number(data.kitCharges) || 0) +
+                         (Number(data.contentRoyalty) || 0) +
+                         (Number(data.bookCharges) || 0) +
+                         (Number(data.travellingAllowance) || 0) +
+                         (Number(data.petrolDiesel) || 0) +
+                         (Number(data.trainerRemunerationAmount) || 0);
+    const total = (Number(data.workshopFees) || 11000) - totalExpenses;
+    const trainerTotalCost = (Number(data.trainerRemunerationAmount) || 0) +
+                            (Number(data.petrolDiesel) || 0) +
+                            (Number(data.travellingAllowance) || 0);
 
     const responseData = {
       schoolId,
       schoolName: data.schoolName || 'N/A',
-      workshopFees: data.workshopFees || 11000,
+      workshopFees: Number(data.workshopFees) || 11000,
       invoiceStatus: data.invoiceStatus || 'N/A',
-      kitCharges: data.kitCharges || 0,
+      kitCharges: Number(data.kitCharges) || 0,
       kitOutDate: data.kitOutDate?.toDate() ? data.kitOutDate.toDate().toISOString().split('T')[0] : 'N/A',
       kitReceivedBy: data.kitReceivedBy || 'N/A',
       status: data.status || 'N/A',
-      contentRoyalty: data.contentRoyalty || 0,
-      bookCharges: data.bookCharges || 0,
+      contentRoyalty: Number(data.contentRoyalty) || 0,
+      bookCharges: Number(data.bookCharges) || 0,
       trainerName1: data.trainerName1 || 'N/A',
       trainerName2: data.trainerName2 || 'N/A',
-      trainerRemunerationAmount: data.trainerRemunerationAmount || 0,
-      trainerTotalCost: data.trainerTotalCost || trainerTotalCost,
+      trainerRemunerationAmount: Number(data.trainerRemunerationAmount) || 0,
+      trainerTotalCost: Number(data.trainerTotalCost) || trainerTotalCost,
       trainerRemunerationStatus: data.trainerRemunerationStatus || 'Pending',
-      travellingAllowance: data.travellingAllowance || 0,
+      travellingAllowance: Number(data.travellingAllowance) || 0,
       paymentDate: data.paymentDate?.toDate() ? data.paymentDate.toDate().toISOString().split('T')[0] : 'N/A',
       bltAccount: data.bltAccount || 'N/A',
       paymentMethod: data.paymentMethod || 'CASH',
-      petrolDiesel: data.petrolDiesel || 0,
+      petrolDiesel: Number(data.petrolDiesel) || 0,
       totalExpenses,
       total,
       financialStatus: data.financialStatus || 'Pending',
@@ -5222,7 +5275,13 @@ app.get('/financial/:schoolId', async (req, res) => {
     };
 
     // Log response data for debugging
-    console.log('Returning school data:', responseData);
+    console.log('Returning school data:', {
+      schoolId,
+      trainerRemunerationAmount: responseData.trainerRemunerationAmount,
+      trainerTotalCost: responseData.trainerTotalCost,
+      totalExpenses: responseData.totalExpenses,
+      total: responseData.total
+    });
 
     res.status(200).json(responseData);
   } catch (error) {
@@ -6130,29 +6189,27 @@ app.get('/school-tracker', async (req, res) => {
     paymentSnapshot.forEach(doc => {
       const data = doc.data();
       payments[doc.id] = {
-        workshopFees: data.workshopFees || 11000,
+        workshopFees: Number(data.workshopFees) || 11000,
         invoiceStatus: data.invoiceStatus || 'N/A',
-        kitCharges: data.kitCharges || 0,
+        kitCharges: Number(data.kitCharges) || 0,
         kitOutDate: data.kitOutDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
         kitReceivedBy: data.kitReceivedBy || 'N/A',
         status: data.status || 'N/A',
-        contentRoyalty: data.contentRoyalty || 0,
-        bookCharges: data.bookCharges || 0,
+        contentRoyalty: Number(data.contentRoyalty) || 0,
+        bookCharges: Number(data.bookCharges) || 0, // Fetch from payments
         trainerName1: data.trainerName1 || 'N/A',
         trainerName2: data.trainerName2 || 'N/A',
-        trainerRemuneration: data.trainerRemunerationAmount || data.trainerHonorarium || 0,
-        travellingAllowance: data.travellingAllowance || 0,
-        petrolDiesel: data.petrolDiesel || 0,
+        trainerRemuneration: Number(data.trainerRemunerationAmount || data.trainerHonorarium) || 0,
+        travellingAllowance: Number(data.travellingAllowance) || 0,
+        petrolDiesel: Number(data.petrolDiesel) || 0,
         trainerRemunerationStatus: data.trainerRemunerationStatus || 'Pending',
-        paid: data.paid || 0,
+        paid: Number(data.paid) || 0,
         paymentDate: data.paymentDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
         bltAccount: data.bltAccount || 'N/A',
         paymentMethod: data.paymentMethod || 'CASH',
         total: Number(data.total) || 0,
         trainerTotalCost: Number(data.trainerTotalCost) || 0,
         totalExpenses: Number(data.totalExpenses) || 0,
-        total: Number(data.total) || 0,//remaining balance 
-        
       };
     });
 
@@ -6203,6 +6260,15 @@ app.get('/school-tracker', async (req, res) => {
       const thinkingLetter = data.thinkingLetter === true ? 'Yes' : data.thinkingLetter === false ? 'No' : 'N/A';
       const cotation = data.cotation === true ? 'Yes' : data.cotation === false ? 'No' : 'N/A';
 
+      // Calculate total expenses and remaining balance
+      const totalExpenses = (paymentData.kitCharges || 0) +
+                           (paymentData.contentRoyalty || 0) +
+                           (paymentData.bookCharges || 0) +
+                           (paymentData.travellingAllowance || 0) +
+                           (paymentData.petrolDiesel || 0) +
+                           (paymentData.trainerRemuneration || 0);
+      const total = (paymentData.workshopFees || 11000) - totalExpenses;
+
       schools.push({
         schoolId,
         schoolName: data.schoolName || 'N/A',
@@ -6219,7 +6285,7 @@ app.get('/school-tracker', async (req, res) => {
         kitReceivedBy: paymentData.kitReceivedBy || 'N/A',
         status: paymentData.status || 'N/A',
         contentRoyalty: paymentData.contentRoyalty || 0,
-        bookCharges: data.bookCharges || 0,
+        bookCharges: paymentData.bookCharges || 0, // Use payments collection
         trainerName,
         trainerRemuneration: paymentData.trainerRemuneration || 0,
         travellingAllowance: paymentData.travellingAllowance || 0,
@@ -6230,8 +6296,8 @@ app.get('/school-tracker', async (req, res) => {
         paymentDate: paymentData.paymentDate || 'N/A',
         bltAccount: paymentData.bltAccount || 'N/A',
         paymentMethod: paymentData.paymentMethod || 'CASH',
-        total: paymentData.total || 0,
-        totalExpenses: paymentData.totalExpenses || 0,
+        total,
+        totalExpenses,
         civicTeachersFeedback: feedbackData.civicTeachersFeedback,
         principalFeedback: feedbackData.principalFeedback !== 'N/A' && feedbackData.principalFeedback ? 'Y' : 'N',
         feedbackSocialMedia: feedbackData.socialMediaFeedback,
@@ -6269,7 +6335,7 @@ app.get('/school-tracker', async (req, res) => {
 // New endpoint for exporting to Excel
 app.get('/school-tracker/export', async (req, res) => {
   try {
-    // Fetch data (unchanged)
+    // Fetch data
     const schoolSnapshot = await db.collection('schools').get();
     const paymentSnapshot = await db.collection('payments').get();
     const participantSnapshot = await db.collection('participants').get();
@@ -6282,13 +6348,29 @@ app.get('/school-tracker/export', async (req, res) => {
     const coordinators = {};
     const workshopSummaries = {};
 
-    // Process coordinators (unchanged)
+    // Check for empty collections
+    if (schoolSnapshot.empty) {
+      console.warn('No schools found in Firestore');
+    }
+    if (paymentSnapshot.empty) {
+      console.warn('No payments found in Firestore');
+    }
+    if (participantSnapshot.empty) {
+      console.warn('No participants found in Firestore');
+    }
+    if (coordinatorSnapshot.empty) {
+      console.warn('No coordinators found in Firestore');
+    }
+    if (workshopSummarySnapshot.empty) {
+      console.warn('No workshop summaries found in Firestore');
+    }
+
+    // Process coordinators
     coordinatorSnapshot.forEach(doc => {
-      const data = doc.data();
-      coordinators[doc.id] = data.name || 'N/A';
+      coordinators[doc.id] = doc.data().name || 'N/A';
     });
 
-    // Process workshop summaries (unchanged)
+    // Process workshop summaries
     workshopSummarySnapshot.forEach(doc => {
       const data = doc.data();
       const key = `${data.schoolName}_${data.coordinatorId}`;
@@ -6297,11 +6379,11 @@ app.get('/school-tracker/export', async (req, res) => {
         principalFeedback: data.principalFeedback || 'N/A',
         socialMediaFeedback: data.socialMediaFeedback || 'N/A',
         trainer1: data.trainer1 || 'N/A',
-        trainer2: data.trainer2 || 'N/A'
+        trainer2: data.trainer2 || 'N/A',
       };
     });
 
-    // Process payments (unchanged)
+    // Process payments
     paymentSnapshot.forEach(doc => {
       const data = doc.data();
       const totalExpenses = (data.kitCharges || 0) +
@@ -6314,9 +6396,7 @@ app.get('/school-tracker/export', async (req, res) => {
         workshopFees: data.workshopFees || 11000,
         invoiceStatus: data.invoiceStatus || 'N/A',
         kitCharges: data.kitCharges || 0,
-        kitOutDate: data.kitOutDate && data.kitOutDate.toDate
-          ? data.kitOutDate.toDate().toLocaleDateString('en-IN')
-          : 'N/A',
+        kitOutDate: data.kitOutDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
         kitReceivedBy: data.kitReceivedBy || 'N/A',
         status: data.status || 'N/A',
         contentRoyalty: data.contentRoyalty || 0,
@@ -6327,28 +6407,26 @@ app.get('/school-tracker/export', async (req, res) => {
         travellingAllowance: data.travellingAllowance || 0,
         petrolDiesel: data.petrolDiesel || 0,
         paid: data.paid || 0,
-        paymentDate: data.paymentDate && data.paymentDate.toDate
-          ? data.paymentDate.toDate().toLocaleDateString('en-IN')
-          : 'N/A',
+        paymentDate: data.paymentDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
         bltAccount: data.bltAccount || 'N/A',
         paymentMethod: data.paymentMethod || 'CASH',
         totalExpenses,
-        total: (data.workshopFees || 11000) - totalExpenses - (data.paid || 0)
+        total: (data.workshopFees || 11000) - totalExpenses - (data.paid || 0),
       };
     });
 
-    // Process participants (unchanged)
+    // Process participants
     participantSnapshot.forEach(doc => {
       const data = doc.data();
       participants.push({
         schoolNameDropdown: data.schoolNameDropdown || 'N/A',
         hasCompletedMCQ: data.hasCompletedMCQ || false,
         isChampion: data.isChampion || false,
-        feedback: data.feedback || ''
+        feedback: data.feedback || '',
       });
     });
 
-    // Process schools (unchanged)
+    // Process schools
     schoolSnapshot.forEach(doc => {
       const data = doc.data();
       const schoolId = doc.id;
@@ -6360,26 +6438,26 @@ app.get('/school-tracker/export', async (req, res) => {
         principalFeedback: 'N/A',
         socialMediaFeedback: 'N/A',
         trainer1: 'N/A',
-        trainer2: 'N/A'
+        trainer2: 'N/A',
       };
 
       let eventDate = null;
       if (data.eventDate) {
-        if (data.eventDate.toDate) {
-          eventDate = data.eventDate.toDate();
-        } else if (data.eventDate instanceof Date) {
-          eventDate = data.eventDate;
-        } else if (typeof data.eventDate === 'string') {
-          eventDate = new Date(data.eventDate);
-        }
+        eventDate = data.eventDate.toDate?.() || (typeof data.eventDate === 'string' ? new Date(data.eventDate) : null);
       }
 
-      const trainerName = [feedbackData.trainer1, feedbackData.trainer2].filter(t => t && t !== 'N/A').join(', ') || 
-                         [paymentData.trainerName1, paymentData.trainerName2].filter(t => t && t !== 'N/A').join(', ') || 'N/A';
+      const trainerName = [
+        feedbackData.trainer1,
+        feedbackData.trainer2,
+      ].filter(t => t && t !== 'N/A').join(', ') || [
+        paymentData.trainerName1,
+        paymentData.trainerName2,
+      ].filter(t => t && t !== 'N/A').join(', ') || 'N/A';
 
-      const champFeedbackStatus = participants.some(p => p.schoolNameDropdown === data.schoolName && p.feedback && p.feedback !== '') ? 'Y' : 'N';
+      const champFeedbackStatus = participants.some(p =>
+        p.schoolNameDropdown === data.schoolName && p.feedback && p.feedback !== ''
+      ) ? 'Y' : 'N';
 
-      // Convert thinkingLetter and cotation to display-friendly format
       const thinkingLetter = data.thinkingLetter === true ? 'Yes' : data.thinkingLetter === false ? 'No' : 'N/A';
       const cotation = data.cotation === true ? 'Yes' : data.cotation === false ? 'No' : 'N/A';
 
@@ -6388,7 +6466,7 @@ app.get('/school-tracker/export', async (req, res) => {
         schoolName: data.schoolName || 'N/A',
         city: data.city || 'N/A',
         district: data.district || 'N/A',
-        eventDate: eventDate ? eventDate.toLocaleDateString('en-IN') : 'N/A',
+        eventDate: eventDate?.toLocaleDateString('en-IN') || 'N/A',
         isApproved: data.isApproved || false,
         deliveryMode: data.deliveryMode || 'pending',
         coordinatorName,
@@ -6416,19 +6494,19 @@ app.get('/school-tracker/export', async (req, res) => {
         centreCoordinationExpenses: paymentData.petrolDiesel || 0,
         champFeedbackStatus,
         thinkingLetter,
-        cotation
+        cotation,
       });
     });
 
-    // Prepare data for Excel with all fields from schools array
+    // Prepare data for Excel (schools sheet)
     const excelData = schools.map((school, index) => ({
       'S. No': index + 1,
-      'School ID': school.schoolId || 'N/A', // Added schoolId
+      'School ID': school.schoolId || 'N/A',
       'School Name': school.schoolName || 'N/A',
       'City': school.city || 'N/A',
       'District': school.district || 'N/A',
       'Event Date': school.eventDate || 'N/A',
-      'Is Approved': school.isApproved ? 'Yes' : 'No', // Added isApproved
+      'Is Approved': school.isApproved ? 'Yes' : 'No',
       'Delivery Mode': school.deliveryMode || 'pending',
       'Event Coordinator': school.coordinatorName || 'N/A',
       'Student Login': participants.filter(p => p.schoolNameDropdown === school.schoolName).length,
@@ -6450,65 +6528,80 @@ app.get('/school-tracker/export', async (req, res) => {
       'Trainer Name': school.trainerName || 'N/A',
       'Trainer Remuneration': `₹${(school.trainerRemuneration || 0).toLocaleString('en-IN')}`,
       'Travelling Allowance': `₹${(school.travellingAllowance || 0).toLocaleString('en-IN')}`,
-      'Petrol/Diesel': `₹${(school.petrolDiesel || 0).toLocaleString('en-IN')}`, // Added petrolDiesel explicitly
-      'Total Expenses': `₹${(school.totalExpenses || 0).toLocaleString('en-IN')}`, // Added totalExpenses
+      'Petrol/Diesel': `₹${(school.petrolDiesel || 0).toLocaleString('en-IN')}`,
+      'Total Expenses': `₹${(school.totalExpenses || 0).toLocaleString('en-IN')}`,
       'Total': `₹${(school.total || 0).toLocaleString('en-IN')}`,
       'Paid': `₹${(school.paid || 0).toLocaleString('en-IN')}`,
       'Payment Date': school.paymentDate || 'N/A',
       'BLT Account': school.bltAccount || 'N/A',
       'Payment Method': school.paymentMethod || 'CASH',
-      'Thinking Letter': school.thinkingLetter || 'N/A', // Added thinkingLetter
-      'Cotation': school.cotation || 'N/A' // Added cotation
+      'Thinking Letter': school.thinkingLetter || 'N/A',
+      'Cotation': school.cotation || 'N/A',
     }));
 
-    // Create a new workbook and worksheet
-    const XLSX = require('xlsx');
-    const ws = XLSX.utils.json_to_sheet(excelData);
+    // Prepare data for participants sheet
+    const participantData = participants.map((p, index) => ({
+      'S. No': index + 1,
+      'School Name': p.schoolNameDropdown || 'N/A',
+      'Has Completed MCQ': p.hasCompletedMCQ ? 'Yes' : 'No',
+      'Is Champion': p.isChampion ? 'Yes' : 'No',
+      'Feedback': p.feedback || 'N/A',
+    }));
 
-    // Define the header range (first row)
+    // Create workbook and worksheets
+    const XLSX = require('xlsx');
+    const wb = XLSX.utils.book_new();
+
+    // Schools sheet
+    const ws = XLSX.utils.json_to_sheet(excelData);
     const range = XLSX.utils.decode_range(ws['!ref']);
     for (let col = range.s.c; col <= range.e.c; col++) {
       const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
       if (!ws[cellAddress]) continue;
       ws[cellAddress].s = {
-        fill: {
-          type: 'pattern',
-          pattern: 'solid',
-          fgColor: { rgb: 'FFFF00' } // Yellow background
-        },
-        font: {
-          bold: true
-        },
-        alignment: {
-          horizontal: 'center',
-          vertical: 'center'
-        }
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { rgb: 'FFFF00' } },
+        font: { bold: true },
+        alignment: { horizontal: 'center', vertical: 'center' },
       };
     }
-
-    // Auto-resize columns for better readability
     const colWidths = [];
     Object.keys(excelData[0]).forEach((key, i) => {
       const maxLength = Math.max(
-        key.length, // Header length
-        ...excelData.map(row => (row[key] || '').toString().length) // Max length of data in column
+        key.length,
+        ...excelData.map(row => (row[key] || '').toString().length)
       );
-      colWidths[i] = { wch: Math.min(maxLength + 2, 50) }; // Add padding, cap at 50
+      colWidths[i] = { wch: Math.min(maxLength + 2, 50) };
     });
     ws['!cols'] = colWidths;
-
-    // Create workbook and append sheet
-    const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'School Tracker');
 
-    // Generate buffer for Excel file
-    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
+    // Participants sheet
+    const participantWs = XLSX.utils.json_to_sheet(participantData);
+    const participantRange = XLSX.utils.decode_range(participantWs['!ref']);
+    for (let col = participantRange.s.c; col <= participantRange.e.c; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
+      if (!participantWs[cellAddress]) continue;
+      participantWs[cellAddress].s = {
+        fill: { type: 'pattern', pattern: 'solid', fgColor: { rgb: 'FFFF00' } },
+        font: { bold: true },
+        alignment: { horizontal: 'center', vertical: 'center' },
+      };
+    }
+    const participantColWidths = [];
+    Object.keys(participantData[0]).forEach((key, i) => {
+      const maxLength = Math.max(
+        key.length,
+        ...participantData.map(row => (row[key] || '').toString().length)
+      );
+      participantColWidths[i] = { wch: Math.min(maxLength + 2, 50) };
+    });
+    participantWs['!cols'] = participantColWidths;
+    XLSX.utils.book_append_sheet(wb, participantWs, 'Participants');
 
-    // Set headers for file download
+    // Generate and send Excel file
+    const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
     res.setHeader('Content-Disposition', 'attachment; filename=School_Tracker.xlsx');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-
-    // Send the Excel file
     res.send(buffer);
   } catch (err) {
     console.error('Error generating Excel:', err);

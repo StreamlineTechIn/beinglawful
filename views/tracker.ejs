@@ -54,12 +54,12 @@
         <h3><%= schools.filter(s => !s.isApproved).length %></h3>
       </div>
     </div>
-    <div class="col-md-3">
-      <div class="card text-center shadow-sm p-3">
-        <h6>Total Balance</h6>
-        <h3>₹<%= schools.reduce((sum, s) => sum + (s.total || 0), 0).toLocaleString('en-IN') %></h3>
-      </div>
-    </div>
+  <div class="col-md-3">
+  <div class="card text-center shadow-sm p-3">
+    <h6>Total BLT Account Balance</h6>
+    <h3>₹<%= schools.reduce((sum, s) => sum + (s.total || 0), 0).toLocaleString('en-IN') %></h3>
+  </div>
+</div>
   </div>
 
   <!-- School Table -->
@@ -85,7 +85,7 @@
           <th>Principal Feedback (Y/N)</th>
           <th>Civic Teachers Feedback</th>
           <th>Workshop Fees</th>
-          <th>Status</th>
+          <!-- <th>Status</th> -->
           <th>Delivery Mode</th>
           <th>Kit Dispatched Date</th>
           <th>Kit Received By</th>
@@ -125,13 +125,13 @@
               <%= school.civicTeachersFeedback.length > 50 ? school.civicTeachersFeedback.substring(0, 47) + '...' : school.civicTeachersFeedback || 'N/A' %>
             </td>
             <td>₹<%= (school.workshopFees || 11000).toLocaleString('en-IN') %></td>
-            <td><%= school.status || 'N/A' %></td>
+            <!-- <td><%= school.status || 'N/A' %></td> -->
             <td><%= school.deliveryMode || 'N/A' %></td>
             <td><%= school.kitDispatchedDate || 'N/A' %></td>
             <td><%= school.kitReceivedBy || 'N/A' %></td>
             <td>₹<%= (school.kitCharges || 0).toLocaleString('en-IN') %></td>
             <td>₹<%= (school.contentRoyalty || 0).toLocaleString('en-IN') %></td>
-            <td>₹<%= (school.bookCharges || 0).toLocaleString('en-IN') %></td>
+            <td><%= school.bookCharges ? school.bookCharges.toLocaleString('en-IN') : '0' %></td>
             <td>₹<%= (school.centreCoordinationExpenses || 0).toLocaleString('en-IN') %></td>
             <td><%= school.trainerName || 'N/A' %></td>
             <td>₹<%= (school.trainerRemuneration || 0).toLocaleString('en-IN') %></td>

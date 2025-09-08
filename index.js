@@ -4511,7 +4511,7 @@ app.post('/trainer-dashboard/add-dates', async (req, res) => {
 app.get('/api/trainers', async (req, res) => {
   try {
     const trainersSnapshot = await db.collection('trainers').get();
-    
+
     const trainers = await Promise.all(trainersSnapshot.docs.map(async (doc) => {
       const data = doc.data();
       const trainerId = doc.id;
@@ -4534,19 +4534,37 @@ app.get('/api/trainers', async (req, res) => {
         city: data.city || 'N/A',
         district: data.district || 'N/A',
         profession: data.profession || 'N/A',
-        completedSchoolsCount // Add the count of completed schools
+        profilePhoto: data.profilePhoto || null, // Include profile photo URL
+        completedSchoolsCount // Count of completed schools
       };
     }));
 
-    // Render the ourtrainers.ejs template
-    // res.render('ourtrainers', { trainers });
+    // Sort trainers by completedSchoolsCount (descending) and then by trainerName (alphabetically)
+    trainers.sort((a, b) => {
+      if (b.completedSchoolsCount !== a.completedSchoolsCount) {
+        return b.completedSchoolsCount - a.completedSchoolsCount;
+      }
+      return a.trainerName.localeCompare(b.trainerName);
+    });
+
+    // Render the ourtrainers.ejs template with trainers data
+    res.render('ourtrainers', { trainers });
   } catch (error) {
     console.error('Error fetching trainers:', error);
     res.status(500).send('Error fetching trainers: ' + error.message);
   }
 });
 
-
+app.get('/ourtrainers', async (req, res) => {
+  try {
+    const response = await axios.get('http://localhost:3000/api/trainers');
+    res.render('ourtrainers', { trainers: response.data });
+  } catch (error) {
+    console.error('Error fetching trainers for /ourtrainers:', error);
+    res.status(500).send('Error rendering trainers page');
+  }
+});
+// Trainer Dashboard Route
 app.get('/trainer-dashboard', async (req, res) => {
     try {
         const trainerEmail = req.query.username;
@@ -4628,7 +4646,7 @@ app.get('/trainer-dashboard', async (req, res) => {
             };
         });
 
-        // ✅ Fetch completed schools
+        // Fetch completed schools
         const completedSnapshot1 = await db.collection('schools')
             .where('trainerId1', '==', trainerId)
             .where('isCompleted', '==', true)
@@ -4697,7 +4715,7 @@ app.get('/trainer-dashboard', async (req, res) => {
             };
         });
 
-        // ✅ Render Trainer Dashboard
+        // Render Trainer Dashboard
         res.render('trainerDashboard', {
             trainerName: trainerData.trainerName || 'Unknown',
             email: trainerEmail,
@@ -4705,14 +4723,15 @@ app.get('/trainer-dashboard', async (req, res) => {
             district: trainerData.district || trainerData.city || '',
             profession: trainerData.profession || '',
             assignedSchools,
-            completedSchools, // ✅ added
+            completedSchools,
             availableDates: trainerData.availableDates || [],
             schoolsInDistrict,
             mediaUploads,
             approvedZips,
-            error: null,
-            success: null,
-            trainerData
+            error: req.query.error || null,
+            success: req.query.success || null,
+            trainerData,
+            
         });
 
     } catch (error) {
@@ -4724,7 +4743,7 @@ app.get('/trainer-dashboard', async (req, res) => {
             district: '',
             profession: '',
             assignedSchools: [],
-            completedSchools: [], // ✅ added fallback to avoid crash
+            completedSchools: [],
             availableDates: [],
             schoolsInDistrict: [],
             mediaUploads: [],
@@ -4733,6 +4752,162 @@ app.get('/trainer-dashboard', async (req, res) => {
             success: null,
             trainerData: {}
         });
+    }
+});
+
+
+// Updated profile route
+app.get('/trainer-dashboard/profile/:username', async (req, res) => {
+  try {
+    const email = decodeURIComponent(req.params.username);
+    if (!email) {
+      return res.status(400).render('profile', {
+        trainerName: 'Unknown',
+        email: '',
+        city: '',
+        district: '',
+        profession: '',
+        trainerData: {},
+        error: 'Invalid or missing username',
+        success: null,
+      });
+    }
+
+    const trainerSnapshot = await db.collection('trainers').where('email', '==', email).get();
+    if (trainerSnapshot.empty) {
+      return res.status(404).render('profile', {
+        trainerName: 'Unknown',
+        email: email,
+        city: '',
+        district: '',
+        profession: '',
+        trainerData: {},
+        error: 'Trainer not found',
+        success: null,
+      });
+    }
+
+    const trainerData = trainerSnapshot.docs[0].data();
+    res.render('profile', {
+      trainerName: trainerData.trainerName || 'Unknown',
+      email: trainerData.email || email,
+      city: trainerData.city || '',
+      district: trainerData.district || trainerData.city || '',
+      profession: trainerData.profession || '',
+      trainerData: trainerData,
+      error: null,
+      success: null,
+    });
+  } catch (error) {
+    console.error('Error in trainer-dashboard/profile route:', error.message, error.stack);
+    res.status(500).render('profile', {
+      trainerName: 'Unknown',
+      email: req.params.username || '',
+      city: '',
+      district: '',
+      profession: '',
+      trainerData: {},
+      error: `Error loading profile: ${error.message}`,
+      success: null,
+    });
+  }
+});
+// Configure Multer for file uploads
+const storages = multer.memoryStorage();
+const trainerUploads = multer({ storages }).single('profilePhoto');
+
+app.post('/trainer-dashboard/upload-profile-photo', trainerUploads, async (req, res) => {
+    try {
+        const trainerEmail = req.body.trainerEmail;
+        if (!trainerEmail) {
+            throw new Error('Trainer email is required');
+        }
+
+        if (!req.file) {
+            throw new Error('No file uploaded');
+        }
+
+        // Fetch trainer from Firestore
+        const trainerSnapshot = await db.collection('trainers')
+            .where('email', '==', trainerEmail)
+            .get();
+
+        if (trainerSnapshot.empty) {
+            throw new Error('Trainer not found');
+        }
+
+        const trainerId = trainerSnapshot.docs[0].id;
+        const trainerDoc = trainerSnapshot.docs[0];
+
+        // Generate a unique file name
+        const fileName = `profile-photos/${trainerId}-${Date.now()}-${req.file.originalname}`;
+        const file = bucket.file(fileName);
+
+        // Validate file type (optional, for security)
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(req.file.mimetype)) {
+            throw new Error('Invalid file type. Only JPEG, PNG, and GIF are allowed.');
+        }
+
+        // Create a stream to upload the file to Firebase Storage
+        const stream = file.createWriteStream({
+            metadata: {
+                contentType: req.file.mimetype
+            }
+        });
+
+        stream.on('error', (error) => {
+            console.error('Error uploading to Firebase Storage:', error);
+            throw new Error('Error uploading file to storage');
+        });
+
+        stream.on('finish', async () => {
+            try {
+                // Get a signed URL instead of making the file public
+                const [photoUrl] = await file.getSignedUrl({
+                    action: 'read',
+                    expires: '03-09-2491' // Far-future expiration
+                });
+                console.log('Generated Photo URL:', photoUrl);
+
+                // Delete old profile photo if it exists
+                const oldPhotoUrl = trainerDoc.data().profilePhoto;
+                if (oldPhotoUrl) {
+                    try {
+                        // Extract file name from URL
+                        const oldFileName = oldPhotoUrl.includes(bucket.name)
+                            ? oldPhotoUrl.split(`${bucket.name}/`)[1]
+                            : null;
+                        if (oldFileName) {
+                            await bucket.file(oldFileName).delete();
+                            console.log(`Deleted old profile photo: ${oldFileName}`);
+                        } else {
+                            console.warn('Could not extract old file name from URL:', oldPhotoUrl);
+                        }
+                    } catch (error) {
+                        console.error(`Error deleting old profile photo: ${error.message}`);
+                    }
+                }
+
+                // Update trainer's Firestore document with the photo URL
+                await db.collection('trainers').doc(trainerId).update({
+                    profilePhoto: photoUrl,
+                    updatedAt: admin.firestore.FieldValue.serverTimestamp()
+                });
+
+                // Redirect with success message
+                res.redirect(`/trainer-dashboard?username=${trainerEmail}&success=Profile photo uploaded successfully`);
+            } catch (error) {
+                console.error('Error in post-upload processing:', error);
+                throw new Error('Error processing file upload');
+            }
+        });
+
+        // Write the file buffer to the stream
+        stream.end(req.file.buffer);
+    } catch (error) {
+        console.error('Error in profile photo upload:', error.message, error.stack);
+        res.redirect(`/trainer-dashboard?username=${req.body.trainerEmail || req.query.username || ''}&error=${encodeURIComponent(error.message)}`);
     }
 });
  
@@ -6609,6 +6784,7 @@ app.get('/school-tracker/export', async (req, res) => {
   }
 });
 
+
 // POST endpoint for submitting workshop summary
 
 app.post('/submit-workshop-summary', isAuthenticated, async (req, res) => {
@@ -6624,6 +6800,7 @@ app.post('/submit-workshop-summary', isAuthenticated, async (req, res) => {
             schoolName: req.body.schoolName?.trim(),
             schoolAddress: req.body.schoolAddress?.trim(),
             workshopDate: req.body.workshopDate?.trim(),
+            studentFeedbackFormNumber: parseInt(req.body.studentFeedbackFormNumber, 10),
             trainer1: req.body.trainer1?.trim(),
             trainer2: req.body.trainer2?.trim() || '',
             coordinatorName: req.body.coordinatorName?.trim(),
@@ -6693,11 +6870,12 @@ function validateFormData(formData) {
         'schoolName', 
         'schoolAddress', 
         'workshopDate', 
+        'studentFeedbackFormNumber',
         'trainer1', 
         'coordinatorName', 
         'principalName', 
         'financialStatus', 
-        'kitPaymentStatus', 
+        // 'kitPaymentStatus', 
         'trainerRemunerationStatus', 
         'paymentMode', 
         'coordinatorDate', 
@@ -6707,10 +6885,15 @@ function validateFormData(formData) {
     ];
 
     requiredFields.forEach(field => {
-        if (!formData[field] || formData[field].trim() === '') {
+        if (!formData[field] || (typeof formData[field] === 'string' && formData[field].trim() === '')) {
             errors.push(`${field} is required`);
         }
     });
+
+    // Validate studentFeedbackFormNumber
+    if (isNaN(formData.studentFeedbackFormNumber) || formData.studentFeedbackFormNumber < 0) {
+        errors.push('Student Feedback Form Number must be a valid number (0 or greater)');
+    }
 
     // Validate coordinatorDeclaration
     if (!formData.coordinatorDeclaration) {
@@ -6738,55 +6921,7 @@ function validateFormData(formData) {
     return errors;
 }
 
-// Validation function
-function validateFormData(formData) {
-    const errors = [];
 
-    // Required fields validation
-    const requiredFields = [
-        'schoolName',
-        'schoolAddress',
-        'workshopDate',
-        'trainer1',
-        'coordinatorName',
-        'principalName',
-        'financialStatus',
-        'kitPaymentStatus',
-        'trainerRemunerationStatus',
-        'paymentMode',
-        'coordinatorDate',
-        'coordinatorPlace'
-    ];
-
-    requiredFields.forEach(field => {
-        if (!formData[field]) {
-            errors.push(`${field} is required`);
-        }
-    });
-
-    // Validate coordinatorDeclaration
-    if (!formData.coordinatorDeclaration) {
-        errors.push('Coordinator declaration is required');
-    }
-
-    // Validate payment details for Online/Cheque
-    if (formData.paymentMode === 'Online' || formData.paymentMode === 'Cheque') {
-        if (!formData.upiId) {
-            errors.push('UPI ID is required for Online or Cheque payment');
-        }
-        if (!formData.transactionId) {
-            errors.push('Transaction ID is required for Online or Cheque payment');
-        }
-    }
-
-    // Validate workshopDate
-    const today = new Date().toISOString().split('T')[0];
-    if (formData.workshopDate > today) {
-        errors.push('Workshop date cannot be in the future');
-    }
-
-    return errors;
-}
 
 // GET endpoint for fetching workshop summaries
 app.get('/workshop-summaries', isAuthenticated, async (req, res) => {
@@ -6882,9 +7017,6 @@ app.get('/call-logs', async (req, res) => {
 });
 
 
-
- 
-
 // Express route to add login log
 // Add login log
 app.post('/add-login-log', requireAdmin, async (req, res) => {
@@ -6935,9 +7067,6 @@ app.post('/add-login-log', requireAdmin, async (req, res) => {
         res.status(500).json({ error: 'Failed to add login log', details: error.message });
     }
 });
-
-
-
 // Express route to fetch all login logs
 app.get('/get-login-logs', async (req, res) => {
   try {

@@ -378,6 +378,11 @@
                             <input type="date" id="workshopDate" name="workshopDate" max="<%= new Date().toISOString().split('T')[0] %>" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                             <span id="workshopDateError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
                         </div>
+                        <div>
+                            <label for="studentFeedbackFormNumber" class="block text-sm font-medium text-gray-700">Student Feedback Form Number <span class="text-red-500">*</span></label>
+                            <input type="number" id="studentFeedbackFormNumber" name="studentFeedbackFormNumber" min="0" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
+                            <span id="studentFeedbackFormNumberError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
+                        </div>
                     </div>
                 </div>
 
@@ -469,11 +474,11 @@
                             </div>
                             <span id="financialStatusError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
                         </div>
-                        <div>
+                        <!-- <div>
                             <label for="kitPaymentStatus" class="block text-sm font-medium text-gray-700">Kit Payment Status <span class="text-red-500">*</span></label>
                             <input type="text" id="kitPaymentStatus" name="kitPaymentStatus" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
                             <span id="kitPaymentStatusError" class="field-error text-red-600 text-sm mt-1 hidden"></span>
-                        </div>
+                        </div> -->
                         <div>
                             <label for="trainerRemunerationStatus" class="block text-sm font-medium text-gray-700">Trainer Remuneration Status <span class="text-red-500">*</span></label>
                             <input type="text" id="trainerRemunerationStatus" name="trainerRemunerationStatus" class="mt-1 block w-full border-gray-300 rounded-lg shadow-sm p-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required>
@@ -844,6 +849,14 @@
                     }
                 });
 
+                const studentFeedbackFormNumber = form.querySelector('#studentFeedbackFormNumber');
+                if (studentFeedbackFormNumber.value && (isNaN(studentFeedbackFormNumber.value) || studentFeedbackFormNumber.value < 0)) {
+                    isValid = false;
+                    studentFeedbackFormNumber.classList.add('error-border');
+                    document.getElementById('studentFeedbackFormNumberError').textContent = 'Please enter a valid number of feedback forms (0 or greater).';
+                    document.getElementById('studentFeedbackFormNumberError').classList.remove('hidden');
+                }
+
                 const paymentMode = form.querySelector('#paymentMode').value;
                 if (paymentMode === 'Online' || paymentMode === 'Cheque') {
                     const upiId = form.querySelector('#upiId');
@@ -915,6 +928,8 @@
                     const formObject = Object.fromEntries(new FormData(form).entries());
                     // Convert coordinatorDeclaration to boolean
                     formObject.coordinatorDeclaration = formObject.coordinatorDeclaration === 'on';
+                    // Convert studentFeedbackFormNumber to number
+                    formObject.studentFeedbackFormNumber = parseInt(formObject.studentFeedbackFormNumber, 10);
 
                     const response = await fetch(form.action, {
                         method: 'POST',

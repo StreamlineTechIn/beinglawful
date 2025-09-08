@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Trainers</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 40px;
+            height: 50vh;
+            background-color: #f4f7fa;
+            color: #333;
+        }
+        h2 {
+            text-align: center;
+            /* font-size: 2.5em; */
+            color: #2c3e50;
+            margin-bottom: 30px;
+            text-transform: uppercase;
+            /* letter-spacing: 1.5px; */
+        }
+        .trainers-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 1200px;
+            margin: 0 auto;
+            gap: 15px;
+        }
+        .trainer-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            width: calc(25% - 15px); /* Reduced width for 4 cards per row */
+            min-width: 200px; /* Minimum width to prevent cards from being too narrow */
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        .trainer-card:hover {
+            transform: translateY(-5px);
+            background-color: #ecf0f1;
+        }
+        .trainer-card.hidden {
+            display: none; /* Hide cards beyond the initial 6 */
+        }
+        .trainer-image {
+            width: 80px; /* Reduced image size */
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 10px;
+            display: block;
+            background-color: #ccc;
+        }
+        .trainer-info {
+            font-size: 0.9em; /* Slightly smaller font */
+            color: #34495e;
+        }
+        .trainer-info p {
+            margin: 4px 0;
+        }
+        .trainer-name {
+            font-weight: 600;
+            font-size: 1.1em;
+            color: #2c3e50;
+        }
+        .medal-icon {
+            width: 20px;
+            height: 20px;
+            vertical-align: middle;
+            margin-right: 4px;
+        }
+        .brown-medal::before {
+            content: '🥉';
+        }
+        .silver-medal::before {
+            content: '🥈';
+        }
+        .gold-medal::before {
+            content: '🥇';
+        }
+        .authentic-medal::before {
+            content: '🏆';
+        }
+        .view-more-container {
+            text-align: center;
+            margin-top: 30px;
+        }
+        .view-more-btn {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .view-more-btn:hover {
+            background-color: #34495e;
+        }
+        /* Responsive Design */
+        @media (max-width: 1024px) {
+            .trainer-card {
+                width: calc(25% - 15px); /* Maintain 4 cards per row */
+            }
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            .trainer-card {
+                width: calc(50% - 15px); /* 2 cards per row on smaller screens */
+            }
+            .trainer-info {
+                font-size: 0.85em;
+            }
+        }
+        @media (max-width: 480px) {
+            .trainer-card {
+                width: 100%; /* 1 card per row on very small screens */
+            }
+            .trainer-info {
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h2>Our Trainers</h2>
+    <div class="trainers-container" id="trainersContainer">
+        <% trainers.forEach((trainer, index) => { %>
+            <div class="trainer-card <%= index >= 3 ? 'hidden' : '' %>">
+                <!-- <img src="/Assets/istockphoto-1495088043-612x612.jpg" alt="Trainer Profile" class="trainer-image"> -->
+                <div class="trainer-info">
+                    <% if (trainer.profilePhoto) { %>
+      <img src="<%= trainer.profilePhoto %>" alt="<%= trainer.trainerName %>'s Profile Photo" width="100" alt="Trainer Profile" class="trainer-image"> 
+    <% } else { %>
+      <img src="/Assets/istockphoto-1495088043-612x612.jpg" alt="Default Profile Photo" width="100">
+    <% } %>
+                    <p class="trainer-name"><%= trainer.trainerName %></p>
+                    <p>City: <%= trainer.city %></p>
+                    <p>District: <%= trainer.district %></p>
+                    <p>Profession: <%= trainer.profession %></p>
+                    <p>Completed Schools: <%= trainer.completedSchoolsCount || 0 %></p>
+                    <p>
+                        Trainer Level: 
+                        <% if (trainer.completedSchoolsCount >= 10) { %>
+                            <span class="authentic-medal"></span> Authentic Trainer
+                        <% } else if (trainer.completedSchoolsCount >= 8) { %>
+                            <span class="gold-medal"></span> Gold
+                        <% } else if (trainer.completedSchoolsCount >= 5) { %>
+                            <span class="silver-medal"></span> Silver
+                        <% } else if (trainer.completedSchoolsCount >= 2) { %>
+                            <span class="brown-medal"></span> Bronze
+                        <% } else { %>
+                            None
+                        <% } %>
+                    </p>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+    <div class="view-more-container">
+        <button class="view-more-btn" onclick="showAllTrainers()">View More</button>
+    </div>
+
+    <script>
+        function showAllTrainers() {
+            const trainers = document.querySelectorAll('.trainer-card');
+            trainers.forEach(trainer => {
+                trainer.classList.remove('hidden');
+            });
+            document.querySelector('.view-more-btn').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

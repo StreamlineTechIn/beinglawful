@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trainer Profile - Being Lawful</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f7fafc;
+        }
+        .sidebar {
+            background: linear-gradient(180deg, #1e7e34, #145a32);
+            transition: transform 0.3s ease;
+        }
+        .sidebar-hidden {
+            transform: translateX(-100%);
+        }
+        .progress-bar {
+            background-color: #e2e8f0;
+            border-radius: 9999px;
+            overflow: hidden;
+        }
+        .progress {
+            height: 1rem;
+            background: linear-gradient(45deg, #1e7e34, #145a32);
+            transition: width 0.5s ease-in-out;
+        }
+        .fade-in {
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100%;
+                z-index: 50;
+                transform: translateX(-100%); /* Hidden by default on mobile */
+            }
+            .sidebar-open {
+                transform: translateX(0); /* Show when toggled */
+            }
+            .content {
+                margin-left: 0;
+            }
+            .hamburger {
+                display: block; /* Show hamburger icon on mobile */
+            }
+        }
+        @media (min-width: 769px) {
+            .sidebar {
+                transform: translateX(0); /* Always visible on desktop */
+            }
+            .hamburger {
+                display: none; /* Hide hamburger icon on desktop */
+            }
+        }
+    </style>
+</head>
+<body class="flex min-h-screen">
+    <!-- Hamburger Menu Button -->
+    <button class="hamburger fixed top-4 left-4 z-50 md:hidden p-2 bg-gray-800 text-white rounded focus:outline-none">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path>
+        </svg>
+    </button>
+
+    <!-- Sidebar -->
+    <aside class="sidebar w-64 text-white shadow-lg sidebar-hidden">
+        <div class="p-4">
+            <h2 class="text-xl font-bold">Trainer Portal</h2>
+        </div>
+        <nav>
+            <ul class="space-y-2">
+                <!-- <li><a href="/trainer-dashboard?username=<%= email %>" class="block px-4 py-2 hover:bg-white hover:bg-opacity-10 rounded transition">Dashboard</a></li> -->
+                <li><a href="/trainer-dashboard/profile/<%= email %>" class="block px-4 py-2 bg-white bg-opacity-10 rounded">Profile</a></li>
+                
+                <!-- <li><a href="/trainer-dashboard/assigned-schools?username=<%= email %>" class="block px-4 py-2 hover:bg-white hover:bg-opacity-10 rounded transition">Assigned Schools</a></li> -->
+                <!-- <li><a href="/trainer-dashboard/upload-media?username=<%= email %>" class="block px-4 py-2 hover:bg-white hover:bg-opacity-10 rounded transition">Upload Media</a></li> -->
+                <li><a href="/trainer-gamezone" class="block px-4 py-2 hover:bg-white hover:bg-opacity-10 rounded transition">Gamezone</a></li>
+                <li><a href="/logout" class="block px-4 py-2 hover:bg-white hover:bg-opacity-10 rounded transition">Logout</a></li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 bg-white overflow-y-auto content">
+        <header class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">
+                <span class="fade-in">Welcome,</span>
+                <span class="fade-in" style="animation-delay: 0.2s;"><%= trainerName %></span>
+            </h1>
+        </header>
+
+        <!-- Profile Completion -->
+        <section class="mb-6">
+            <div class="bg-gray-100 p-4 rounded-lg shadow">
+                <p class="text-lg font-semibold text-gray-700">Profile Completion: <span id="completionPercentage">0%</span></p>
+                <div class="progress-bar mt-2">
+                    <div class="progress" id="progressBar"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Profile Details -->
+        <section class="bg-gray-50 p-6 rounded-lg shadow">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">Your Profile</h2>
+            <div class="flex flex-col md:flex-row gap-6">
+                <!-- Profile Photo -->
+                <div class="flex-shrink-0">
+                    <% if (trainerData && trainerData.profilePhoto) { %>
+                        <img src="<%= trainerData.profilePhoto %>" alt="Profile Photo" class="w-32 h-32 rounded-full object-cover border-2 border-gray-300" />
+                    <% } else { %>
+                        <img src="https://via.placeholder.com/150" alt="Default Profile Photo" class="w-32 h-32 rounded-full object-cover border-2 border-gray-300" />
+                    <% } %>
+                    <form action="/trainer-dashboard/upload-profile-photo?username=<%= email %>" method="POST" enctype="multipart/form-data" class="mt-4">
+                        <input type="hidden" name="trainerEmail" value="<%= email %>" />
+                        <label for="profilePhoto" class="block text-sm font-medium text-gray-700 mb-2">Upload Profile Photo</label>
+                        <input type="file" id="profilePhoto" name="profilePhoto" accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-blue-600 file:text-white hover:file:bg-blue-700" />
+                        <button type="submit" class="mt-4 px-4 py-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition">Upload Photo</button>
+                    </form>
+                </div>
+                <!-- Profile Information -->
+                <div class="flex-1">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Profile Details</h3>
+                    <dl class="space-y-2">
+                        <div class="flex">
+                            <dt class="font-medium text-gray-600 w-1/3">Name:</dt>
+                            <dd class="text-gray-800"><%= trainerName %></dd>
+                        </div>
+                        <div class="flex">
+                            <dt class="font-medium text-gray-600 w-1/3">Email:</dt>
+                            <dd class="text-gray-800"><%= email %></dd>
+                        </div>
+                        <div class="flex">
+                            <dt class="font-medium text-gray-600 w-1/3">City:</dt>
+                            <dd class="text-gray-800"><%= city %></dd>
+                        </div>
+                        <div class="flex">
+                            <dt class="font-medium text-gray-600 w-1/3">District:</dt>
+                            <dd class="text-gray-800"><%= district %></dd>
+                        </div>
+                        <div class="flex">
+                            <dt class="font-medium text-gray-600 w-1/3">Profession:</dt>
+                            <dd class="text-gray-800"><%= profession %></dd>
+                        </div>
+                        <div class="flex">
+                            <dt class="font-medium text-gray-600 w-1/3">Workshop Completed:</dt>
+                            <dd class="text-gray-800"><%= trainerData && trainerData.isApproved ? 'Yes' : 'No' %></dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Calculate profile completion percentage
+            function calculateProfileCompletion(trainerData) {
+                try {
+                    const fields = [
+                        trainerData?.trainerName && trainerData.trainerName !== 'Unknown',
+                        trainerData?.email,
+                        trainerData?.city,
+                        trainerData?.district,
+                        trainerData?.profession,
+                        trainerData?.profilePhoto
+                    ];
+                    const filledFields = fields.filter(Boolean).length;
+                    const totalFields = fields.length;
+                    const percentage = Math.round((filledFields / totalFields) * 100);
+                    
+                    const percentageElement = document.getElementById('completionPercentage');
+                    const progressBarElement = document.getElementById('progressBar');
+                    
+                    if (percentageElement && progressBarElement) {
+                        percentageElement.textContent = `${percentage}%`;
+                        progressBarElement.style.width = `${percentage}%`;
+                    }
+                } catch (error) {
+                    console.error('Error calculating profile completion:', error);
+                }
+            }
+
+            // Initialize with trainerData
+            calculateProfileCompletion(<%- JSON.stringify(trainerData) %>);
+
+            // Add fade-in animation to profile details
+            document.querySelectorAll('.fade-in').forEach((el, index) => {
+                el.style.animationDelay = `${index * 0.2}s`;
+            });
+
+            // Toggle sidebar on hamburger click
+            const hamburger = document.querySelector('.hamburger');
+            const sidebar = document.querySelector('.sidebar');
+            
+            hamburger.addEventListener('click', () => {
+                sidebar.classList.toggle('sidebar-hidden');
+                sidebar.classList.toggle('sidebar-open');
+            });
+        });
+    </script>
+</body>
+</html>

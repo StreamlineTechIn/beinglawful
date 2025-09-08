@@ -165,7 +165,7 @@
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             margin-bottom: 20px;
             max-width: fit-content;
-            animation: blink 1.5s ease-in-out 3; /* Runs 3 times */
+            animation: blink 1.5s ease-in-out 3;
         }
 
         .blink-message {
@@ -184,7 +184,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             transition: all 0.3s ease;
-            animation: blink 1.5s ease-in-out 3; /* Runs 3 times */
+            animation: blink 1.5s ease-in-out 3;
         }
 
         @keyframes blink {
@@ -278,6 +278,27 @@
             z-index: 1000;
         }
 
+        .hamburger {
+            display: none;
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background: linear-gradient(135deg, #1e7e34, #145a32);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1.5em;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .hamburger-icon {
+            display: block;
+            line-height: 1;
+        }
+
         @media (max-width: 768px) {
             body {
                 flex-direction: column;
@@ -287,24 +308,41 @@
             .sidebar {
                 width: 100%;
                 height: auto;
-                flex-direction: row;
-                justify-content: space-around;
-                padding: 10px 0;
+                position: fixed;
+                top: 0;
+                left: -100%;
+                z-index: 999;
+                transition: left 0.3s ease-in-out;
+                padding-top: 50px;
+            }
+
+            .sidebar.active {
+                left: 0;
             }
 
             .sidebar ul {
                 display: flex;
-                flex-direction: row;
+                flex-direction: column;
+                padding: 0;
             }
 
             .sidebar ul li {
-                padding: 10px;
+                padding: 15px 20px;
+            }
+
+            .sidebar ul li a {
+                font-size: 1.2em;
             }
 
             .content {
                 width: 100%;
                 margin-left: 0;
                 overflow: visible;
+                padding-top: 60px;
+            }
+
+            .hamburger {
+                display: block;
             }
 
             input[type="date"],
@@ -384,10 +422,15 @@
     </style>
 </head>
 <body>
-    <div class="sidebar">
+    <button class="hamburger" onclick="toggleSidebar()">
+        <span class="hamburger-icon">☰</span>
+    </button>
+
+    <div class="sidebar" id="sidebar">
         <h2>Trainer Portal</h2>
         <ul>
             <li><a onclick="showSection('dashboard')">Dashboard</a></li>
+            <li><a href="/trainer-dashboard/profile/<%= email %>">Profile</a></li>
             <li><a onclick="showSection('assigned-schools')">Assigned Schools</a></li>
             <li><a onclick="showSection('upload-media')">Upload Media</a></li>
             <li><a href="/trainer-gamezone">Gamezone</a></li>
@@ -414,10 +457,8 @@
             <p style="color: green;"><%= success %></p>
         <% } %>
 
-        <!-- Dashboard Section -->
         <div id="dashboard" class="section active">
             <% if (trainerData && trainerData.isApproved) { %>
-                <!-- Badge Display Section -->
                 <% 
                     const completedCount = completedSchools.length;
                     let badgeLevel = '';
@@ -473,15 +514,15 @@
                     <% } %>
                     <span class="badge-text"><%= badgeText %></span>
                 </div>
-              <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-    <h2 style="margin: 0 15px 0 0;">Trainer SOP</h2>
-    <a href="https://drive.google.com/file/d/1WU_GaxOOu1mUBSUqL0G3JLgLrXgeEqYz/preview" target="_blank">
-        <button>View</button>
-    </a>
-    <a href="https://drive.google.com/uc?export=download&id=1WU_GaxOOu1mUBSUqL0G3JLgLrXgeEqYz">
-        <button>Download</button>
-    </a>
-</div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
+                    <h2 style="margin: 0 15px 0 0;">Trainer SOP</h2>
+                    <a href="https://drive.google.com/file/d/1WU_GaxOOu1mUBSUqL0G3JLgLrXgeEqYz/preview" target="_blank">
+                        <button>View</button>
+                    </a>
+                    <a href="https://drive.google.com/uc?export=download&id=1WU_GaxOOu1mUBSUqL0G3JLgLrXgeEqYz">
+                        <button>Download</button>
+                    </a>
+                </div>
                 <h2>Workshop Materials</h2>
                 <a href="https://drive.google.com/drive/folders/1eLAp8bFnKbsqTa7jEApylckT0X91fivS?usp=sharing" target="_blank">
                     <button>Download Workshop Materials</button>
@@ -529,7 +570,6 @@
             <% } %>
         </div>
 
-        <!-- Upload Media Section -->
         <div id="upload-media" class="section">
             <h2>Upload Media</h2>
             <form action="/trainer-dashboard/upload-media?username=<%= email %>" method="POST" enctype="multipart/form-data">
@@ -590,7 +630,6 @@
             <% } %>
         </div>
 
-        <!-- Assigned Schools Section -->
         <div id="assigned-schools" class="section">
             <h2 class="text-xl font-bold mb-4 text-gray-700">Assigned Schools</h2>
             <button onclick="toggleSchoolView()" id="schoolViewBtn">Show Completed Schools</button>
@@ -663,7 +702,6 @@
     </div>
 
     <script>
-        // Initialize JSConfetti
         const jsConfetti = new JSConfetti();
 
         function showSection(sectionId) {
@@ -676,8 +714,11 @@
                 document.getElementById('completed-schools-table').style.display = 'none';
                 document.getElementById('schoolViewBtn').textContent = 'Show Completed Schools';
             } else if (sectionId === 'dashboard') {
-                // Trigger confetti when switching to dashboard if badge exists
                 triggerConfetti();
+            }
+            // Hide sidebar in mobile view after selecting a menu item
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('active');
             }
         }
 
@@ -695,6 +736,11 @@
                 completedTable.style.display = 'none';
                 button.textContent = 'Show Completed Schools';
             }
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('active');
         }
 
         function triggerConfetti() {
@@ -726,7 +772,6 @@
                 // Trigger confetti on page load
                 triggerConfetti();
             }
-            // Stop blinking on click
             document.addEventListener('click', () => {
                 const congratsMessage = document.querySelector('.congrats-message');
                 const blinkMessage = document.querySelector('.blink-message');

@@ -871,6 +871,24 @@
         height: 170px;
       }
     }
+    @media screen and (max-width: 768px) {
+  div {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  video {
+    max-width: 90vw;
+    max-height: 50vh;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  video {
+    max-width: 95vw;
+    max-height: 40vh;
+  }
+}
   </style>
 </head>
 <body class="font-sans text-gray-800">
@@ -1271,17 +1289,18 @@
       <a href="./gallery" target="_blank" class="mt-4  blink-button border-2 border-gray-800 font-semibold rounded-md shadow-md hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 text-xl sm:text-m" data-aos="zoom-in" data-aos-delay="1100"> View More </a>
     </div>
 </section>
-<div style="display: flex; justify-content: center; align-items: center; gap: 20px; height: 60vh;">
-  <video controls autoplay muted style="max-width:70%; max-height:70%;" id="video1">
+<div style="display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 1.5rem; min-height: 60vh; padding: 1rem;">
+  <video controls autoplay muted style="width: 100%; max-width: 45vw; max-height: 70vh; object-fit: contain;" id="video1">
     <source src="./Assets/dharmadhikari.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
 
-  <video controls autoplay muted style="max-width:70%; max-height:70%;" id="video2">
+  <video controls autoplay muted style="width: 100%; max-width: 45vw; max-height: 70vh; object-fit: contain;" id="video2">
     <source src="./Assets/Adv. Parijat Pande.mp4" type="video/mp4">
     Your browser does not support the video tag.
   </video>
 </div>
+
 
 
 
@@ -1617,5 +1636,4 @@ window.onload = loadTrainers;
 </script>
 
 </body>
-
 </html>

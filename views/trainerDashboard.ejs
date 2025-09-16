@@ -468,20 +468,20 @@
                     let confettiEmojis = [];
                     let confettiNumber = 100;
 
-                    if (completedCount >= 20) {
+                    if (completedCount >= 15) {
                         badgeLevel = 'platinum';
                         badgeSymbol = '💎';
                         badgeText = 'Platinum Level';
                         confettiColors = ['#e0e7ff', '#c3dafe', '#93c5fd', '#3b82f6'];
                         confettiEmojis = ['💎', '✨', '🏆'];
                         confettiNumber = 150;
-                    } else if (completedCount >= 15) {
+                    } else if (completedCount >= 10) {
                         badgeLevel = 'authentic-trainer';
                         badgeSymbol = '🌟';
                         badgeText = 'Authentic Trainer';
                         confettiColors = ['#4b5e7e', '#6b7280', '#9ca3af'];
                         confettiEmojis = ['🌟', '✨'];
-                    } else if (completedCount >= 10) {
+                    } else if (completedCount >= 8) {
                         badgeLevel = 'gold';
                         badgeSymbol = '🥇';
                         badgeText = 'Gold Level';
@@ -493,7 +493,7 @@
                         badgeText = 'Silver Level';
                         confettiColors = ['#b0b7bf', '#d1d5db', '#e5e7eb'];
                         confettiEmojis = ['⭐', '✨'];
-                    } else if (completedCount >= 3) {
+                    } else if (completedCount >= 2) {
                         badgeLevel = 'bronze';
                         badgeSymbol = '🥉';
                         badgeText = 'Bronze Level';
@@ -515,14 +515,15 @@
                     <span class="badge-text"><%= badgeText %></span>
                 </div>
                 <div style="display: flex; align-items: center; gap: 10px; margin-top: 10px;">
-                    <h2 style="margin: 0 15px 0 0;">Trainer SOP</h2>
-                    <a href="https://drive.google.com/file/d/1WU_GaxOOu1mUBSUqL0G3JLgLrXgeEqYz/preview" target="_blank">
-                        <button>View</button>
-                    </a>
-                    <a href="https://drive.google.com/uc?export=download&id=1WU_GaxOOu1mUBSUqL0G3JLgLrXgeEqYz">
-                        <button>Download</button>
-                    </a>
+    <h2 style="margin: 0 15px 0 0;">Trainer SOP</h2>
+    <a href="https://drive.google.com/file/d/1RCWys756lTjzhSAZGlLOy4DwauBs23aq/view?usp=sharing" target="_blank">
+        <button>View</button>
+    </a>
+    <a href="https://drive.google.com/uc?export=download&id=1RCWys756lTjzhSAZGlLOy4DwauBs23aq">
+        <button>Download</button>
+    </a>
                 </div>
+
                 <h2>Workshop Materials</h2>
                 <a href="https://drive.google.com/drive/folders/1eLAp8bFnKbsqTa7jEApylckT0X91fivS?usp=sharing" target="_blank">
                     <button>Download Workshop Materials</button>
@@ -648,6 +649,10 @@
                                     <th class="py-3 px-4 text-left">School Phone</th>
                                     <th class="py-3 px-4 text-left">Civics Number</th>
                                     <th class="py-3 px-4 text-left">Principal Number</th>
+                                    <!-- <th class="py-2 px-4 border-b text-left">Coordinator ID</th> -->
+                                    <th class="py-2 px-4 border-b text-left">Coordinator Name</th>
+                                    <th class="py-2 px-4 border-b text-left">Coordinator Phone Number</th>
+                                    
                                     <th class="py-2 px-4 border-b text-left">Resources Confirmed</th>
                                 </tr>
                             </thead>
@@ -661,6 +666,10 @@
                                         <td class="py-2 px-4"><%= school.schoolPhoneNumber || 'N/A' %></td>
                                         <td class="py-2 px-4"><%= school.civicsTeacherNumber || 'N/A' %></td>
                                         <td class="py-2 px-4"><%= school.principalNumber || 'N/A' %></td>
+                                        <!-- <td class="py-2 px-4"><%= school.coordinatorId %> -->
+                                          <td class="py-2 px-4"><%= school.name %>
+                                            <td class="py-2 px-4"><%= school.number %>
+                                              
                                         <td class="py-2 px-4"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
                                     </tr>
                                 <% }) %>

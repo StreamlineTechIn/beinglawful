@@ -1470,16 +1470,15 @@ app.post('/update-description', requireAdmin, async (req, res) => {
 });
 // School dashboard (renders schoolDashboard.ejs)
 
+// School Dashboard Route
 app.get('/school-dashboard', async (req, res) => {
     try {
         const schoolEmail = req.query.username;
         console.log('Request query:', req.query); // Debug log
 
-        // Define formatTime to handle HH:mm strings and Firestore Timestamps
+        // Format time helper
         const formatTime = (timeInput) => {
             if (!timeInput) return null;
-
-            // Handle Firestore Timestamp
             if (timeInput.toDate) {
                 const dateObj = timeInput.toDate();
                 return dateObj.toLocaleTimeString('en-IN', {
@@ -1488,8 +1487,6 @@ app.get('/school-dashboard', async (req, res) => {
                     hour12: true,
                 });
             }
-
-            // Handle HH:mm string format
             const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
             if (typeof timeInput === 'string' && timeRegex.test(timeInput)) {
                 const [hours, minutes] = timeInput.split(':').map(Number);
@@ -1501,8 +1498,6 @@ app.get('/school-dashboard', async (req, res) => {
                     hour12: true,
                 });
             }
-
-            // Handle full date strings or other formats
             const dateObj = new Date(timeInput);
             if (!isNaN(dateObj.getTime())) {
                 return dateObj.toLocaleTimeString('en-IN', {
@@ -1511,11 +1506,10 @@ app.get('/school-dashboard', async (req, res) => {
                     hour12: true,
                 });
             }
-
-            return null; // Return null for invalid inputs
+            return null;
         };
 
-        // Initialize default response data
+        // Default response
         const defaultResponse = {
             schoolName: 'Unknown',
             schoolEmail: '',
@@ -1533,6 +1527,7 @@ app.get('/school-dashboard', async (req, res) => {
             resourcesConfirmed: false,
             selectedResources: [],
             selectedTrainers: [],
+            coordinatorDetails: null,
             workshopStartTime: null,
             workshopEndTime: null,
             error: null,
@@ -1545,25 +1540,27 @@ app.get('/school-dashboard', async (req, res) => {
         };
 
         if (!schoolEmail) {
+            console.log('No schoolEmail provided');
             defaultResponse.error = 'Please login first';
-            console.log('No schoolEmail provided, rendering with defaults');
             return res.render('schoolDashboard', defaultResponse);
         }
 
+        // Fetch school
         const schoolSnapshot = await db.collection('schools')
             .where('schoolEmail', '==', schoolEmail)
             .get();
 
-        if (schoolSnapshot.empty || schoolSnapshot.docs.length === 0) {
-            defaultResponse.error = 'School not found';
+        if (schoolSnapshot.empty) {
             console.log('School not found for email:', schoolEmail);
+            defaultResponse.error = 'School not found';
             return res.render('schoolDashboard', defaultResponse);
         }
 
         const schoolData = schoolSnapshot.docs[0].data();
-        const schoolName = schoolData.schoolName;
+        const schoolId = schoolSnapshot.docs[0].id;
+        const schoolName = schoolData.schoolName || 'Unknown';
 
-        // Format event date
+        // Event Date
         let eventDate = null;
         let eventDateMissing = true;
         if (schoolData.eventDate && typeof schoolData.eventDate.toDate === 'function') {
@@ -1585,7 +1582,7 @@ app.get('/school-dashboard', async (req, res) => {
             }
         }
 
-        // Format workshop times
+        // Workshop times
         const workshopStartTime = formatTime(schoolData.workshopStartTime);
         const workshopEndTime = formatTime(schoolData.workshopEndTime);
 
@@ -1606,17 +1603,18 @@ app.get('/school-dashboard', async (req, res) => {
                 score: data.score || 0,
                 totalQuestions: data.totalQuestions || 0,
                 percentage: data.percentage || 0,
-                completedAt: data.completedAt ? (data.completedAt.toDate ? data.completedAt.toDate().toLocaleDateString() : new Date(data.completedAt).toLocaleDateString()) : 'N/A',
+                completedAt: data.completedAt ? 
+                    (data.completedAt.toDate ? data.completedAt.toDate().toLocaleDateString() : new Date(data.completedAt).toLocaleDateString()) 
+                    : 'N/A',
                 isApproved: data.isApproved || false,
                 isChampion: data.isChampion || false,
                 message: data.message || null,
             };
         });
 
-        // Calculate student statistics
         const totalStudents = students.length;
-        const mcqCompletedCount = students.filter(student => student.hasCompletedMCQ).length;
-        const championCount = students.filter(student => student.isChampion).length;
+        const mcqCompletedCount = students.filter(s => s.hasCompletedMCQ).length;
+        const championCount = students.filter(s => s.isChampion).length;
 
         // Fetch trainers
         const trainersSnapshot = await db.collection('trainers').get();
@@ -1626,19 +1624,54 @@ app.get('/school-dashboard', async (req, res) => {
                 id: doc.id,
                 trainerName: data.trainerName || 'Unnamed',
                 district: data.district || 'Not Specified',
+                mobileNumber: data.mobileNumber || 'N/A',
+                email: data.email || 'N/A',
                 availableDates: Array.isArray(data.availableDates)
-                    ? data.availableDates.map(dateObj =>
-                          dateObj.toDate ? dateObj.toDate().toISOString().split('T')[0] : (dateObj.date || dateObj)
-                      )
+                    ? data.availableDates.map(d => d.toDate ? d.toDate().toISOString().split('T')[0] : (d.date || d))
                     : [],
             };
         });
 
+        // Fetch coordinator details using coordinatorId from schools collection
+        let coordinatorDetails = null;
+        if (schoolData.coordinatorId) {
+            console.log('Fetching coordinator for ID:', schoolData.coordinatorId);
+            const coordinatorDoc = await db.collection('coordinators').doc(schoolData.coordinatorId).get();
+            if (coordinatorDoc.exists) {
+                const data = coordinatorDoc.data();
+                coordinatorDetails = {
+                    id: coordinatorDoc.id,
+                    name: data.name || 'Unknown', 
+                    phone: data.mobile || 'N/A', 
+                };
+            } else {
+                console.log('Coordinator not found for ID:', schoolData.coordinatorId);
+            }
+        } else {
+            console.log('No coordinatorId found for school:', schoolId);
+        }
+
+        // Selected trainers with details
+        const selectedTrainers = [
+            schoolData.trainerId1 || '',
+            schoolData.trainerId2 || '',
+        ].map(trainerId => {
+            const trainer = trainers.find(t => t.id === trainerId);
+            return trainer
+                ? {
+                      ...trainer,
+                      isOtherDistrict: trainer.district !== schoolData.district,
+                      phone: trainer.mobileNumber || 'N/A',
+                  }
+                : null;
+        }).filter(t => t !== null);
+
         // Fetch media uploads
         const mediaSnapshot = await db.collection('schools')
-            .doc(schoolSnapshot.docs[0].id)
+            .doc(schoolId)
             .collection('mediaUploads')
             .get();
+
         const mediaUploads = mediaSnapshot.docs.map(doc => ({
             ...doc.data(),
             id: doc.id,
@@ -1647,24 +1680,10 @@ app.get('/school-dashboard', async (req, res) => {
             uploaderType: 'School',
         }));
 
-        // Map selected trainers
-        const selectedTrainers = [
-            schoolData.trainerId1 || '',
-            schoolData.trainerId2 || '',
-        ].map(trainerId => {
-            const trainer = trainers.find(t => t.id === trainerId);
-            return trainer ? { ...trainer, isOtherDistrict: trainer.district !== schoolData.district } : null;
-        }).filter(trainer => trainer !== null);
+        // Debug log for coordinatorDetails
+        console.log('coordinatorDetails before render:', coordinatorDetails);
 
-        // Log the data being sent to the template
-        console.log('Rendering schoolDashboard with data:', {
-            schoolName,
-            totalStudents,
-            mcqCompletedCount,
-            championCount,
-            studentsCount: students.length,
-        });
-
+        // Render dashboard
         res.render('schoolDashboard', {
             schoolName,
             schoolEmail: schoolData.schoolEmail || '',
@@ -1682,10 +1701,11 @@ app.get('/school-dashboard', async (req, res) => {
             resourcesConfirmed: schoolData.resourcesConfirmed || false,
             selectedResources: schoolData.selectedResources || [],
             selectedTrainers,
+            coordinatorDetails,
             workshopStartTime,
             workshopEndTime,
             error: null,
-            trialTests: [], // Replace with actual trialTests data if available
+            trialTests: [],
             trainers,
             mediaUploads,
             totalStudents,
@@ -1696,34 +1716,12 @@ app.get('/school-dashboard', async (req, res) => {
     } catch (error) {
         console.error('Error in /school-dashboard route:', error.message, error.stack);
         res.render('schoolDashboard', {
-            schoolName: 'Unknown',
-            schoolEmail: '',
-            city: '',
-            district: '',
-            pincode: '',
-            schoolPhoneNumber: '',
-            principalNumber: '',
-            principalEmail: '',
-            civicsTeacherNumber: '',
-            civicsTeacherEmail: '',
-            students: [],
-            eventDate: null,
-            eventDateMissing: true,
-            resourcesConfirmed: false,
-            selectedResources: [],
-            selectedTrainers: [],
-            workshopStartTime: null,
-            workshopEndTime: null,
+            ...defaultResponse,
             error: 'Error loading school data: ' + error.message,
-            trialTests: [],
-            trainers: [],
-            mediaUploads: [],
-            totalStudents: 0,
-            mcqCompletedCount: 0,
-            championCount: 0,
         });
     }
 });
+
 
 app.post('/school-dashboard/delete-student/:id', async (req, res) => {
     const participantId = req.params.id;
@@ -4625,8 +4623,24 @@ app.get('/trainer-dashboard', async (req, res) => {
             .where('trainerId2', '==', trainerId)
             .get();
 
-        const assignedSchools = [...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(doc => {
+        const assignedSchools = await Promise.all([...schoolsSnapshot1.docs, ...schoolsSnapshot2.docs].map(async doc => {
             const data = doc.data();
+            let coordinatorName = 'N/A';
+            let coordinatorNumber = 'N/A';
+
+            // Fetch coordinator data if coordinatorId exists
+            if (data.coordinatorId && data.coordinatorId !== 'N/A') {
+                const coordinatorSnapshot = await db.collection('coordinators')
+                    .doc(data.coordinatorId)
+                    .get();
+                
+                if (coordinatorSnapshot.exists) {
+                    const coordinatorData = coordinatorSnapshot.data();
+                    coordinatorName = coordinatorData.name || 'N/A';
+                    coordinatorNumber = coordinatorData.number || 'N/A';
+                }
+            }
+
             return {
                 schoolName: data.schoolName || 'N/A',
                 city: data.city || 'N/A',
@@ -4642,10 +4656,13 @@ app.get('/trainer-dashboard', async (req, res) => {
                 civicsTeacherNumber: data.civicsTeacherNumber || 'N/A',
                 principalNumber: data.principalNumber || 'N/A',
                 principalEmail: data.principalEmail || 'N/A',
-                schoolCode: data.schoolCode || data.schoolNumber || 'N/A'
+                schoolCode: data.schoolCode || data.schoolNumber || 'N/A',
+                coordinatorId: data.coordinatorId || 'N/A',
+                coordinatorName, 
+                coordinatorNumber 
             };
-        });
-
+        }));
+console.log('Assigned Schools:', assignedSchools);
         // Fetch completed schools
         const completedSnapshot1 = await db.collection('schools')
             .where('trainerId1', '==', trainerId)
@@ -4657,17 +4674,36 @@ app.get('/trainer-dashboard', async (req, res) => {
             .where('isCompleted', '==', true)
             .get();
 
-        const completedSchools = [...completedSnapshot1.docs, ...completedSnapshot2.docs].map(doc => {
+        const completedSchools = await Promise.all([...completedSnapshot1.docs, ...completedSnapshot2.docs].map(async doc => {
             const data = doc.data();
+            let coordinatorName = 'N/A';
+            let coordinatorNumber = 'N/A';
+
+            // Fetch coordinator data if coordinatorId exists
+            if (data.coordinatorId && data.coordinatorId !== 'N/A') {
+                const coordinatorSnapshot = await db.collection('coordinators')
+                    .doc(data.coordinatorId)
+                    .get();
+                
+                if (coordinatorSnapshot.exists) {
+                    const coordinatorData = coordinatorSnapshot.data();
+                    coordinatorName = coordinatorData.name || 'N/A';
+                    coordinatorNumber = coordinatorData.number || 'N/A';
+                }
+            }
+
             return {
                 schoolName: data.schoolName || 'N/A',
                 city: data.city || 'N/A',
                 district: data.district || data.city || 'N/A',
                 eventDate: data.eventDate ? data.eventDate.toDate().toLocaleDateString('en-IN') : 'Not assigned',
                 completionDate: data.completionDate ? data.completionDate.toDate().toLocaleDateString('en-IN') : 'N/A',
-                remarks: data.remarks || 'N/A'
+                remarks: data.remarks || 'N/A',
+                coordinatorId: data.coordinatorId || 'N/A',
+                coordinatorName, // Add coordinator name
+                coordinatorNumber // Add coordinator number
             };
-        });
+        }));
 
         // Fetch schools in trainer's district
         const schoolsInDistrictSnapshot = await db.collection('schools')
@@ -4714,7 +4750,7 @@ app.get('/trainer-dashboard', async (req, res) => {
                 uploadedAt: data.uploadedAt ? data.uploadedAt.toDate() : null
             };
         });
-
+         
         // Render Trainer Dashboard
         res.render('trainerDashboard', {
             trainerName: trainerData.trainerName || 'Unknown',
@@ -4731,7 +4767,6 @@ app.get('/trainer-dashboard', async (req, res) => {
             error: req.query.error || null,
             success: req.query.success || null,
             trainerData,
-            
         });
 
     } catch (error) {
@@ -4753,6 +4788,7 @@ app.get('/trainer-dashboard', async (req, res) => {
             trainerData: {}
         });
     }
+    console.log('assigned schools',assignedSchools)
 });
 
 
@@ -5989,11 +6025,12 @@ app.get('/coordinator-dashboard', isAuthenticated, async (req, res) => {
         });
 
         // Fetch trainers
-        const trainersSnapshot = await db.collection('trainers').get();
-        const trainers = trainersSnapshot.docs.map(doc => ({
-            id: doc.id,
-            name: doc.data().trainerName || 'Unknown Trainer',
-        }));
+const trainersSnapshot = await db.collection('trainers').get();
+const trainers = trainersSnapshot.docs.map(doc => ({
+    id: doc.id,
+    name: doc.data().trainerName || 'Unknown Trainer',
+    mobileNumber: doc.data().mobileNumber || 'N/A' 
+}));
 
         // Fetch feedback data
         const feedbackSnapshot = await db

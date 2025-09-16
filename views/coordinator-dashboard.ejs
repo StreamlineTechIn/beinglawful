@@ -231,120 +231,131 @@
             </div>
         </div>
 
-        <!-- Coordinator Summary Tab -->
-        <div id="coordinator-summary" class="tab-content active">
-            <h3 class="text-xl font-semibold mb-4">Workshop Summary for <%= coordinator.name %></h3>
-            <div class="overflow-x-auto">
-                <table id="coordinatorSummaryTable" class="min-w-full bg-white shadow-md rounded-lg">
-                    <thead class="bg-gray-700 text-white">
-                        <tr>
-                            <th class="py-3 px-4 text-left" data-filter="schoolName">School Name<br><select class="filter-select text-sm" data-column="schoolName"></select></th>
-                            <th class="py-3 px-4 text-left">Event Date</th>
-                            <th class="py-3 px-4 text-left">Day</th>
-                            <th class="py-3 px-4 text-left">Trainer Name</th>
-                            <th class="py-3 px-4 text-left">Time Slot</th>
-                            <th class="py-3 px-4 text-left">Trainer Occupied</th>
-                            <th class="py-3 px-4 text-left" data-filter="registerStatus">Our Register School<br><select class="filter-select text-sm" data-column="registerStatus"></select></th>
-                            <th class="py-3 px-4 text-left" data-filter="mcqStatus">MCQ Status<br><select class="filter-select text-sm" data-column="mcqStatus"></select></th>
-                            <th class="py-3 px-4 text-left" data-filter="approvalStatus">Approval Status<br><select class="filter-select text-sm" data-column="approvalStatus"></select></th>
-                            <th class="py-3 px-4 text-left">Materials Sent?</th>
+      <!-- Coordinator Summary Tab -->
+<div id="coordinator-summary" class="tab-content active">
+    <h3 class="text-xl font-semibold mb-4">Workshop Summary for <%= coordinator.name %></h3>
+    <div class="overflow-x-auto">
+        <table id="coordinatorSummaryTable" class="min-w-full bg-white shadow-md rounded-lg">
+            <thead class="bg-gray-700 text-white">
+                <tr>
+                    <th class="py-3 px-4 text-left" data-filter="schoolName">School Name<br><select class="filter-select text-sm" data-column="schoolName"></select></th>
+                    <th class="py-3 px-4 text-left">Event Date</th>
+                    <th class="py-3 px-4 text-left">Day</th>
+                    <th class="py-3 px-4 text-left">Trainer Details</th> <!-- Updated header -->
+                    <th class="py-3 px-4 text-left">Time Slot</th>
+                    <th class="py-3 px-4 text-left">Trainer Occupied</th>
+                    <th class="py-3 px-4 text-left" data-filter="registerStatus">Our Register School<br><select class="filter-select text-sm" data-column="registerStatus"></select></th>
+                    <th class="py-3 px-4 text-left" data-filter="mcqStatus">MCQ Status<br><select class="filter-select text-sm" data-column="mcqStatus"></select></th>
+                    <th class="py-3 px-4 text-left" data-filter="approvalStatus">Approval Status<br><select class="filter-select text-sm" data-column="approvalStatus"></select></th>
+                    <th class="py-3 px-4 text-left">Materials Sent?</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% 
+                    const allSchools = [
+                        ...schools.map(s => ({ 
+                            ...s, 
+                            source: 'approved',
+                            registerStatus: s.registerStatus || 'Yes',
+                            mcqStatus: s.mcqStatus || 'Pending',
+                            approvalStatus: s.mcqStatus === 'Completed' ? 'Approved' : 'Approved, MCQ Remaining'
+                        })),
+                        ...completedSchools.map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            eventDate: s.eventDate || 'Not set',
+                            trainerId1: s.trainerId1 || null,
+                            trainerId2: s.trainerId2 || null,
+                            workshopStartTime: s.workshopStartTime || null,
+                            workshopEndTime: s.workshopEndTime || null,
+                            resourcesConfirmed: s.resourcesConfirmed || false,
+                            coordinatorId: s.coordinatorId || coordinator.id,
+                            status: 'completed',
+                            source: 'completed',
+                            registerStatus: 'Yes',
+                            mcqStatus: s.mcqStatus || 'Completed',
+                            approvalStatus: 'Approved'
+                        })),
+                        ...visitedSchools.filter(s => s.status === 'register').map(s => ({
+                            id: s.id,
+                            name: s.name,
+                            eventDate: s.eventDate || 'Not set',
+                            trainerId1: null,
+                            trainerId2: null,
+                            workshopStartTime: null,
+                            workshopEndTime: null,
+                            resourcesConfirmed: false,
+                            coordinatorId: coordinator.id,
+                            status: 'registered',
+                            source: 'visited',
+                            registerStatus: 'Yes',
+                            mcqStatus: 'Pending',
+                            approvalStatus: 'Registered, Not Approved'
+                        }))
+                    ].filter(s => s.coordinatorId === coordinator.id);
+                %>
+                <% if (allSchools.length > 0) { %>
+                    <% allSchools.forEach(school => { %>
+                        <tr class="border-b">
+                            <td class="py-3 px-4" data-column="schoolName"><%= school.name %></td>
+                            <td class="py-3 px-4"><%= school.eventDate !== 'Not set' ? school.eventDate : 'Not assigned' %></td>
+                            <td class="py-3 px-4"><%= school.eventDate !== 'Not set' ? new Date(school.eventDate).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' }) : 'N/A' %></td>
+                            <td class="py-3 px-4">
+                                <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
+                                <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
+                                <% if (trainer1 || trainer2) { %>
+                                    <% if (trainer1) { %>
+                                        <%= trainer1.name %> (<%= trainer1.mobileNumber %>)
+                                        <% if (trainer2) { %>,<% } %>
+                                    <% } %>
+                                    <% if (trainer2) { %>
+                                        <%= trainer2.name %> (<%= trainer2.mobileNumber %>)
+                                    <% } %>
+                                <% } else { %>
+                                    Not Assigned
+                                <% } %>
+                            </td>
+                            <td class="py-3 px-4">
+                                <% if (school.workshopStartTime && school.workshopEndTime) { %>
+                                    <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
+                                <% } else { %>
+                                    Not Assigned
+                                <% } %>
+                            </td>
+                            <td class="py-3 px-4"><%= (school.trainerId1 || school.trainerId2) ? 'Yes' : 'No' %></td>
+                            <td class="py-3 px-4" data-column="registerStatus"><%= school.registerStatus %></td>
+                            <td class="py-3 px-4" data-column="mcqStatus"><%= school.mcqStatus %></td>
+                            <td class="py-3 px-4" data-column="approvalStatus">
+                                <% if (school.approvalStatus === 'Approved, MCQ Remaining') { %>
+                                    <span class="status-approved-mcq-remaining"><%= school.approvalStatus %></span>
+                                <% } else if (school.approvalStatus === 'Registered, Not Approved') { %>
+                                    <span class="status-registered-not-approved"><%= school.approvalStatus %></span>
+                                <% } else { %>
+                                    <%= school.approvalStatus %>
+                                <% } %>
+                            </td>
+                            <td class="py-3 px-4"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        <% 
-                            const allSchools = [
-                                ...schools.map(s => ({ 
-                                    ...s, 
-                                    source: 'approved',
-                                    registerStatus: s.registerStatus || 'Yes',
-                                    mcqStatus: s.mcqStatus || 'Pending',
-                                    approvalStatus: s.mcqStatus === 'Completed' ? 'Approved' : 'Approved, MCQ Remaining'
-                                })),
-                                ...completedSchools.map(s => ({
-                                    id: s.id,
-                                    name: s.name,
-                                    eventDate: s.eventDate || 'Not set',
-                                    trainerId1: s.trainerId1 || null,
-                                    trainerId2: s.trainerId2 || null,
-                                    workshopStartTime: s.workshopStartTime || null,
-                                    workshopEndTime: s.workshopEndTime || null,
-                                    resourcesConfirmed: s.resourcesConfirmed || false,
-                                    coordinatorId: s.coordinatorId || coordinator.id,
-                                    status: 'completed',
-                                    source: 'completed',
-                                    registerStatus: 'Yes',
-                                    mcqStatus: s.mcqStatus || 'Completed',
-                                    approvalStatus: 'Approved'
-                                })),
-                                ...visitedSchools.filter(s => s.status === 'register').map(s => ({
-                                    id: s.id,
-                                    name: s.name,
-                                    eventDate: s.eventDate || 'Not set',
-                                    trainerId1: null,
-                                    trainerId2: null,
-                                    workshopStartTime: null,
-                                    workshopEndTime: null,
-                                    resourcesConfirmed: false,
-                                    coordinatorId: coordinator.id,
-                                    status: 'registered',
-                                    source: 'visited',
-                                    registerStatus: 'Yes',
-                                    mcqStatus: 'Pending',
-                                    approvalStatus: 'Registered, Not Approved'
-                                }))
-                            ].filter(s => s.coordinatorId === coordinator.id);
-                        %>
-                        <% if (allSchools.length > 0) { %>
-                            <% allSchools.forEach(school => { %>
-                                <tr class="border-b">
-                                    <td class="py-3 px-4" data-column="schoolName"><%= school.name %></td>
-                                    <td class="py-3 px-4"><%= school.eventDate !== 'Not set' ? school.eventDate : 'Not assigned' %></td>
-                                    <td class="py-3 px-4"><%= school.eventDate !== 'Not set' ? new Date(school.eventDate).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' }) : 'N/A' %></td>
-                                    <td class="py-3 px-4">
-                                        <% let trainer1 = school.trainerId1 && trainers.find(t => t.id === school.trainerId1); %>
-                                        <% let trainer2 = school.trainerId2 && trainers.find(t => t.id === school.trainerId2); %>
-                                        <%= trainer1 ? trainer1.name : 'Not Assigned' %><%= trainer2 ? ', ' + trainer2.name : '' %>
-                                    </td>
-                                    <td class="py-3 px-4">
-                                        <% if (school.workshopStartTime && school.workshopEndTime) { %>
-                                            <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
-                                        <% } else { %>
-                                            Not Assigned
-                                        <% } %>
-                                    </td>
-                                    <td class="py-3 px-4"><%= (school.trainerId1 || school.trainerId2) ? 'Yes' : 'No' %></td>
-                                    <td class="py-3 px-4" data-column="registerStatus"><%= school.registerStatus %></td>
-                                    <td class="py-3 px-4" data-column="mcqStatus"><%= school.mcqStatus %></td>
-                                    <td class="py-3 px-4" data-column="approvalStatus">
-                                        <% if (school.approvalStatus === 'Approved, MCQ Remaining') { %>
-                                            <span class="status-approved-mcq-remaining"><%= school.approvalStatus %></span>
-                                        <% } else if (school.approvalStatus === 'Registered, Not Approved') { %>
-                                            <span class="status-registered-not-approved"><%= school.approvalStatus %></span>
-                                        <% } else { %>
-                                            <%= school.approvalStatus %>
-                                        <% } %>
-                                    </td>
-                                    <td class="py-3 px-4"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
-                                </tr>
-                            <% }) %>
-                        <% } else { %>
-                            <tr><td colspan="10" class="py-3 px-4 text-center">No workshops assigned to you.</td></tr>
-                        <% } %>
-                    </tbody>
-                </table>
-            </div>
-        </div>
+                    <% }) %>
+                <% } else { %>
+                    <tr><td colspan="10" class="py-3 px-4 text-center">No workshops assigned to you.</td></tr>
+                <% } %>
+            </tbody>
+        </table>
+    </div>
+</div>
 
         <!-- SOP Tab -->
-        <div id="sop" class="tab-content">
-            <h3 class="text-xl font-semibold mb-4">Standard Operating Procedure</h3>
-            <div class="space-y-4">
-                <div class="flex space-x-4">
-                    <a href="https://drive.google.com/file/d/1UIkBdkSMjvBPaea-fEmdfesZGPErwN1F/view?usp=sharing" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">View SOP</a>
-                    <a href="https://drive.google.com/uc?export=download&id=1UIkBdkSMjvBPaea-fEmdfesZGPErwN1F" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Download SOP</a>
-                </div>
-            </div>
+       <div id="sop" class="tab-content">
+    <h3 class="text-xl font-semibold mb-4">Standard Operating Procedure</h3>
+    <div class="space-y-4">
+        <div class="flex space-x-4">
+            <a href="https://drive.google.com/file/d/1Mn6afZmW8hoE30QzILQ2Gv5EE5x_27o_/view?usp=sharing" target="_blank" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">View SOP</a>
+            <a href="https://drive.google.com/uc?export=download&id=1Mn6afZmW8hoE30QzILQ2Gv5EE5x_27o_" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">Download SOP</a>
         </div>
+    </div>
+</div>
+
 
         <!-- Workshop Summary Tab -->
         <div id="workshop-summary" class="tab-content">

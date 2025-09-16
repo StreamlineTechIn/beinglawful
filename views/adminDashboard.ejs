@@ -686,6 +686,7 @@ function toggleCustomDateInput(selectElem, schoolId) {
         customDateInput.classList.remove('hidden');
         customDateInput.value = '';
         hiddenInput.value = '';
+        customDateInput.focus();
 
         // Update hidden input when user picks a date
         customDateInput.onchange = () => {
@@ -693,6 +694,7 @@ function toggleCustomDateInput(selectElem, schoolId) {
         };
     } else {
         customDateInput.classList.add('hidden');
+        customDateInput.value = '';
         hiddenInput.value = selectElem.value;
     }
 }
@@ -700,8 +702,8 @@ function toggleCustomDateInput(selectElem, schoolId) {
 // Validate the event date form before submission
 function validateEventDateForm(form, schoolId) {
     const selectElem = form.querySelector('select[name="eventDate"]');
-    const customDateInput = form.querySelector(`#custom-date-${schoolId}`);
-    const hiddenInput = form.querySelector(`#eventDateFinal-${schoolId}`);
+    const customDateInput = document.getElementById(`custom-date-${schoolId}`);
+    const hiddenInput = document.getElementById(`eventDateFinal-${schoolId}`);
 
     if (!selectElem.value) {
         alert('Please select an event date or "Other" to choose a custom date.');
@@ -711,6 +713,18 @@ function validateEventDateForm(form, schoolId) {
     if (selectElem.value === 'other') {
         if (!customDateInput.value) {
             alert('Please select a custom event date.');
+            return false;
+        }
+        const selectedDate = new Date(customDateInput.value);
+        if (isNaN(selectedDate.getTime())) {
+            alert('Please enter a valid date.');
+            return false;
+        }
+        // Ensure the date is not in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (selectedDate < today) {
+            alert('Event date cannot be in the past.');
             return false;
         }
         hiddenInput.value = customDateInput.value;
@@ -885,6 +899,7 @@ async function handleDropdownChange(select, column) {
     select.setAttribute('data-previous-value', select.value);
     select.disabled = false; // Re-enable dropdown
 }
+
 document.addEventListener('DOMContentLoaded', () => {
     // Initialize dialog polyfill for call log dialog
     const callLogDialog = document.getElementById('callLogDialog');
@@ -1240,32 +1255,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Complete school buttons
     const completeSchoolButtons = document.querySelectorAll('.complete-school-btn');
-    completeSchoolButtons.forEach(button => {
-        button.addEventListener('click', (event) => {
-            event.preventDefault();
-            const schoolId = button.dataset.schoolId;
-            const row = button.closest('tr');
-            if (!row) return;
-            const isApproved = row.querySelector('[data-column="isApproved"]')?.textContent.trim() === 'Yes';
-            const eventDate = row.querySelector('[data-column="eventDate"]')?.textContent.trim();
-            const isCompleted = row.querySelector('[data-column="isCompleted"]')?.textContent.trim() === 'Yes';
+completeSchoolButtons.forEach(button => {
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        const schoolId = button.dataset.schoolId;
+        const row = button.closest('tr');
+        if (!row) return;
+        const isApproved = row.querySelector('[data-column="isApproved"]')?.textContent.trim() === 'Yes';
+        const eventDate = row.querySelector('[data-column="eventDate"]')?.textContent.trim();
+        const isCompleted = row.querySelector('[data-column="isCompleted"]')?.textContent.trim() === 'Yes';
 
-            if (!isApproved) {
-                alert('Cannot complete: School is not approved.');
-                return;
-            }
-            if (eventDate === 'Not assigned') {
-                alert('Cannot complete: Event date is not assigned.');
-                return;
-            }
-            if (isCompleted) {
-                alert('School is already marked as completed.');
-                return;
-            }
+        if (!isApproved) {
+            alert('Cannot complete: School is not approved.');
+            return;
+        }
+        if (eventDate === 'Not assigned') {
+            alert('Cannot complete: Event date is not assigned.');
+            return;
+        }
+        if (isCompleted) {
+            alert('School is already marked as completed.');
+            return;
+        }
 
-            markSchoolCompleted(schoolId, button, row);
-        });
+        markSchoolCompleted(schoolId, button, row);
     });
+});
 
     // Export Excel button
     const exportExcelButton = document.getElementById('exportExcelButton');
@@ -1291,6 +1306,26 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         if (select.value === 'Yes') select.classList.add('text-green-600');
     });
+
+    // Initialize event date forms
+    document.querySelectorAll('select[name="eventDate"]').forEach(select => {
+        const schoolId = select.dataset.schoolId;
+        if (schoolId) {
+            const eventDateFinal = document.getElementById(`eventDateFinal-${schoolId}`);
+            if (select.value && select.value !== 'other') {
+                eventDateFinal.value = select.value;
+            }
+        }
+    });
+});
+
+document.addEventListener('click', (event) => {
+    const button = event.target.closest('.post-to-website-btn');
+    if (button) {
+        console.log('Button clicked:', button.getAttribute('data-id'));
+        event.stopPropagation();
+        postToWebsite(button);
+    }
 });
 
 // Window onload for initialization
@@ -1500,16 +1535,54 @@ window.onload = function () {
             select.addEventListener('change', filterTable);
         });
     });
-};
+    async function standardizeWorkshopTimes() {
+    try {
+        const schoolsSnapshot = await db.collection('schools').get();
+        const batch = db.batch();
 
-document.addEventListener('click', (event) => {
-    const button = event.target.closest('.post-to-website-btn');
-    if (button) {
-        console.log('Button clicked:', button.getAttribute('data-id'));
-        event.stopPropagation();
-        postToWebsite(button);
+        for (const doc of schoolsSnapshot.docs) {
+            const data = doc.data();
+            let workshopStartTime = data.workshopStartTime;
+            let workshopEndTime = data.workshopEndTime;
+
+            // Convert Timestamps to strings
+            if (workshopStartTime && workshopStartTime.toDate) {
+                workshopStartTime = workshopStartTime.toDate().toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
+            if (workshopEndTime && workshopEndTime.toDate) {
+                workshopEndTime = workshopEndTime.toDate().toLocaleTimeString('en-IN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            }
+
+            // Update only if necessary
+            if (workshopStartTime !== data.workshopStartTime || workshopEndTime !== data.workshopEndTime) {
+                batch.update(doc.ref, {
+                    workshopStartTime: workshopStartTime || null,
+                    workshopEndTime: workshopEndTime || null
+                });
+                console.log(`Updating school ${doc.id}:`, {
+                    workshopStartTime,
+                    workshopEndTime
+                });
+            }
+        }
+
+        await batch.commit();
+        console.log('Firestore data standardization complete.');
+    } catch (err) {
+        console.error('Error standardizing workshop times:', err);
     }
-});
+}
+
+standardizeWorkshopTimes();
+};
 </script>
     <style>
         .mark-seen-checkbox:checked {
@@ -1776,123 +1849,117 @@ document.addEventListener('click', (event) => {
         </div>
 
 <div id="event-date-assign" class="tab-content p-6">
-        <h2 class="text-2xl font-bold mb-4 text-gray-700">Assign Event Dates</h2>
-        <% if (schools && schools.length > 0) { %>
-            <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved, No Event Date</h3>
-            <div class="overflow-x-auto mb-6">
-                <table id="approved-no-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-                    <thead class="bg-gray-100 sticky top-0">
-                        <tr>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Workshop Time</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="coordinator">Coordinator<br><select class="filter-select text-sm w-full" data-column="coordinator"></select></th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
-                            <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                            <!-- <th class="py-2 px-4 border-b text-left text-gray-600">Spot</th> -->
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% schools.filter(school => school.isApproved && !school.eventDate).forEach(school => { %>
-                            <tr class="hover:bg-gray-50">
-                                <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
-                                <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700">
-                                    <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
-                                        timeZone: 'Asia/Kolkata',
-                                        weekday: 'long',
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    }) : 'N/A' %>
-                                </td>
-                                <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">Not assigned</td>
-                                <td class="py-2 px-4 border-b text-gray-700">
-                                 <% if (school.workshopStartTime && school.workshopEndTime) { %>
-                                            <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
-                                        <% } else { %>
-                                            Not Assigned
-                                        <% } %>
-                                </td>
-                                <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
-                                <td class="py-2 px-4 border-b text-gray-700" data-column="coordinator">
-                                    <%= school.coordinator ? `${school.coordinator.name} (${school.coordinator.email})` : 'Not Assigned' %>
-                                </td>
-                                <td class="py-2 px-4 border-b">
-                                    <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
-                                       <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="inline" onsubmit="return validateEventDateForm(this, '<%= school.id %>')">
-    <select name="eventDate" class="border rounded py-1 px-2 mr-2 text-gray-700" onchange="toggleCustomDateInput(this, '<%= school.id %>')">
-        <option value="">Select Event Date</option>
-        <% if (school.eventDates && school.eventDates.length > 0) { %>
-            <% school.eventDates.forEach(date => { %>
-                <% let validDate = new Date(date); %>
-                <% if (!isNaN(validDate.getTime())) { %>
-                    <% let eventDateStr = school.eventDate ? school.eventDate.toISOString().split('T')[0] : null; %>
-                    <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>>
-                        <%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
-                    </option>
-                <% } %>
-            <% }) %>
-        <% } %>
-        <option value="other">Other</option>
-    </select>
-    
-    <input type="date" name="customEventDate" id="custom-date-<%= school.id %>" class="border rounded py-1 px-2 mr-2 text-gray-700 hidden" placeholder="YYYY-MM-DD">
-    
-    <!-- Hidden input for server to receive custom date -->
-    <input type="hidden" name="eventDateFinal" id="eventDateFinal-<%= school.id %>" value="">
-    
-    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
-</form>
-                                        <form action="/admin/assign-coordinator/<%= school.id %>" method="POST" class="inline">
-                                            <select name="coordinatorId" class="border rounded py-1 px-2 mr-2 text-gray-700">
-                                                <option value="">Select Coordinator</option>
-                                                <% coordinators.forEach(coord => { %>
-                                                    <option value="<%= coord.id %>" <%= school.coordinatorId === coord.id ? 'selected' : '' %>>
-                                                        <%= coord.name %> (<%= coord.email %>)
-                                                    </option>
+    <h2 class="text-2xl font-bold mb-4 text-gray-700">Assign Event Dates</h2>
+    <% if (schools && schools.length > 0) { %>
+        <h3 class="text-xl font-semibold mb-2 text-gray-600">Schools Approved, No Event Date</h3>
+        <div class="overflow-x-auto mb-6">
+            <table id="approved-no-date" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                <thead class="bg-gray-100 sticky top-0">
+                    <tr>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="id">Doc ID<br><select class="filter-select text-sm w-full" data-column="id"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolName">School Name<br><select class="filter-select text-sm w-full" data-column="schoolName"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Registered At</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="schoolEmail">Email<br><select class="filter-select text-sm w-full" data-column="schoolEmail"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="city">City<br><select class="filter-select text-sm w-full" data-column="city"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="district">District<br><select class="filter-select text-sm w-full" data-column="district"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="pincode">Pincode<br><select class="filter-select text-sm w-full" data-column="pincode"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="eventDate">Event Date<br><select class="filter-select text-sm w-full" data-column="eventDate"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Workshop Time</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="isApproved">Approved<br><select class="filter-select text-sm w-full" data-column="isApproved"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="coordinator">Coordinator<br><select class="filter-select text-sm w-full" data-column="coordinator"></select></th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Actions</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Principal Phone</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Phone</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">School Phone</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Principal Email</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% schools.filter(school => school.isApproved && !school.eventDate).forEach(school => { %>
+                        <tr class="hover:bg-gray-50">
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+                                    timeZone: 'Asia/Kolkata',
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                }) : 'N/A' %>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="pincode"><%= school.pincode || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="eventDate">Not assigned</td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <% if (school.workshopStartTime && school.workshopEndTime) { %>
+                                    <%= school.workshopStartTime %> - <%= school.workshopEndTime %>
+                                <% } else { %>
+                                    Not Assigned
+                                <% } %>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="isApproved">Yes</td>
+                            <td class="py-2 px-4 border-b text-gray-700" data-column="coordinator">
+                                <%= school.coordinator ? `${school.coordinator.name} (${school.coordinator.email})` : 'Not Assigned' %>
+                            </td>
+                            <td class="py-2 px-4 border-b">
+                                <div class="flex flex-col sm:flex-row sm:space-x-2 space-y-2 sm:space-y-0">
+                                    <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="inline" onsubmit="return validateEventDateForm(this, '<%= school.id %>')">
+                                        <select name="eventDate" class="border rounded py-1 px-2 mr-2 text-gray-700" onchange="toggleCustomDateInput(this, '<%= school.id %>')">
+                                            <option value="">Select Event Date</option>
+                                            <% if (school.eventDates && school.eventDates.length > 0) { %>
+                                                <% school.eventDates.forEach(date => { %>
+                                                    <% let validDate = new Date(date); %>
+                                                    <% if (!isNaN(validDate.getTime())) { %>
+                                                        <% let eventDateStr = school.eventDate ? school.eventDate.toISOString().split('T')[0] : null; %>
+                                                        <option value="<%= date %>" <%= eventDateStr === date ? 'selected' : '' %>>
+                                                            <%= validDate.toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
+                                                        </option>
+                                                    <% } %>
                                                 <% }) %>
-                                            </select>
-                                            <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Coordinator</button>
-                                        </form>
-                                    </div>
-                                </td>
-                                <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail || 'N/A' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
-                                <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
-                                <!-- <td class="py-2 px-4 border-b text-gray-700"><%= school.spot || 'None' %></td> -->
-                            </tr>
-                        <% }) %>
-                    </tbody>
-                </table>
-            </div>
-        <% } else { %>
-            <p class="text-gray-700">No schools awaiting event date assignment.</p>
-        <% } %>
-    </div>
+                                            <% } %>
+                                            <option value="other">Other</option>
+                                        </select>
+                                        <input type="date" name="customEventDate" id="custom-date-<%= school.id %>" class="border rounded py-1 px-2 mr-2 text-gray-700 hidden" placeholder="YYYY-MM-DD">
+                                        <input type="hidden" name="eventDateFinal" id="eventDateFinal-<%= school.id %>" value="">
+                                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded">Assign Event Date</button>
+                                    </form>
+                                    <form action="/admin/assign-coordinator/<%= school.id %>" method="POST" class="inline">
+                                        <select name="coordinatorId" class="border rounded py-1 px-2 mr-2 text-gray-700">
+                                            <option value="">Select Coordinator</option>
+                                            <% coordinators.forEach(coord => { %>
+                                                <option value="<%= coord.id %>" <%= school.coordinatorId === coord.id ? 'selected' : '' %>>
+                                                    <%= coord.name %> (<%= coord.email %>)
+                                                </option>
+                                            <% }) %>
+                                        </select>
+                                        <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white font-semibold py-1 px-3 rounded">Assign Coordinator</button>
+                                    </form>
+                                </div>
+                            </td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.principalNumber || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherNumber || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.schoolPhoneNumber || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.principalEmail || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.civicsTeacherEmail || 'N/A' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.resourcesConfirmed ? 'Yes' : 'No' %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    <% } else { %>
+        <p class="text-gray-700">No schools awaiting event date assignment.</p>
+    <% } %>
+</div>
 
 <div id="approved-with-date" class="tab-content hidden">
     <h2 class="text-2xl font-bold mb-4 text-gray-700">Schools Approved and Event Date Assigned</h2>
@@ -1923,8 +1990,7 @@ document.addEventListener('click', (event) => {
                         <th class="py-2 px-4 border-b text-left text-gray-600">Civics Teacher Email</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Resources Confirmed</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Selected Resources</th>
-                        
-                        <th class="py-2 px-4 border-b text-left text-gray-600">Total Students</th> <!-- New Column -->
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Total Students</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">MCQ Completed Students</th>
                         <th class="py-2 px-4 border-b text-left text-gray-600">Champions</th>
                     </tr>
@@ -1934,17 +2000,17 @@ document.addEventListener('click', (event) => {
                         <tr class="hover:bg-gray-50">
                             <td class="py-2 px-4 border-b text-gray-700" data-column="id"><%= school.id %></td>
                             <td class="py-2 px-4 border-b text-gray-700" data-column="schoolName"><%= school.schoolName || 'N/A' %></td>
-                             <td class="py-2 px-4 border-b text-gray-700">
-                                    <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
-                                        timeZone: 'Asia/Kolkata',
-                                        weekday: 'long',
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                        hour: '2-digit',
-                                        minute: '2-digit'
-                                    }) : 'N/A' %>
-                                </td>
+                            <td class="py-2 px-4 border-b text-gray-700">
+                                <%= school.registeredAt ? school.registeredAt.toDate().toLocaleString('en-US', {
+                                    timeZone: 'Asia/Kolkata',
+                                    weekday: 'long',
+                                    year: 'numeric',
+                                    month: 'long',
+                                    day: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit'
+                                }) : 'N/A' %>
+                            </td>
                             <td class="py-2 px-4 border-b text-gray-700" data-column="schoolEmail"><%= school.schoolEmail || 'N/A' %></td>
                             <td class="py-2 px-4 border-b text-gray-700" data-column="city"><%= school.city || 'N/A' %></td>
                             <td class="py-2 px-4 border-b text-gray-700" data-column="district"><%= school.district || 'N/A' %></td>
@@ -1982,8 +2048,8 @@ document.addEventListener('click', (event) => {
                             <td class="py-2 px-4 border-b text-gray-700 status-no" data-column="isCompleted">No</td>
                             <td class="py-2 px-4 border-b">
                                 <div class="flex flex-col space-y-2">
-                                    <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="flex items-center space-x-2">
-                                        <select name="eventDate" required class="border rounded py-1 px-2 text-gray-700 assign-event-date" data-school-id="<%= school.id %>">
+                                    <form action="/admin/assign-event-date-school/<%= school.id %>" method="POST" class="flex items-center space-x-2" onsubmit="return validateEventDateForm(this, '<%= school.id %>')">
+                                        <select name="eventDate" class="border rounded py-1 px-2 text-gray-700 assign-event-date" data-school-id="<%= school.id %>" onchange="toggleCustomDateInput(this, '<%= school.id %>')">
                                             <option value="">Select Event Date</option>
                                             <% if (school.eventDates && school.eventDates.length > 0) { %>
                                                 <% school.eventDates.forEach(date => { %>
@@ -1995,11 +2061,12 @@ document.addEventListener('click', (event) => {
                                                         </option>
                                                     <% } %>
                                                 <% }) %>
-                                            <% } else { %>
-                                                <option value="" disabled>No dates available</option>
                                             <% } %>
+                                            <option value="other">Other</option>
                                         </select>
-                                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded assign-event-date-btn" data-school-id="<%= school.id %>">Assign</button>
+                                        <input type="date" name="customEventDate" id="custom-date-<%= school.id %>" class="border rounded py-1 px-2 mr-2 text-gray-700 hidden" placeholder="YYYY-MM-DD">
+                                        <input type="hidden" name="eventDateFinal" id="eventDateFinal-<%= school.id %>" value="<%= school.eventDate ? school.eventDate.toISOString().split('T')[0] : '' %>">
+                                        <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded assign-event-date-btn" data-school-id="<%= school.id %>">Update Event Date</button>
                                     </form>
                                     <form action="/admin/assign-coordinator/<%= school.id %>" method="POST" class="flex items-center space-x-2">
                                         <select name="coordinatorId" class="border rounded py-1 px-2 text-gray-700">
@@ -2070,7 +2137,7 @@ document.addEventListener('click', (event) => {
                                 <%= school.resourcesConfirmed ? 'Yes' : 'No' %>
                             </td>
                             <td class="py-2 px-4 border-b text-gray-700"><%= school.selectedResources && school.selectedResources.length > 0 ? school.selectedResources.join(', ') : 'None' %></td>
-                               <td class="py-2 px-4 border-b text-gray-700">
+                            <td class="py-2 px-4 border-b text-gray-700">
                                 <%= participants.filter(p => p.schoolNameDropdown === school.schoolName).length %>
                             </td>
                             <td class="py-2 px-4 border-b text-gray-700">

@@ -9,7 +9,9 @@ const schedule = require('node-schedule');
 require('dotenv').config();
 const multer = require('multer');
 const xlsx = require('xlsx');
-const XLSX = require('xlsx');
+const crypto = require('crypto');
+const fs = require('fs');
+
 
 const saltRounds = 10;
 // Multer setup for file uploads
@@ -260,14 +262,92 @@ const ADMIN_PASSWORD = 'admin12345';
 // Utility Functions
 
 // Fetch random questions from Firestore
-async function getRandomQuestions(limit = 30) {
+// Load questions from JSON file
+// Load questions from JSON file
+let MASTER_POOL;
+try {
+    const filePath = path.join(__dirname, 'question.json');
+    const rawData = fs.readFileSync(filePath);
+    MASTER_POOL = JSON.parse(rawData); // Directly parse array as per provided format
+    if (!Array.isArray(MASTER_POOL) || MASTER_POOL.length < 30) {
+        throw new Error('Invalid or insufficient questions in questions.json');
+    }
+    console.log(`Loaded ${MASTER_POOL.length} questions from questions.json`);
+} catch (error) {
+    console.error('Error loading questions.json:', error.message);
+    process.exit(1); // Exit if questions cannot be loaded
+}
+
+// Map to store IP-based assignments: { ip: { sessionId, sets, timestamp } }
+const assignments = new Map();
+
+// Shuffle array using Fisher-Yates algorithm with a seed
+function shuffleArray(array, seed) {
+    if (!seed) {
+        console.warn('Seed is undefined, generating fallback seed');
+        seed = crypto.randomUUID();
+    }
+    const random = seededRandom(seed);
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// Seeded random number generator for reproducible shuffling
+function seededRandom(seed) {
+    let x = 0, y = 0, z = 0, w = 0;
+
+    function seedRand(s) {
+        if (!s) {
+            console.warn('seedRand received undefined seed, using fallback');
+            s = crypto.randomUUID();
+        }
+        const hash = crypto.createHash('sha256').update(s).digest('hex');
+        x = parseInt(hash.slice(0, 8), 16);
+        y = parseInt(hash.slice(8, 16), 16);
+        z = parseInt(hash.slice(16, 24), 16);
+        w = parseInt(hash.slice(24, 32), 16);
+    }
+
+    seedRand(seed);
+
+    return function () {
+        const t = x ^ (x << 11);
+        x = y;
+        y = z;
+        z = w;
+        w = w ^ (w >> 19) ^ t ^ (t >> 8);
+        return (w >>> 0) / 0x100000000;
+    };
+}
+
+// Clean expired assignments (older than 1 hour)
+function cleanExpiredAssignments() {
+    const now = Date.now();
+    for (const [ip, assignment] of assignments) {
+        if (now - assignment.timestamp > 60 * 60 * 1000) { // 1 hour
+            assignments.delete(ip);
+            console.log(`Cleared expired assignment for IP: ${ip}`);
+        }
+    }
+}
+
+// Get random questions with validation
+async function getRandomQuestions(limit = 30, seed) {
     try {
-        const snapshot = await db.collection('mcqs').get();
-        let questions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (!seed) {
+            console.warn('getRandomQuestions received undefined seed, generating fallback');
+            seed = crypto.randomUUID();
+        }
+
+        let questions = [...MASTER_POOL]; // Use MASTER_POOL
 
         // Filter valid questions
         questions = questions.filter(mcq => {
-            const isValid = 
+            const isValid =
+                mcq.id && typeof mcq.id === 'string' &&
                 mcq.question && typeof mcq.question === 'string' &&
                 Array.isArray(mcq.options) && mcq.options.length >= 4 &&
                 mcq.options.every(opt => typeof opt === 'string' && opt.trim()) &&
@@ -277,59 +357,133 @@ async function getRandomQuestions(limit = 30) {
             return isValid;
         });
 
-        // Fallback questions if not enough valid ones
-        const fallbackQuestions = [
-            { question: "What is the supreme law of India?", options: ["Parliament", "President", "Supreme Court", "Constitution"], correctAnswer: "Constitution" },
-            { question: "When did the Indian Constitution come into effect?", options: ["15 August 1947", "26 January 1950", "2 October 1948", "26 November 1949"], correctAnswer: "26 January 1950" },
-            { question: "Who is known as the father of the Indian Constitution?", options: ["Mahatma Gandhi", "Jawaharlal Nehru", "B. R. Ambedkar", "Rajendra Prasad"], correctAnswer: "B. R. Ambedkar" },
-            { question: "How many fundamental rights are there in the Indian Constitution?", options: ["5", "6", "7", "8"], correctAnswer: "6" },
-            { question: "Which part of the Constitution deals with Fundamental Rights?", options: ["Part I", "Part II", "Part III", "Part IV"], correctAnswer: "Part III" },
-            { question: "Which Article guarantees the Right to Equality?", options: ["Article 12", "Article 14", "Article 16", "Article 19"], correctAnswer: "Article 14" },
-            { question: "Right to Education is a fundamental right under which Article?", options: ["Article 21A", "Article 15", "Article 19", "Article 32"], correctAnswer: "Article 21A" },
-            { question: "Directive Principles of State Policy are in which part of the Constitution?", options: ["Part IV", "Part V", "Part III", "Part VI"], correctAnswer: "Part IV" },
-            { question: "Which Article allows the President to declare Emergency?", options: ["Article 352", "Article 356", "Article 360", "Article 370"], correctAnswer: "Article 352" },
-            { question: "What does the Preamble of the Constitution declare India to be?", options: ["Monarchy", "Dictatorship", "Sovereign Republic", "Colony"], correctAnswer: "Sovereign Republic" },
-            { question: "Which body interprets the Constitution?", options: ["Lok Sabha", "Rajya Sabha", "Supreme Court", "President"], correctAnswer: "Supreme Court" },
-            { question: "What is the minimum age to vote in India?", options: ["16", "18", "21", "25"], correctAnswer: "18" },
-            { question: "Which Article provides Right to Freedom of Religion?", options: ["Article 14", "Article 19", "Article 25", "Article 32"], correctAnswer: "Article 25" },
-            { question: "Who elects the President of India?", options: ["Public", "Rajya Sabha", "Electoral College", "Prime Minister"], correctAnswer: "Electoral College" },
-            { question: "Which Article deals with the abolition of untouchability?", options: ["Article 14", "Article 17", "Article 21", "Article 23"], correctAnswer: "Article 17" },
-            { question: "What is the term of the Lok Sabha?", options: ["4 years", "5 years", "6 years", "7 years"], correctAnswer: "5 years" },
-            { question: "Which is the highest judicial authority in India?", options: ["High Court", "District Court", "Supreme Court", "Cabinet"], correctAnswer: "Supreme Court" },
-            { question: "How many schedules are there in the Indian Constitution?", options: ["10", "12", "8", "11"], correctAnswer: "12" },
-            { question: "Which article ensures cultural and educational rights?", options: ["Article 15", "Article 29", "Article 21", "Article 14"], correctAnswer: "Article 29" },
-            { question: "Which organ of the government makes laws?", options: ["Executive", "Judiciary", "Legislature", "Election Commission"], correctAnswer: "Legislature" },
-            { question: "What is the role of the Election Commission?", options: ["Conducts elections", "Make laws", "Judicial review", "Budget allocation"], correctAnswer: "Conducts elections" },
-            { question: "The Constitution of India was adopted on?", options: ["15 August 1947", "26 January 1950", "26 November 1949", "2 October 1950"], correctAnswer: "26 November 1949" },
-            { question: "How many amendments have been made to the Constitution (as of 2024)?", options: ["80", "90", "100", "105"], correctAnswer: "105" },
-            { question: "Which Article gives the Right to Constitutional Remedies?", options: ["Article 32", "Article 19", "Article 21", "Article 14"], correctAnswer: "Article 32" },
-            { question: "Fundamental Duties were added to the Constitution in which year?", options: ["1950", "1976", "1980", "1992"], correctAnswer: "1976" },
-            { question: "How many Fundamental Duties are listed in the Constitution?", options: ["10", "9", "12", "11"], correctAnswer: "11" },
-            { question: "Who administers the oath to the President of India?", options: ["Prime Minister", "Speaker", "Chief Justice of India", "Vice President"], correctAnswer: "Chief Justice of India" },
-            { question: "What is the meaning of 'Secular' in the Preamble?", options: ["Religious state", "No religion", "Equal respect to all religions", "One religion"], correctAnswer: "Equal respect to all religions" },
-            { question: "The concept of Fundamental Rights is inspired by which country?", options: ["USA", "UK", "France", "Germany"], correctAnswer: "USA" },
-            { question: "Which Article deals with the Right against Exploitation?", options: ["Article 19", "Article 23", "Article 15", "Article 21"], correctAnswer: "Article 23" }
-        ];
-
+        // Check if enough valid questions are available
         if (questions.length < limit) {
-            console.warn(`Only ${questions.length} valid questions available. Using fallback questions.`);
-            const needed = limit - questions.length;
-            const shuffledFallbacks = [...fallbackQuestions].sort(() => Math.random() - 0.5);
-            questions = [...questions, ...shuffledFallbacks.slice(0, needed)];
-            
-            while (questions.length < limit) {
-                const additional = limit - questions.length;
-                questions = [...questions, ...shuffledFallbacks.slice(0, additional)];
-            }
+            throw new Error(`Only ${questions.length} valid questions available, need ${limit}`);
         }
 
-        questions = questions.sort(() => Math.random() - 0.5).slice(0, limit);
+        // Shuffle questions using the provided seed
+        questions = shuffleArray([...questions], seed).slice(0, limit);
         return questions;
     } catch (error) {
         console.error('Error fetching random questions:', error.message, error.stack);
         throw error;
     }
 }
+
+// Generate unique MCQ set
+async function generateUniqueMCQSet(ip, sessionId) {
+    try {
+        cleanExpiredAssignments();
+
+        // Get or initialize assignment for this IP
+        let assignment = assignments.get(ip) || { sessionId, sets: [], timestamp: Date.now() };
+
+        // Track used sets to avoid duplicates
+        const usedSetIds = new Set(assignment.sets.map(set => set.seed));
+
+        // Generate a unique seed for shuffling
+        let seed;
+        let attempts = 0;
+        const maxAttempts = 100;
+        do {
+            seed = crypto.randomUUID() + ip + sessionId + Date.now();
+            attempts++;
+            if (attempts > maxAttempts) {
+                // Fallback: Use least recently used set
+                const allAssignments = Array.from(assignments.values());
+                if (allAssignments.length > 0) {
+                    const oldestAssignment = allAssignments.sort((a, b) => a.timestamp - b.timestamp)[0];
+                    seed = oldestAssignment.sets[0].seed;
+                    console.log(`Fallback: Reusing set for IP: ${ip}`);
+                    break;
+                } else {
+                    seed = crypto.randomUUID(); // Use new seed if no assignments exist
+                }
+            }
+        } while (usedSetIds.has(seed));
+
+        // Get 30 random questions
+        const questions = await getRandomQuestions(30, seed);
+
+        // Generate quiz set
+        const quizSet = questions.map(q => ({
+            id: q.id,
+            question: q.question,
+            options: shuffleArray([...q.options], seed + q.id), // Shuffle options
+            // correctAnswer omitted for client
+        }));
+
+        // Update assignments
+        assignment.sets.push({ seed, indices: questions.map(q => MASTER_POOL.findIndex(m => m.id === q.id)) });
+        assignment.sessionId = sessionId;
+        assignment.timestamp = Date.now();
+        assignments.set(ip, assignment);
+
+        return { quizSet, sessionId, seed };
+    } catch (error) {
+        console.error('Error in generateUniqueMCQSet:', error.message);
+        throw new Error('Failed to generate quiz set');
+    }
+}
+
+// Express middleware to parse JSON
+app.use(express.json());
+
+// Express route to serve quiz
+app.get('/start_quiz', async (req, res) => {
+    const ip = req.ip; // Get client IP
+    const sessionId = crypto.randomUUID(); // Generate unique session ID
+
+    try {
+        const { quizSet, sessionId: assignedSessionId } = await generateUniqueMCQSet(ip, sessionId);
+        res.json({ quizSet, sessionId: assignedSessionId });
+    } catch (error) {
+        console.error('Error in /start_quiz:', error.message);
+        res.status(500).json({ error: 'Failed to generate quiz set' });
+    }
+});
+
+// Route to submit answers and validate
+app.post('/submit_quiz', (req, res) => {
+    const { sessionId, answers } = req.body;
+    const ip = req.ip;
+
+    try {
+        const assignment = assignments.get(ip);
+        if (!assignment || assignment.sessionId !== sessionId) {
+            return res.status(400).json({ error: 'Invalid session' });
+        }
+
+        let score = 0;
+        const results = answers.map(answer => {
+            const question = MASTER_POOL.find(q => q.id === answer.questionId);
+            if (!question) {
+                return {
+                    questionId: answer.questionId,
+                    isCorrect: false,
+                    correctAnswer: null
+                };
+            }
+            const isCorrect = question.correctAnswer === answer.selectedOption;
+            if (isCorrect) score++;
+            return {
+                questionId: answer.questionId,
+                isCorrect,
+                correctAnswer: question.correctAnswer
+            };
+        });
+
+        res.json({ score, total: answers.length, results });
+    } catch (error) {
+        console.error('Error in /submit_quiz:', error.message);
+        res.status(500).json({ error: 'Failed to process quiz submission' });
+    }
+});
+
+// Periodic cleanup
+setInterval(cleanExpiredAssignments, 10 * 60 * 1000); // Run every 10 minutes
+
 
 // Fetch user by parentMobile1
 async function getUserByParentMobile(parentMobile1) {

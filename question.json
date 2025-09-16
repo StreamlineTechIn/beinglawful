@@ -1,0 +1,2161 @@
+[
+        {
+      "id": "Q1",
+      "question": "Who is known as the Father of the Indian Constitution?",
+      "options": ["Mahatma Gandhi", "B.R. Ambedkar", "Jawaharlal Nehru", "Rajendra Prasad"],
+      "correctAnswer": "B.R. Ambedkar"
+    },
+    {
+      "id": "Q2",
+      "question": "When did the Constitution of India come into effect?",
+      "options": ["15th August 1947", "26th January 1950", "2nd October 1950", "26th November 1950"],
+      "correctAnswer": "26th January 1950"
+    },
+    {
+      "id": "Q3",
+      "question": "Who was the first President of India?",
+      "options": ["Rajendra Prasad", "S. Radhakrishnan", "B.R. Ambedkar", "C. Rajagopalachari"],
+      "correctAnswer": "Rajendra Prasad"
+    },
+    {
+      "id": "Q4",
+      "question": "Who was the first Prime Minister of India?",
+      "options": ["Sardar Vallabhbhai Patel", "Jawaharlal Nehru", "Lal Bahadur Shastri", "Rajendra Prasad"],
+      "correctAnswer": "Jawaharlal Nehru"
+    },
+    {
+      "id": "Q5",
+      "question": "The Preamble of the Constitution begins with the words:",
+      "options": ["We the Citizens of India", "We the People of India", "We the Nation of India", "We the Republic of India"],
+      "correctAnswer": "We the People of India"
+    },
+    {
+      "id": "Q6",
+      "question": "Who presides over the Lok Sabha?",
+      "options": ["President", "Prime Minister", "Speaker", "Vice President"],
+      "correctAnswer": "Speaker"
+    },
+    {
+      "id": "Q7",
+      "question": "Which Fundamental Right is called the ‘heart and soul’ of the Constitution?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Constitutional Remedies", "Right to Education"],
+      "correctAnswer": "Right to Constitutional Remedies"
+    },
+    {
+      "id": "Q8",
+      "question": "What is the minimum age for voting in India?",
+      "options": ["18 years", "21 years", "25 years", "16 years"],
+      "correctAnswer": "18 years"
+    },
+    {
+      "id": "Q9",
+      "question": "Who has the power to dissolve the Lok Sabha?",
+      "options": ["Prime Minister", "President", "Speaker", "Chief Justice"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q10",
+      "question": "Which Article abolishes untouchability?",
+      "options": ["Article 14", "Article 17", "Article 19", "Article 21"],
+      "correctAnswer": "Article 17"
+    },
+    {
+      "id": "Q11",
+      "question": "How many Fundamental Duties are listed in the Indian Constitution?",
+      "options": ["9", "10", "11", "12"],
+      "correctAnswer": "11"
+    },
+    {
+      "id": "Q12",
+      "question": "Who appoints the Chief Justice of India?",
+      "options": ["Prime Minister", "President", "Law Minister", "Parliament"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q13",
+      "question": "In which year was the Constitution of India adopted?",
+      "options": ["1947", "1949", "1950", "1952"],
+      "correctAnswer": "1949"
+    },
+    {
+      "id": "Q14",
+      "question": "Who was the last Governor-General of independent India?",
+      "options": ["Lord Mountbatten", "C. Rajagopalachari", "Warren Hastings", "Rajendra Prasad"],
+      "correctAnswer": "C. Rajagopalachari"
+    },
+    {
+      "id": "Q15",
+      "question": "Which body conducts elections in India?",
+      "options": ["Parliament", "President", "Election Commission", "Supreme Court"],
+      "correctAnswer": "Election Commission"
+    },
+    {
+      "id": "Q16",
+      "question": "Who is the head of the Union Cabinet?",
+      "options": ["President", "Prime Minister", "Vice President", "Speaker"],
+      "correctAnswer": "Prime Minister"
+    },
+    {
+      "id": "Q17",
+      "question": "What is the tenure of the Rajya Sabha?",
+      "options": ["5 years", "6 years", "Permanent body, 1/3rd retires every 2 years", "4 years"],
+      "correctAnswer": "Permanent body, 1/3rd retires every 2 years"
+    },
+    {
+      "id": "Q18",
+      "question": "Which Article deals with Right to Education?",
+      "options": ["Article 14", "Article 19", "Article 21A", "Article 32"],
+      "correctAnswer": "Article 21A"
+    },
+    {
+      "id": "Q19",
+      "question": "Who is the Supreme Commander of the Armed Forces in India?",
+      "options": ["Prime Minister", "Defence Minister", "President", "Chief of Defence Staff"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q20",
+      "question": "Which is the highest court of justice in India?",
+      "options": ["High Court", "Supreme Court", "District Court", "Session Court"],
+      "correctAnswer": "Supreme Court"
+    },
+    {
+      "id": "Q21",
+      "question": "What does ‘Secular’ in the Preamble mean?",
+      "options": ["India has one religion", "All religions are treated equally by the State", "Citizens must follow Hinduism", "No religion is allowed"],
+      "correctAnswer": "All religions are treated equally by the State"
+    },
+    {
+      "id": "Q22",
+      "question": "Which body frames the laws in India?",
+      "options": ["Parliament", "Supreme Court", "Election Commission", "President"],
+      "correctAnswer": "Parliament"
+    },
+    {
+      "id": "Q23",
+      "question": "Who was the Chairman of the Drafting Committee of the Constitution?",
+      "options": ["Jawaharlal Nehru", "B.R. Ambedkar", "Rajendra Prasad", "Sardar Patel"],
+      "correctAnswer": "B.R. Ambedkar"
+    },
+    {
+      "id": "Q24",
+      "question": "What is the minimum age to contest Lok Sabha elections?",
+      "options": ["18 years", "21 years", "25 years", "30 years"],
+      "correctAnswer": "25 years"
+    },
+    {
+      "id": "Q25",
+      "question": "Who has the power to declare an emergency in India?",
+      "options": ["Prime Minister", "Parliament", "President", "Supreme Court"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q26",
+      "question": "Which Fundamental Right includes the freedom of speech and expression?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Religion", "Right to Constitutional Remedies"],
+      "correctAnswer": "Right to Freedom"
+    },
+    {
+      "id": "Q27",
+      "question": "Who is known as the “Missile Man of India”?",
+      "options": ["Vikram Sarabhai", "Homi Bhabha", "A.P.J. Abdul Kalam", "C.V. Raman"],
+      "correctAnswer": "A.P.J. Abdul Kalam"
+    },
+    {
+      "id": "Q28",
+      "question": "Which day is celebrated as Constitution Day in India?",
+      "options": ["26th January", "15th August", "26th November", "2nd October"],
+      "correctAnswer": "26th November"
+    },
+    {
+      "id": "Q29",
+      "question": "Who was the first woman Prime Minister of India?",
+      "options": ["Sarojini Naidu", "Sonia Gandhi", "Indira Gandhi", "Pratibha Patil"],
+      "correctAnswer": "Indira Gandhi"
+    },
+    {
+      "id": "Q30",
+      "question": "How many states were there in India at the time of independence?",
+      "options": ["14", "15", "28", "29"],
+      "correctAnswer": "14"
+    },
+    {
+      "id": "Q31",
+      "question": "Who was the first Vice President of India?",
+      "options": ["Rajendra Prasad", "S. Radhakrishnan", "Zakir Hussain", "V.V. Giri"],
+      "correctAnswer": "S. Radhakrishnan"
+    },
+    {
+      "id": "Q32",
+      "question": "Which is the smallest state of India by area?",
+      "options": ["Sikkim", "Goa", "Tripura", "Nagaland"],
+      "correctAnswer": "Goa"
+    },
+    {
+      "id": "Q33",
+      "question": "Who appoints the Governors of states?",
+      "options": ["Prime Minister", "President", "Chief Justice of India", "Parliament"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q34",
+      "question": "Which Fundamental Right provides cultural and educational rights to minorities?",
+      "options": ["Right to Equality", "Right to Freedom", "Right against Exploitation", "Cultural and Educational Rights"],
+      "correctAnswer": "Cultural and Educational Rights"
+    },
+    {
+      "id": "Q35",
+      "question": "How many members are nominated to the Rajya Sabha by the President?",
+      "options": ["2", "10", "12", "15"],
+      "correctAnswer": "12"
+    },
+    {
+      "id": "Q36",
+      "question": "The Constitution of India describes India as a:",
+      "options": ["Union of States", "Federation of States", "Confederation of States", "Republic of States"],
+      "correctAnswer": "Union of States"
+    },
+    {
+      "id": "Q37",
+      "question": "What is the maximum period of emergency in India?",
+      "options": ["6 months", "1 year", "3 years", "2 years"],
+      "correctAnswer": "3 years"
+    },
+    {
+      "id": "Q38",
+      "question": "Which Fundamental Right protects citizens against exploitation?",
+      "options": ["Right to Equality", "Right to Freedom", "Right against Exploitation", "Right to Freedom of Religion"],
+      "correctAnswer": "Right against Exploitation"
+    },
+    {
+      "id": "Q39",
+      "question": "Who was the first Indian woman President of India?",
+      "options": ["Sarojini Naidu", "Indira Gandhi", "Sonia Gandhi", "Pratibha Patil"],
+      "correctAnswer": "Pratibha Patil"
+    },
+    {
+      "id": "Q40",
+      "question": "The Right to Information Act was passed in which year?",
+      "options": ["2000", "2005", "2010", "2012"],
+      "correctAnswer": "2005"
+    },
+    {
+      "id": "Q41",
+      "question": "Which writ is issued to produce a person before a court?",
+      "options": ["Habeas Corpus", "Mandamus", "Certiorari", "Quo Warranto"],
+      "correctAnswer": "Habeas Corpus"
+    },
+    {
+      "id": "Q42",
+      "question": "Who is the head of the state in India?",
+      "options": ["Prime Minister", "President", "Vice President", "Governor"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q43",
+      "question": "Which language is in the 8th Schedule but not an official language of India?",
+      "options": ["Hindi", "Sanskrit", "English", "Sindhi"],
+      "correctAnswer": "Sindhi"
+    },
+    {
+      "id": "Q44",
+      "question": "How many schedules were there in the original Constitution?",
+      "options": ["8", "10", "12", "14"],
+      "correctAnswer": "8"
+    },
+    {
+      "id": "Q45",
+      "question": "Who was the last British Governor-General of India?",
+      "options": ["Lord Mountbatten", "Lord Wavell", "Warren Hastings", "Curzon"],
+      "correctAnswer": "Lord Mountbatten"
+    },
+    {
+      "id": "Q46",
+      "question": "Who has the power to appoint the Prime Minister of India?",
+      "options": ["Parliament", "President", "Lok Sabha", "Supreme Court"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q47",
+      "question": "Which Fundamental Duty directs citizens to protect the environment?",
+      "options": ["To defend the country", "To protect natural environment", "To safeguard public property", "To promote harmony"],
+      "correctAnswer": "To protect natural environment"
+    },
+    {
+      "id": "Q48",
+      "question": "What is the tenure of the President of India?",
+      "options": ["4 years", "5 years", "6 years", "7 years"],
+      "correctAnswer": "5 years"
+    },
+    {
+      "id": "Q49",
+      "question": "Which Fundamental Right is available only to citizens of India?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Constitutional Remedies", "Right against Exploitation"],
+      "correctAnswer": "Right to Equality"
+    },
+    {
+      "id": "Q50",
+      "question": "Who is called the ‘First Citizen of India’?",
+      "options": ["Prime Minister", "Chief Justice", "President", "Speaker"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q51",
+      "question": "Which Fundamental Right was removed from the Constitution in 1978?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Property", "Right to Education"],
+      "correctAnswer": "Right to Property"
+    },
+    {
+      "id": "Q52",
+      "question": "Which part of the Constitution deals with Directive Principles of State Policy?",
+      "options": ["Part III", "Part IV", "Part V", "Part VI"],
+      "correctAnswer": "Part IV"
+    },
+    {
+      "id": "Q53",
+      "question": "Who is the custodian of the Indian Constitution?",
+      "options": ["Parliament", "Prime Minister", "Supreme Court", "President"],
+      "correctAnswer": "Supreme Court"
+    },
+    {
+      "id": "Q54",
+      "question": "The idea of Fundamental Duties was borrowed from which country?",
+      "options": ["USA", "USSR", "UK", "Ireland"],
+      "correctAnswer": "USSR"
+    },
+    {
+      "id": "Q55",
+      "question": "How many High Courts are there in India currently?",
+      "options": ["21", "25", "28", "30"],
+      "correctAnswer": "25"
+    },
+    {
+      "id": "Q56",
+      "question": "Who appoints the judges of the Supreme Court?",
+      "options": ["Prime Minister", "President", "Law Minister", "Vice President"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q57",
+      "question": "What is the maximum strength of Lok Sabha?",
+      "options": ["500", "530", "545", "552"],
+      "correctAnswer": "552"
+    },
+    {
+      "id": "Q58",
+      "question": "Who was the first Law Minister of Independent India?",
+      "options": ["B.R. Ambedkar", "Sardar Patel", "Rajendra Prasad", "Nehru"],
+      "correctAnswer": "B.R. Ambedkar"
+    },
+    {
+      "id": "Q59",
+      "question": "Which Article provides the power of amendment to the Constitution?",
+      "options": ["Article 352", "Article 360", "Article 368", "Article 370"],
+      "correctAnswer": "Article 368"
+    },
+    {
+      "id": "Q60",
+      "question": "Who is the Chairman of the Rajya Sabha?",
+      "options": ["Prime Minister", "President", "Vice President", "Speaker"],
+      "correctAnswer": "Vice President"
+    },
+    {
+      "id": "Q61",
+      "question": "Which country’s Constitution influenced India’s federal system?",
+      "options": ["USA", "UK", "Ireland", "France"],
+      "correctAnswer": "USA"
+    },
+    {
+      "id": "Q62",
+      "question": "The concept of single citizenship in India is borrowed from which country?",
+      "options": ["USA", "UK", "Canada", "France"],
+      "correctAnswer": "UK"
+    },
+    {
+      "id": "Q63",
+      "question": "Who was the first Speaker of the Lok Sabha?",
+      "options": ["G.V. Mavalankar", "M.A. Ayyangar", "Hukum Singh", "Balram Jakhar"],
+      "correctAnswer": "G.V. Mavalankar"
+    },
+    {
+      "id": "Q64",
+      "question": "How many languages are recognized in the 8th Schedule?",
+      "options": ["18", "20", "22", "24"],
+      "correctAnswer": "22"
+    },
+    {
+      "id": "Q65",
+      "question": "Which Indian leader is called the ‘Iron Man of India’?",
+      "options": ["Subhash Chandra Bose", "Sardar Vallabhbhai Patel", "B.R. Ambedkar", "Bal Gangadhar Tilak"],
+      "correctAnswer": "Sardar Vallabhbhai Patel"
+    },
+    {
+      "id": "Q66",
+      "question": "Who was the first woman judge of the Supreme Court of India?",
+      "options": ["Sujata Manohar", "Fathima Beevi", "Indu Malhotra", "Ruma Pal"],
+      "correctAnswer": "Fathima Beevi"
+    },
+    {
+      "id": "Q67",
+      "question": "Which Amendment is known as the ‘Mini Constitution’?",
+      "options": ["42nd Amendment", "44th Amendment", "24th Amendment", "73rd Amendment"],
+      "correctAnswer": "42nd Amendment"
+    },
+    {
+      "id": "Q68",
+      "question": "Who has the power to summon and prorogue Parliament?",
+      "options": ["Prime Minister", "President", "Speaker", "Vice President"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q69",
+      "question": "Which Indian state was formed first on a linguistic basis?",
+      "options": ["Andhra Pradesh", "Maharashtra", "Tamil Nadu", "Gujarat"],
+      "correctAnswer": "Andhra Pradesh"
+    },
+    {
+      "id": "Q70",
+      "question": "Which Fundamental Right deals with freedom of religion?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Freedom of Religion", "Right to Constitutional Remedies"],
+      "correctAnswer": "Right to Freedom of Religion"
+    },
+    {
+      "id": "Q71",
+      "question": "Who has the power to dissolve the Lok Sabha?",
+      "options": ["Prime Minister", "Speaker", "President", "Supreme Court"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q72",
+      "question": "What is the minimum age for becoming a Rajya Sabha member?",
+      "options": ["25 years", "30 years", "35 years", "40 years"],
+      "correctAnswer": "30 years"
+    },
+    {
+      "id": "Q73",
+      "question": "Which Article gives the President power to impose President’s Rule?",
+      "options": ["Article 352", "Article 356", "Article 360", "Article 370"],
+      "correctAnswer": "Article 356"
+    },
+    {
+      "id": "Q74",
+      "question": "Who was the first Deputy Prime Minister of India?",
+      "options": ["Jawaharlal Nehru", "Sardar Patel", "Rajendra Prasad", "Morarji Desai"],
+      "correctAnswer": "Sardar Patel"
+    },
+    {
+      "id": "Q75",
+      "question": "What is the national motto of India?",
+      "options": ["Satyam Shivam Sundaram", "Jai Hind", "Satyameva Jayate", "Vande Mataram"],
+      "correctAnswer": "Satyameva Jayate"
+    },
+    {
+      "id": "Q76",
+      "question": "How many Union Territories are there in India currently?",
+      "options": ["7", "8", "9", "10"],
+      "correctAnswer": "8"
+    },
+    {
+      "id": "Q77",
+      "question": "Who was the first woman Chief Minister of an Indian state?",
+      "options": ["Sucheta Kriplani", "Indira Gandhi", "Jayalalithaa", "Mamata Banerjee"],
+      "correctAnswer": "Sucheta Kriplani"
+    },
+    {
+      "id": "Q78",
+      "question": "Which state has the largest population in India?",
+      "options": ["Maharashtra", "West Bengal", "Uttar Pradesh", "Bihar"],
+      "correctAnswer": "Uttar Pradesh"
+    },
+    {
+      "id": "Q79",
+      "question": "Which state has the largest area in India?",
+      "options": ["Madhya Pradesh", "Maharashtra", "Rajasthan", "Uttar Pradesh"],
+      "correctAnswer": "Rajasthan"
+    },
+    {
+      "id": "Q80",
+      "question": "What is the minimum age for the President of India?",
+      "options": ["30 years", "35 years", "40 years", "25 years"],
+      "correctAnswer": "35 years"
+    },
+    {
+      "id": "Q81",
+      "question": "Who appoints the Comptroller and Auditor General of India?",
+      "options": ["Prime Minister", "President", "Finance Minister", "Lok Sabha"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q82",
+      "question": "Which Fundamental Right allows Indian citizens to form associations?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Education", "Right to Constitutional Remedies"],
+      "correctAnswer": "Right to Freedom"
+    },
+    {
+      "id": "Q83",
+      "question": "Who was the first Education Minister of India?",
+      "options": ["Rajendra Prasad", "Zakir Hussain", "Maulana Abul Kalam Azad", "Lal Bahadur Shastri"],
+      "correctAnswer": "Maulana Abul Kalam Azad"
+    },
+    {
+      "id": "Q84",
+      "question": "Which state was bifurcated to create the state of Telangana in 2014?",
+      "options": ["Andhra Pradesh", "Tamil Nadu", "Karnataka", "Kerala"],
+      "correctAnswer": "Andhra Pradesh"
+    },
+    {
+      "id": "Q85",
+      "question": "Which Indian leader gave the slogan ‘Do or Die’?",
+      "options": ["Mahatma Gandhi", "Jawaharlal Nehru", "Subhash Chandra Bose", "Bal Gangadhar Tilak"],
+      "correctAnswer": "Mahatma Gandhi"
+    },
+    {
+      "id": "Q86",
+      "question": "Which Article of the Constitution deals with the amendment procedure?",
+      "options": ["Article 352", "Article 360", "Article 368", "Article 370"],
+      "correctAnswer": "Article 368"
+    },
+    {
+      "id": "Q87",
+      "question": "Who was the first Home Minister of India?",
+      "options": ["Jawaharlal Nehru", "B.R. Ambedkar", "Sardar Vallabhbhai Patel", "Rajendra Prasad"],
+      "correctAnswer": "Sardar Vallabhbhai Patel"
+    },
+    {
+      "id": "Q88",
+      "question": "Who was the first Chief Election Commissioner of India?",
+      "options": ["T.N. Seshan", "Sukumar Sen", "S.Y. Quraishi", "Sunil Arora"],
+      "correctAnswer": "Sukumar Sen"
+    },
+    {
+      "id": "Q89",
+      "question": "The National Emergency can be declared under which Article?",
+      "options": ["Article 352", "Article 356", "Article 360", "Article 370"],
+      "correctAnswer": "Article 352"
+    },
+    {
+      "id": "Q90",
+      "question": "Which Indian leader is called the ‘Father of the Nation’?",
+      "options": ["B.R. Ambedkar", "Mahatma Gandhi", "Jawaharlal Nehru", "Subhash Chandra Bose"],
+      "correctAnswer": "Mahatma Gandhi"
+    },
+    {
+      "id": "Q91",
+      "question": "Which Article guarantees equality before law?",
+      "options": ["Article 12", "Article 13", "Article 14", "Article 15"],
+      "correctAnswer": "Article 14"
+    },
+    {
+      "id": "Q92",
+      "question": "Who has the power to dissolve the State Legislative Assembly?",
+      "options": ["Chief Minister", "Governor", "President", "Prime Minister"],
+      "correctAnswer": "Governor"
+    },
+    {
+      "id": "Q93",
+      "question": "Which Fundamental Right prohibits human trafficking and forced labour?",
+      "options": ["Right to Equality", "Right against Exploitation", "Right to Freedom", "Right to Constitutional Remedies"],
+      "correctAnswer": "Right against Exploitation"
+    },
+    {
+      "id": "Q94",
+      "question": "Which part of the Constitution deals with Fundamental Rights?",
+      "options": ["Part II", "Part III", "Part IV", "Part V"],
+      "correctAnswer": "Part III"
+    },
+    {
+      "id": "Q95",
+      "question": "Who was the first woman Governor of an Indian state?",
+      "options": ["Sarojini Naidu", "Indira Gandhi", "Vijaya Lakshmi Pandit", "Sucheta Kriplani"],
+      "correctAnswer": "Sarojini Naidu"
+    },
+    {
+      "id": "Q96",
+      "question": "What is the minimum age to contest elections for Legislative Assembly?",
+      "options": ["18 years", "21 years", "25 years", "30 years"],
+      "correctAnswer": "25 years"
+    },
+    {
+      "id": "Q97",
+      "question": "Which Union Territory has its own Legislative Assembly?",
+      "options": ["Lakshadweep", "Chandigarh", "Delhi", "Andaman & Nicobar"],
+      "correctAnswer": "Delhi"
+    },
+    {
+      "id": "Q98",
+      "question": "The national song of India is:",
+      "options": ["Jana Gana Mana", "Vande Mataram", "Saare Jahan Se Achha", "Jai Hind"],
+      "correctAnswer": "Vande Mataram"
+    },
+    {
+      "id": "Q99",
+      "question": "What is the maximum strength of the Rajya Sabha?",
+      "options": ["245", "250", "260", "275"],
+      "correctAnswer": "250"
+    },
+    {
+      "id": "Q100",
+      "question": "Who is the guardian of Fundamental Rights?",
+      "options": ["Parliament", "Supreme Court", "President", "Prime Minister"],
+      "correctAnswer": "Supreme Court"
+    },
+    {
+      "id": "Q101",
+      "question": "Which Constitutional body recommends distribution of taxes between Union and States?",
+      "options": ["NITI Aayog", "Finance Commission", "RBI", "Planning Commission"],
+      "correctAnswer": "Finance Commission"
+    },
+    {
+      "id": "Q102",
+      "question": "Which Fundamental Right allows freedom to practice any profession?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Education", "Right to Religion"],
+      "correctAnswer": "Right to Freedom"
+    },
+    {
+      "id": "Q103",
+      "question": "Who was the last Indian Governor-General?",
+      "options": ["Rajendra Prasad", "Lord Mountbatten", "C. Rajagopalachari", "Jawaharlal Nehru"],
+      "correctAnswer": "C. Rajagopalachari"
+    },
+    {
+      "id": "Q104",
+      "question": "Which Fundamental Right ensures free and compulsory education for children?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Education", "Right against Exploitation"],
+      "correctAnswer": "Right to Education"
+    },
+    {
+      "id": "Q105",
+      "question": "What is the maximum period between two sessions of Parliament?",
+      "options": ["3 months", "4 months", "6 months", "9 months"],
+      "correctAnswer": "6 months"
+    },
+    {
+      "id": "Q106",
+      "question": "Who is the Chairman of the Planning Commission?",
+      "options": ["President", "Finance Minister", "Prime Minister", "Vice President"],
+      "correctAnswer": "Prime Minister"
+    },
+    {
+      "id": "Q107",
+      "question": "What does Article 21 deal with?",
+      "options": ["Right to Equality", "Right to Life and Personal Liberty", "Right to Freedom of Religion", "Right to Constitutional Remedies"],
+      "correctAnswer": "Right to Life and Personal Liberty"
+    },
+    {
+      "id": "Q108",
+      "question": "The Panchayati Raj system was adopted to promote:",
+      "options": ["Centralisation", "Rural self-government", "Judicial powers", "Emergency powers"],
+      "correctAnswer": "Rural self-government"
+    },
+    {
+      "id": "Q109",
+      "question": "What is the tenure of a member of Lok Sabha?",
+      "options": ["4 years", "5 years", "6 years", "7 years"],
+      "correctAnswer": "5 years"
+    },
+    {
+      "id": "Q110",
+      "question": "Who decides disputes regarding election of the President?",
+      "options": ["Prime Minister", "Parliament", "Supreme Court", "Election Commission"],
+      "correctAnswer": "Supreme Court"
+    },
+    {
+      "id": "Q111",
+      "question": "Which is the highest law-making body in India?",
+      "options": ["Parliament", "Lok Sabha", "Rajya Sabha", "Supreme Court"],
+      "correctAnswer": "Parliament"
+    },
+    {
+      "id": "Q112",
+      "question": "Who appoints the Chief Election Commissioner?",
+      "options": ["Prime Minister", "President", "Vice President", "Speaker"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q113",
+      "question": "Which Article deals with Right to Constitutional Remedies?",
+      "options": ["Article 14", "Article 19", "Article 21", "Article 32"],
+      "correctAnswer": "Article 32"
+    },
+    {
+      "id": "Q114",
+      "question": "What is the maximum number of members in the Council of Ministers?",
+      "options": ["10% of Lok Sabha", "12% of Lok Sabha", "15% of Lok Sabha", "20% of Lok Sabha"],
+      "correctAnswer": "15% of Lok Sabha"
+    },
+    {
+      "id": "Q115",
+      "question": "Who was the first President of the Constituent Assembly?",
+      "options": ["B.R. Ambedkar", "Rajendra Prasad", "Jawaharlal Nehru", "Sardar Patel"],
+      "correctAnswer": "Rajendra Prasad"
+    },
+    {
+      "id": "Q116",
+      "question": "Which Fundamental Duty directs citizens to respect the National Flag?",
+      "options": ["To defend the country", "To promote harmony", "To abide by the Constitution", "To respect the National Flag and National Anthem"],
+      "correctAnswer": "To respect the National Flag and National Anthem"
+    },
+    {
+      "id": "Q117",
+      "question": "Who is known as the Chief Architect of the Indian Constitution?",
+      "options": ["Rajendra Prasad", "B.R. Ambedkar", "Jawaharlal Nehru", "Mahatma Gandhi"],
+      "correctAnswer": "B.R. Ambedkar"
+    },
+    {
+      "id": "Q118",
+      "question": "Who administers the oath of office to the President?",
+      "options": ["Prime Minister", "Chief Justice of India", "Vice President", "Speaker"],
+      "correctAnswer": "Chief Justice of India"
+    },
+    {
+      "id": "Q119",
+      "question": "Which part of the Constitution deals with citizenship?",
+      "options": ["Part I", "Part II", "Part III", "Part IV"],
+      "correctAnswer": "Part II"
+    },
+    {
+      "id": "Q120",
+      "question": "Who is the ex-officio Chairman of the Rajya Sabha?",
+      "options": ["Speaker", "Vice President", "Prime Minister", "President"],
+      "correctAnswer": "Vice President"
+    },
+    {
+      "id": "Q121",
+      "question": "Who gave the slogan “Jai Jawan, Jai Kisan”?",
+      "options": ["Jawaharlal Nehru", "Lal Bahadur Shastri", "Indira Gandhi", "Rajiv Gandhi"],
+      "correctAnswer": "Lal Bahadur Shastri"
+    },
+    {
+      "id": "Q122",
+      "question": "Who appoints the Attorney General of India?",
+      "options": ["Prime Minister", "President", "Parliament", "Chief Justice of India"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q123",
+      "question": "Who can dissolve the Lok Sabha before its term?",
+      "options": ["Prime Minister", "President", "Speaker", "Vice President"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q124",
+      "question": "Which Fundamental Right guarantees freedom to move freely throughout India?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Religion", "Right to Constitutional Remedies"],
+      "correctAnswer": "Right to Freedom"
+    },
+    {
+      "id": "Q125",
+      "question": "Who is called the First Law Officer of India?",
+      "options": ["Chief Justice", "Attorney General", "Law Minister", "Solicitor General"],
+      "correctAnswer": "Attorney General"
+    },
+    {
+      "id": "Q126",
+      "question": "Which part of the Constitution deals with Directive Principles of State Policy?",
+      "options": ["Part II", "Part III", "Part IV", "Part V"],
+      "correctAnswer": "Part IV"
+    },
+    {
+      "id": "Q127",
+      "question": "The system of Public Interest Litigation (PIL) was introduced by:",
+      "options": ["President", "Supreme Court", "Parliament", "Prime Minister"],
+      "correctAnswer": "Supreme Court"
+    },
+    {
+      "id": "Q128",
+      "question": "Who was the President of the Constituent Assembly?",
+      "options": ["Rajendra Prasad", "B.R. Ambedkar", "Sardar Patel", "Jawaharlal Nehru"],
+      "correctAnswer": "Rajendra Prasad"
+    },
+    {
+      "id": "Q129",
+      "question": "Who is known as the Father of Local Self-Government in India?",
+      "options": ["Mahatma Gandhi", "Lord Ripon", "B.R. Ambedkar", "Jawaharlal Nehru"],
+      "correctAnswer": "Lord Ripon"
+    },
+    {
+      "id": "Q130",
+      "question": "Which is the highest court of justice in a state?",
+      "options": ["District Court", "High Court", "Session Court", "Supreme Court"],
+      "correctAnswer": "High Court"
+    },
+    {
+      "id": "Q131",
+      "question": "Who appoints the Chief Minister of a state?",
+      "options": ["Governor", "President", "Prime Minister", "Chief Justice"],
+      "correctAnswer": "Governor"
+    },
+    {
+      "id": "Q132",
+      "question": "What is the minimum age for becoming the Vice President of India?",
+      "options": ["25 years", "30 years", "35 years", "40 years"],
+      "correctAnswer": "35 years"
+    },
+    {
+      "id": "Q133",
+      "question": "Who gave the slogan “Do or Die”?",
+      "options": ["Subhash Chandra Bose", "Mahatma Gandhi", "Jawaharlal Nehru", "Sardar Patel"],
+      "correctAnswer": "Mahatma Gandhi"
+    },
+    {
+      "id": "Q134",
+      "question": "The concept of judicial review in India is borrowed from:",
+      "options": ["UK", "USA", "France", "Japan"],
+      "correctAnswer": "USA"
+    },
+    {
+      "id": "Q135",
+      "question": "Which state is known as the “Land of Five Rivers”?",
+      "options": ["Haryana", "Punjab", "Gujarat", "Rajasthan"],
+      "correctAnswer": "Punjab"
+    },
+    {
+      "id": "Q136",
+      "question": "Who can extend President’s Rule in a state beyond one year?",
+      "options": ["Parliament", "Prime Minister", "Supreme Court", "Governor"],
+      "correctAnswer": "Parliament"
+    },
+    {
+      "id": "Q137",
+      "question": "Who presents the Union Budget in Parliament?",
+      "options": ["Prime Minister", "Finance Minister", "President", "Speaker"],
+      "correctAnswer": "Finance Minister"
+    },
+    {
+      "id": "Q138",
+      "question": "What is the term of office of a Governor?",
+      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "correctAnswer": "5 years"
+    },
+    {
+      "id": "Q139",
+      "question": "Who has the power to amend the Constitution?",
+      "options": ["Parliament", "President", "Supreme Court", "Prime Minister"],
+      "correctAnswer": "Parliament"
+    },
+    {
+      "id": "Q140",
+      "question": "Who gave the slogan “Inquilab Zindabad”?",
+      "options": ["Bhagat Singh", "Chandrashekhar Azad", "Mahatma Gandhi", "Sardar Patel"],
+      "correctAnswer": "Bhagat Singh"
+    },
+    {
+      "id": "Q141",
+      "question": "Which Article deals with Right to Equality?",
+      "options": ["Article 12", "Article 14", "Article 16", "Article 18"],
+      "correctAnswer": "Article 14"
+    },
+    {
+      "id": "Q142",
+      "question": "Who is the Chairman of the Union Public Service Commission (UPSC)?",
+      "options": ["Appointed by Prime Minister", "Appointed by President", "Appointed by Chief Justice", "Elected by Parliament"],
+      "correctAnswer": "Appointed by President"
+    },
+    {
+      "id": "Q143",
+      "question": "The Parliament of India is also known as:",
+      "options": ["Rashtrapati Bhavan", "Sansad Bhavan", "Nyay Bhavan", "Vidhan Bhavan"],
+      "correctAnswer": "Sansad Bhavan"
+    },
+    {
+      "id": "Q144",
+      "question": "Who appoints the judges of the High Court?",
+      "options": ["Prime Minister", "President", "Chief Justice", "Governor"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q145",
+      "question": "Which Fundamental Duty directs citizens to safeguard public property?",
+      "options": ["To defend the country", "To safeguard public property", "To protect the environment", "To respect the Constitution"],
+      "correctAnswer": "To safeguard public property"
+    },
+    {
+      "id": "Q146",
+      "question": "Who can remove the President of India?",
+      "options": ["Prime Minister", "Parliament through impeachment", "Supreme Court", "Vice President"],
+      "correctAnswer": "Parliament through impeachment"
+    },
+    {
+      "id": "Q147",
+      "question": "Who was the first Indian Governor of the Reserve Bank of India?",
+      "options": ["B.R. Ambedkar", "C.D. Deshmukh", "Morarji Desai", "Raghuram Rajan"],
+      "correctAnswer": "C.D. Deshmukh"
+    },
+    {
+      "id": "Q148",
+      "question": "Which Fundamental Right deals with protection of interests of minorities?",
+      "options": ["Right to Freedom", "Cultural and Educational Rights", "Right against Exploitation", "Right to Equality"],
+      "correctAnswer": "Cultural and Educational Rights"
+    },
+    {
+      "id": "Q149",
+      "question": "Who was the first President of India to die in office?",
+      "options": ["Rajendra Prasad", "Zakir Hussain", "V.V. Giri", "Fakhruddin Ali Ahmed"],
+      "correctAnswer": "Zakir Hussain"
+    },
+    {
+      "id": "Q150",
+      "question": "What is the term of office of the Vice President?",
+      "options": ["3 years", "4 years", "5 years", "6 years"],
+      "correctAnswer": "5 years"
+    },
+    {
+      "id": "Q151",
+      "question": "Which body approves the Union Budget?",
+      "options": ["Rajya Sabha", "Lok Sabha", "President", "Supreme Court"],
+      "correctAnswer": "Lok Sabha"
+    },
+    {
+      "id": "Q152",
+      "question": "Which Fundamental Right allows citizens to assemble peacefully?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Religion", "Right to Constitutional Remedies"],
+      "correctAnswer": "Right to Freedom"
+    },
+    {
+      "id": "Q153",
+      "question": "Who is the current head of the Election Commission?",
+      "options": ["Chief Election Commissioner", "Prime Minister", "President", "Vice President"],
+      "correctAnswer": "Chief Election Commissioner"
+    },
+    {
+      "id": "Q154",
+      "question": "The Constitution was enacted in which year?",
+      "options": ["1947", "1948", "1949", "1950"],
+      "correctAnswer": "1949"
+    },
+    {
+      "id": "Q155",
+      "question": "Who was the first Deputy Prime Minister of India?",
+      "options": ["Rajendra Prasad", "Sardar Patel", "Morarji Desai", "Jawaharlal Nehru"],
+      "correctAnswer": "Sardar Patel"
+    },
+    {
+      "id": "Q156",
+      "question": "Which Article of the Constitution provided special status to Jammu and Kashmir (before 2019)?",
+      "options": ["Article 352", "Article 356", "Article 360", "Article 370"],
+      "correctAnswer": "Article 370"
+    },
+    {
+      "id": "Q157",
+      "question": "Which Fundamental Right protects personal liberty?",
+      "options": ["Article 14", "Article 19", "Article 21", "Article 32"],
+      "correctAnswer": "Article 21"
+    },
+    {
+      "id": "Q158",
+      "question": "What is the minimum age to be elected as a member of the Legislative Council?",
+      "options": ["21 years", "25 years", "30 years", "35 years"],
+      "correctAnswer": "30 years"
+    },
+    {
+      "id": "Q159",
+      "question": "Which writ means “to be certified”?",
+      "options": ["Habeas Corpus", "Mandamus", "Certiorari", "Quo Warranto"],
+      "correctAnswer": "Certiorari"
+    },
+    {
+      "id": "Q160",
+      "question": "Who appoints the Prime Minister of India?",
+      "options": ["President", "Parliament", "Lok Sabha", "Supreme Court"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q161",
+      "question": "Which Fundamental Duty requires parents to provide education to children?",
+      "options": ["Duty to defend the country", "Duty to protect the environment", "Duty to provide education to children 6–14 years", "Duty to respect the Constitution"],
+      "correctAnswer": "Duty to provide education to children 6–14 years"
+    },
+    {
+      "id": "Q162",
+      "question": "Who was the first Indian Chief Justice of India?",
+      "options": ["M. Patanjali Sastri", "Harilal J. Kania", "B.P. Sinha", "Alladi Krishnaswami Ayyar"],
+      "correctAnswer": "Harilal J. Kania"
+    },
+    {
+      "id": "Q163",
+      "question": "Which part of the Constitution deals with the Union Government?",
+      "options": ["Part IV", "Part V", "Part VI", "Part VII"],
+      "correctAnswer": "Part V"
+    },
+    {
+      "id": "Q164",
+      "question": "Who has the power to pardon a death sentence in India?",
+      "options": ["Prime Minister", "Supreme Court", "President", "Governor"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q165",
+      "question": "Which Fundamental Right allows freedom to practice any religion?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Freedom of Religion", "Right to Constitutional Remedies"],
+      "correctAnswer": "Right to Freedom of Religion"
+    },
+    {
+      "id": "Q166",
+      "question": "What is the tenure of the Chief Justice of India?",
+      "options": ["5 years", "6 years", "Till 65 years of age", "Till 62 years of age"],
+      "correctAnswer": "Till 65 years of age"
+    },
+    {
+      "id": "Q167",
+      "question": "Which part of the Constitution deals with elections?",
+      "options": ["Part XII", "Part XIII", "Part XV", "Part XIX"],
+      "correctAnswer": "Part XV"
+    },
+    {
+      "id": "Q168",
+      "question": "Who was the first Governor of RBI?",
+      "options": ["C.D. Deshmukh", "Osborne Smith", "Raghuram Rajan", "Manmohan Singh"],
+      "correctAnswer": "Osborne Smith"
+    },
+    {
+      "id": "Q169",
+      "question": "Which Indian leader is called “Lokmanya”?",
+      "options": ["Bal Gangadhar Tilak", "Mahatma Gandhi", "Subhash Chandra Bose", "Dadabhai Naoroji"],
+      "correctAnswer": "Bal Gangadhar Tilak"
+    },
+    {
+      "id": "Q170",
+      "question": "The Rajya Sabha is also known as:",
+      "options": ["Lower House", "Upper House", "People’s House", "Legislative House"],
+      "correctAnswer": "Upper House"
+    },
+    {
+      "id": "Q171",
+      "question": "Who was the first Indian Nobel laureate?",
+      "options": ["C.V. Raman", "Amartya Sen", "Rabindranath Tagore", "Mother Teresa"],
+      "correctAnswer": "Rabindranath Tagore"
+    },
+    {
+      "id": "Q172",
+      "question": "Which Fundamental Right allows freedom of speech and expression?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Religion", "Right against Exploitation"],
+      "correctAnswer": "Right to Freedom"
+    },
+    {
+      "id": "Q173",
+      "question": "The system of Panchayati Raj was recommended by which committee?",
+      "options": ["Balwant Rai Mehta Committee", "Sarkaria Committee", "Mandal Commission", "Rajmannar Committee"],
+      "correctAnswer": "Balwant Rai Mehta Committee"
+    },
+    {
+      "id": "Q174",
+      "question": "Which Indian state is known as the “Fruit Bowl of India”?",
+      "options": ["Punjab", "Himachal Pradesh", "Kerala", "Assam"],
+      "correctAnswer": "Himachal Pradesh"
+    },
+    {
+      "id": "Q175",
+      "question": "Who was the first Indian woman to become Chief Minister of a state?",
+      "options": ["Indira Gandhi", "Sucheta Kriplani", "Sarojini Naidu", "Mayawati"],
+      "correctAnswer": "Sucheta Kriplani"
+    },
+    {
+      "id": "Q176",
+      "question": "Which Article provides for the suspension of Fundamental Rights during Emergency?",
+      "options": ["Article 14", "Article 19", "Article 20", "Article 21"],
+      "correctAnswer": "Article 19"
+    },
+    {
+      "id": "Q177",
+      "question": "Who was the first Indian President to resign before completing term?",
+      "options": ["Zakir Hussain", "Rajendra Prasad", "Fakhruddin Ali Ahmed", "Neelam Sanjiva Reddy"],
+      "correctAnswer": "Neelam Sanjiva Reddy"
+    },
+    {
+      "id": "Q178",
+      "question": "Which Indian state is famous for the Sun Temple at Konark?",
+      "options": ["Odisha", "Maharashtra", "Gujarat", "Madhya Pradesh"],
+      "correctAnswer": "Odisha"
+    },
+    {
+      "id": "Q179",
+      "question": "Who was the last Mughal Emperor of India?",
+      "options": ["Akbar II", "Bahadur Shah II (Zafar)", "Shah Alam II", "Aurangzeb"],
+      "correctAnswer": "Bahadur Shah II (Zafar)"
+    },
+    {
+      "id": "Q180",
+      "question": "Which Fundamental Right is available to foreigners in India?",
+      "options": ["Right to Equality", "Right to Vote", "Right to Constitutional Remedies", "Right to Property"],
+      "correctAnswer": "Right to Equality"
+    },
+    {
+      "id": "Q181",
+      "question": "Who is known as the “Frontier Gandhi”?",
+      "options": ["Mahatma Gandhi", "Abdul Ghaffar Khan", "Subhash Chandra Bose", "Sardar Patel"],
+      "correctAnswer": "Abdul Ghaffar Khan"
+    },
+    {
+      "id": "Q182",
+      "question": "What is the official language of the Indian Union?",
+      "options": ["Hindi", "English", "Both Hindi and English", "Sanskrit"],
+      "correctAnswer": "Hindi"
+    },
+    {
+      "id": "Q183",
+      "question": "Which writ prevents a person from holding an office illegally?",
+      "options": ["Habeas Corpus", "Mandamus", "Quo Warranto", "Certiorari"],
+      "correctAnswer": "Quo Warranto"
+    },
+    {
+      "id": "Q184",
+      "question": "Who gave the slogan “Give me blood, and I will give you freedom”?",
+      "options": ["Mahatma Gandhi", "Subhash Chandra Bose", "Bhagat Singh", "Chandrashekhar Azad"],
+      "correctAnswer": "Subhash Chandra Bose"
+    },
+    {
+      "id": "Q185",
+      "question": "The Fundamental Duties were introduced in which year?",
+      "options": ["1950", "1962", "1976", "1982"],
+      "correctAnswer": "1976"
+    },
+    {
+      "id": "Q186",
+      "question": "Which is the largest state of India by population?",
+      "options": ["Maharashtra", "Uttar Pradesh", "Bihar", "West Bengal"],
+      "correctAnswer": "Uttar Pradesh"
+    },
+    {
+      "id": "Q187",
+      "question": "Who was the founder of the Maurya Dynasty?",
+      "options": ["Ashoka", "Bindusara", "Chandragupta Maurya", "Chanakya"],
+      "correctAnswer": "Chandragupta Maurya"
+    },
+    {
+      "id": "Q188",
+      "question": "Which Article deals with the establishment of the Supreme Court?",
+      "options": ["Article 124", "Article 125", "Article 126", "Article 127"],
+      "correctAnswer": "Article 124"
+    },
+    {
+      "id": "Q189",
+      "question": "Who appoints the Governor of a state?",
+      "options": ["Prime Minister", "President", "Chief Justice", "Vice President"],
+      "correctAnswer": "President"
+    },
+    {
+      "id": "Q190",
+      "question": "Who is known as the “Nightingale of India”?",
+      "options": ["Indira Gandhi", "Sarojini Naidu", "Vijaya Lakshmi Pandit", "Annie Besant"],
+      "correctAnswer": "Sarojini Naidu"
+    },
+    {
+      "id": "Q191",
+      "question": "Which Fundamental Right protects citizens against arbitrary arrest?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Constitutional Remedies", "Right to Life and Personal Liberty"],
+      "correctAnswer": "Right to Life and Personal Liberty"
+    },
+    {
+      "id": "Q192",
+      "question": "Who was the first Indian to win the Nobel Peace Prize?",
+      "options": ["Rabindranath Tagore", "Mother Teresa", "Kailash Satyarthi", "C.V. Raman"],
+      "correctAnswer": "Mother Teresa"
+    },
+    {
+      "id": "Q193",
+      "question": "The Indian Parliament is composed of:",
+      "options": ["Lok Sabha", "Rajya Sabha", "President", "All of the above"],
+      "correctAnswer": "All of the above"
+    },
+    {
+      "id": "Q194",
+      "question": "Who was the first woman to preside over the UN General Assembly?",
+      "options": ["Sarojini Naidu", "Vijaya Lakshmi Pandit", "Indira Gandhi", "Pratibha Patil"],
+      "correctAnswer": "Vijaya Lakshmi Pandit"
+    },
+    {
+      "id": "Q195",
+      "question": "Which Indian leader gave the slogan “Swaraj is my birthright and I shall have it”?",
+      "options": ["Mahatma Gandhi", "Bal Gangadhar Tilak", "Subhash Chandra Bose", "Jawaharlal Nehru"],
+      "correctAnswer": "Bal Gangadhar Tilak"
+    },
+    {
+      "id": "Q196",
+      "question": "What is the maximum strength of the Legislative Assembly in a state?",
+      "options": ["400", "500", "545", "552"],
+      "correctAnswer": "500"
+    },
+    {
+      "id": "Q197",
+      "question": "Which Fundamental Right prohibits employment of children below 14 years in factories?",
+      "options": ["Right to Equality", "Right against Exploitation", "Right to Education", "Right to Freedom"],
+      "correctAnswer": "Right against Exploitation"
+    },
+    {
+      "id": "Q198",
+      "question": "Who was the first Indian to become President of the International Court of Justice?",
+      "options": ["B.N. Rau", "Nagendra Singh", "Dalveer Bhandari", "V.R. Krishna Iyer"],
+      "correctAnswer": "Nagendra Singh"
+    },
+    {
+      "id": "Q199",
+      "question": "Which Article deals with the financial emergency?",
+      "options": ["Article 352", "Article 356", "Article 360", "Article 370"],
+      "correctAnswer": "Article 360"
+    },
+    {
+      "id": "Q200",
+      "question": "Who was the first Muslim President of India?",
+      "options": ["Zakir Hussain", "Abdul Kalam", "Fakhruddin Ali Ahmed", "Hamid Ansari"],
+      "correctAnswer": "Zakir Hussain"
+    },
+    {
+      "id": "Q201",
+      "question": "Which Fundamental Duty asks citizens to develop scientific temper?",
+      "options": ["To safeguard public property", "To defend the country", "To develop scientific temper", "To respect the Constitution"],
+      "correctAnswer": "To develop scientific temper"
+    },
+    {
+      "id": "Q202",
+      "question": "Which Prime Minister gave the slogan “Garibi Hatao”?",
+      "options": ["Lal Bahadur Shastri", "Rajiv Gandhi", "Indira Gandhi", "Narendra Modi"],
+      "correctAnswer": "Indira Gandhi"
+    },
+    {
+      "id": "Q203",
+      "question": "Who was the first Sikh President of India?",
+      "options": ["Giani Zail Singh", "Manmohan Singh", "Charan Singh", "Bhagat Singh"],
+      "correctAnswer": "Giani Zail Singh"
+    },
+    {
+      "id": "Q204",
+      "question": "Who was the first Indian Nobel laureate in Physics?",
+      "options": ["Amartya Sen", "C.V. Raman", "Hargobind Khurana", "S. Chandrashekhar"],
+      "correctAnswer": "C.V. Raman"
+    },
+    {
+      "id": "Q205",
+      "question": "Which Fundamental Right is enforceable during Emergency?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Life and Personal Liberty", "Right to Property"],
+      "correctAnswer": "Right to Life and Personal Liberty"
+    },
+    {
+      "id": "Q206",
+      "question": "Who is known as the “Indian Napoleon”?",
+      "options": ["Chandragupta Maurya", "Samudragupta", "Ashoka", "Harshavardhana"],
+      "correctAnswer": "Samudragupta"
+    },
+    {
+      "id": "Q207",
+      "question": "Which state has the highest literacy rate in India?",
+      "options": ["Kerala", "Goa", "Tamil Nadu", "Maharashtra"],
+      "correctAnswer": "Kerala"
+    },
+    {
+      "id": "Q208",
+      "question": "Who was the first Indian woman to climb Mount Everest?",
+      "options": ["Bachendri Pal", "Santosh Yadav", "Kalpana Chawla", "Sunita Williams"],
+      "correctAnswer": "Bachendri Pal"
+    },
+    {
+      "id": "Q209",
+      "question": "Which Fundamental Right ensures protection in respect of conviction for offences?",
+      "options": ["Article 20", "Article 21", "Article 22", "Article 23"],
+      "correctAnswer": "Article 20"
+    },
+    {
+      "id": "Q210",
+      "question": "Who was the first woman to be appointed as Chief Justice of a High Court?",
+      "options": ["Leila Seth", "Sujata Manohar", "Indu Malhotra", "Ruma Pal"],
+      "correctAnswer": "Leila Seth"
+    },
+    {
+      "id": "Q211",
+      "question": "Which Mughal ruler built the Taj Mahal?",
+      "options": ["Akbar", "Shah Jahan", "Aurangzeb", "Humayun"],
+      "correctAnswer": "Shah Jahan"
+    },
+    {
+      "id": "Q212",
+      "question": "Who gave the slogan “Jai Hind”?",
+      "options": ["Mahatma Gandhi", "Subhash Chandra Bose", "Jawaharlal Nehru", "Sardar Patel"],
+      "correctAnswer": "Subhash Chandra Bose"
+    },
+    {
+      "id": "Q213",
+      "question": "Which Fundamental Right prohibits bonded labour?",
+      "options": ["Right to Equality", "Right against Exploitation", "Right to Freedom", "Right to Education"],
+      "correctAnswer": "Right against Exploitation"
+    },
+    {
+      "id": "Q214",
+      "question": "Which Article is known as the “heart and soul” of the Constitution?",
+      "options": ["Article 14", "Article 19", "Article 32", "Article 368"],
+      "correctAnswer": "Article 32"
+    },
+    {
+      "id": "Q215",
+      "question": "Who was the first Indian woman astronaut?",
+      "options": ["Kalpana Chawla", "Sunita Williams", "Bachendri Pal", "Indira Gandhi"],
+      "correctAnswer": "Kalpana Chawla"
+    },
+    {
+      "id": "Q216",
+      "question": "The Preamble declares India as:",
+      "options": ["Socialist", "Secular", "Democratic", "All of the above"],
+      "correctAnswer": "All of the above"
+    },
+    {
+      "id": "Q217",
+      "question": "Which Indian leader gave the slogan “Tum Mujhe Khoon Do, Main Tumhe Azadi Dunga”?",
+      "options": ["Mahatma Gandhi", "Jawaharlal Nehru", "Subhash Chandra Bose", "Bhagat Singh"],
+      "correctAnswer": "Subhash Chandra Bose"
+    },
+    {
+      "id": "Q218",
+      "question": "Who was the first Indian woman to win a Nobel Prize?",
+      "options": ["Indira Gandhi", "Mother Teresa", "Amartya Sen", "Sarojini Naidu"],
+      "correctAnswer": "Mother Teresa"
+    },
+    {
+      "id": "Q219",
+      "question": "Which Fundamental Duty was added by the 86th Amendment in 2002?",
+      "options": ["To defend the country", "To protect natural environment", "To provide education to children 6–14 years", "To respect the Constitution"],
+      "correctAnswer": "To provide education to children 6–14 years"
+    },
+    {
+      "id": "Q220",
+      "question": "Who was the first Finance Minister of Independent India?",
+      "options": ["B.R. Ambedkar", "R.K. Shanmukham Chetty", "Morarji Desai", "C.D. Deshmukh"],
+      "correctAnswer": "R.K. Shanmukham Chetty"
+    },
+    {
+      "id": "Q221",
+      "question": "Which Indian state is called the “Spice Garden of India”?",
+      "options": ["Kerala", "Tamil Nadu", "Karnataka", "Andhra Pradesh"],
+      "correctAnswer": "Kerala"
+    },
+    {
+      "id": "Q222",
+      "question": "Who was the last Mughal Emperor?",
+      "options": ["Aurangzeb", "Shah Alam II", "Bahadur Shah II (Zafar)", "Akbar II"],
+      "correctAnswer": "Bahadur Shah II (Zafar)"
+    },
+    {
+      "id": "Q223",
+      "question": "Which Fundamental Right ensures free legal aid?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Life and Personal Liberty", "Right against Exploitation"],
+      "correctAnswer": "Right to Life and Personal Liberty"
+    },
+    {
+      "id": "Q224",
+      "question": "Who gave the slogan “Vande Mataram”?",
+      "options": ["Bankim Chandra Chattopadhyay", "Mahatma Gandhi", "Rabindranath Tagore", "Bal Gangadhar Tilak"],
+      "correctAnswer": "Bankim Chandra Chattopadhyay"
+    },
+    {
+      "id": "Q225",
+      "question": "Which Indian region is known as the “Seven Sisters”?",
+      "options": ["Assam", "Nagaland", "Northeastern states", "Tripura"],
+      "correctAnswer": "Northeastern states"
+    },
+    {
+      "id": "Q226",
+      "question": "Who was the first Governor-General of Independent India?",
+      "options": ["Rajendra Prasad", "C. Rajagopalachari", "Lord Mountbatten", "Jawaharlal Nehru"],
+      "correctAnswer": "Lord Mountbatten"
+    },
+    {
+      "id": "Q227",
+      "question": "Which Fundamental Right protects against arbitrary arrest?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Life and Personal Liberty", "Right to Constitutional Remedies"],
+      "correctAnswer": "Right to Life and Personal Liberty"
+    },
+    {
+      "id": "Q228",
+      "question": "Which Indian leader is called “Netaji”?",
+      "options": ["Mahatma Gandhi", "Subhash Chandra Bose", "Bhagat Singh", "Bal Gangadhar Tilak"],
+      "correctAnswer": "Subhash Chandra Bose"
+    },
+    {
+      "id": "Q229",
+      "question": "Who was the first Indian woman to fly a plane?",
+      "options": ["Sarla Thakral", "Kalpana Chawla", "Bachendri Pal", "Sunita Williams"],
+      "correctAnswer": "Sarla Thakral"
+    },
+    {
+      "id": "Q230",
+      "question": "What is the national animal of India?",
+      "options": ["Lion", "Tiger", "Elephant", "Peacock"],
+      "correctAnswer": "Tiger"
+    },
+    {
+      "id": "Q231",
+      "question": "Who was the first Indian woman to become President of the United Nations General Assembly?",
+      "options": ["Sarojini Naidu", "Vijaya Lakshmi Pandit", "Indira Gandhi", "Pratibha Patil"],
+      "correctAnswer": "Vijaya Lakshmi Pandit"
+    },
+    {
+      "id": "Q232",
+      "question": "Where is the Iron Pillar that demonstrates ancient Indian metallurgy located?",
+      "options": ["Konark", "Sarnath", "Delhi (Qutub Complex)", "Hampi"],
+      "correctAnswer": "Delhi (Qutub Complex)"
+    },
+    {
+      "id": "Q233",
+      "question": "The Ajanta caves are famous for their:",
+      "options": ["Rock-cut temples", "Ancient paintings and frescoes", "Fortifications", "Stepwells"],
+      "correctAnswer": "Ancient paintings and frescoes"
+    },
+    {
+      "id": "Q234",
+      "question": "Which river is called the ‘Ganga of the South’?",
+      "options": ["Godavari", "Krishna", "Kaveri", "Narmada"],
+      "correctAnswer": "Kaveri"
+    },
+    {
+      "id": "Q235",
+      "question": "The Pradhan Mantri Jan Dhan Yojana aims primarily to:",
+      "options": ["Provide health insurance", "Expand financial inclusion through bank accounts", "Provide free LPG connections", "Promote digital literacy"],
+      "correctAnswer": "Expand financial inclusion through bank accounts"
+    },
+    {
+      "id": "Q236",
+      "question": "Which city is home to India’s Parliament House?",
+      "options": ["Mumbai", "New Delhi", "Kolkata", "Chennai"],
+      "correctAnswer": "New Delhi"
+    },
+    {
+      "id": "Q237",
+      "question": "The World Heritage site “Humayun’s Tomb” influenced the design of which later monument?",
+      "options": ["Red Fort", "Qutub Minar", "Taj Mahal", "Gateway of India"],
+      "correctAnswer": "Taj Mahal"
+    },
+    {
+      "id": "Q238",
+      "question": "Which of the following is a Directive Principle of State Policy?",
+      "options": ["Right to Freedom of Speech", "Equal pay for equal work for both men and women", "Right to Constitutional Remedies", "Right to Education"],
+      "correctAnswer": "Equal pay for equal work for both men and women"
+    },
+    {
+      "id": "Q239",
+      "question": "Which Indian monument was built by Emperor Ashoka to mark the spot of Buddha’s first sermon?",
+      "options": ["Sanchi Stupa", "Bodh Gaya Mahabodhi Temple", "Dhamek Stupa (Sarnath)", "Amaravati Stupa"],
+      "correctAnswer": "Dhamek Stupa (Sarnath)"
+    },
+    {
+      "id": "Q240",
+      "question": "Which of these is an example of India’s intangible cultural heritage?",
+      "options": ["Qutub Minar architecture", "Traditional folk dance forms like Kathakali and Bhangra", "Taj Mahal marble inlay", "Ellora rock-cut architecture"],
+      "correctAnswer": "Traditional folk dance forms like Kathakali and Bhangra"
+    },
+    {
+      "id": "Q241",
+      "question": "Which Article allows a citizen to move the Supreme Court directly for enforcement of Fundamental Rights?",
+      "options": ["Article 21", "Article 19", "Article 32", "Article 226"],
+      "correctAnswer": "Article 32"
+    },
+    {
+      "id": "Q242",
+      "question": "Which Article prohibits discrimination on grounds of religion, race, caste, sex or place of birth?",
+      "options": ["Article 14", "Article 15", "Article 16", "Article 17"],
+      "correctAnswer": "Article 15"
+    },
+    {
+      "id": "Q243",
+      "question": "The “Basic Structure Doctrine” was first articulated by the Supreme Court in which case?",
+      "options": ["Golaknath vs. State of Punjab", "Kesavananda Bharati vs. State of Kerala", "Minerva Mills vs. Union of India", "S.R. Bommai vs. Union of India"],
+      "correctAnswer": "Kesavananda Bharati vs. State of Kerala"
+    },
+    {
+      "id": "Q244",
+      "question": "Who is responsible for conducting a state’s legislative assembly elections?",
+      "options": ["State Election Commission", "Election Commission of India", "Chief Electoral Officer of the state only", "Parliament"],
+      "correctAnswer": "Election Commission of India"
+    },
+    {
+      "id": "Q245",
+      "question": "Which Constitutional Amendment introduced Panchayati Raj as a constitutional institution?",
+      "options": ["42nd Amendment", "73rd Amendment", "74th Amendment", "44th Amendment"],
+      "correctAnswer": "73rd Amendment"
+    },
+    {
+      "id": "Q246",
+      "question": "The Preamble of the Constitution lists several ideals. Which one of the following is not in the Preamble?",
+      "options": ["Justice", "Liberty", "Fraternity", "Secularism (added later by amendment)"],
+      "correctAnswer": "Secularism (added later by amendment)"
+    },
+    {
+      "id": "Q247",
+      "question": "Which organ of government is primarily responsible for implementing laws?",
+      "options": ["Legislature", "Executive", "Judiciary", "Election Commission"],
+      "correctAnswer": "Executive"
+    },
+    {
+      "id": "Q248",
+      "question": "Which of the following is NOT a feature of the Indian Constitution?",
+      "options": ["Written Constitution", "Federal structure with unitary bias", "Presidential form of government", "Parliamentary system"],
+      "correctAnswer": "Presidential form of government"
+    },
+    {
+      "id": "Q249",
+      "question": "The Fundamental Right that guarantees equality of opportunity in public employment is Article:",
+      "options": ["Article 14", "Article 15", "Article 16", "Article 17"],
+      "correctAnswer": "Article 16"
+    },
+    {
+      "id": "Q250",
+      "question": "Who has the power to grant pardons, reprieves, respites and remissions of punishment for offences against a state?",
+      "options": ["President only", "Governor only", "President for Union and Governor for State", "Supreme Court only"],
+      "correctAnswer": "President for Union and Governor for State"
+    },
+    {
+      "id": "Q251",
+      "question": "Which institution was replaced by NITI Aayog in 2015?",
+      "options": ["Finance Commission", "Planning Commission", "National Development Council", "Central Advisory Board on Education"],
+      "correctAnswer": "Planning Commission"
+    },
+    {
+      "id": "Q252",
+      "question": "The term ‘Secular’ was added to the Preamble by which Amendment?",
+      "options": ["40th Amendment", "42nd Amendment", "44th Amendment", "52nd Amendment"],
+      "correctAnswer": "42nd Amendment"
+    },
+    {
+      "id": "Q253",
+      "question": "Which of the following is an essential condition of a democratic government?",
+      "options": ["Centralized power only", "Free and fair elections", "Single-party rule", "Rule by decree"],
+      "correctAnswer": "Free and fair elections"
+    },{
+      "id": "Q254",
+      "question": "Which Indian state is known as the ‘Land of the Gods’?",
+      "options": ["Himachal Pradesh", "Uttarakhand", "Jammu & Kashmir", "Arunachal Pradesh"],
+      "correctAnswer": "Uttarakhand"
+    },
+    {
+      "id": "Q255",
+      "question": "Who was the first Indian to win an Oscar?",
+      "options": ["Satyajit Ray", "Bhanu Athaiya", "A.R. Rahman", "Resul Pookutty"],
+      "correctAnswer": "Bhanu Athaiya"
+    },
+    {
+      "id": "Q256",
+      "question": "Which Fundamental Right is described as the ‘soul of the Constitution’ by Dr. B.R. Ambedkar?",
+      "options": ["Right to Equality", "Right to Freedom", "Right to Constitutional Remedies", "Right to Education"],
+      "correctAnswer": "Right to Constitutional Remedies"
+    },
+    {
+      "id": "Q257",
+      "question": "Which Indian state is known as the ‘Tea Garden of India’?",
+      "options": ["Assam", "West Bengal", "Kerala", "Tamil Nadu"],
+      "correctAnswer": "Assam"
+    },
+    {
+      "id": "Q258",
+      "question": "Who was the first Indian to win a Nobel Prize in Economics?",
+      "options": ["Amartya Sen", "Abhijit Banerjee", "C.V. Raman", "Kailash Satyarthi"],
+      "correctAnswer": "Amartya Sen"
+    },
+    {
+      "id": "Q259",
+      "question": "Which Article provides for the abolition of titles?",
+      "options": ["Article 14", "Article 15", "Article 17", "Article 18"],
+      "correctAnswer": "Article 18"
+    },
+    {
+      "id": "Q260",
+      "question": "Who was the first Indian woman to become a Governor?",
+      "options": ["Sarojini Naidu", "Indira Gandhi", "Sucheta Kriplani", "Vijaya Lakshmi Pandit"],
+      "correctAnswer": "Sarojini Naidu"
+    },
+    {
+      "id": "Q261",
+      "question": "Which Indian state is known as the ‘Land of Festivals’?",
+      "options": ["Rajasthan", "Gujarat", "Odisha", "West Bengal"],
+      "correctAnswer": "Odisha"
+    },
+    {
+      "id": "Q262",
+      "question": "Who was the first Indian to win a Nobel Prize in Chemistry?",
+      "options": ["C.V. Raman", "Venki Ramakrishnan", "Har Gobind Khorana", "S. Chandrasekhar"],
+      "correctAnswer": "Venki Ramakrishnan"
+    },
+    {
+      "id": "Q263",
+      "question": "Which Fundamental Duty promotes harmony and the spirit of common brotherhood?",
+      "options": ["To defend the country", "To promote harmony", "To protect the environment", "To respect the Constitution"],
+      "correctAnswer": "To promote harmony"
+    },
+    {
+      "id": "Q264",
+      "question": "Who was the first Indian woman to win an Olympic medal?",
+      "options": ["P.T. Usha", "Karnam Malleswari", "Saina Nehwal", "Mary Kom"],
+      "correctAnswer": "Karnam Malleswari"
+    },
+    {
+      "id": "Q265",
+      "question": "Which Indian state is known as the ‘Land of the Rising Sun’?",
+      "options": ["Arunachal Pradesh", "Assam", "Nagaland", "Manipur"],
+      "correctAnswer": "Arunachal Pradesh"
+    },
+    {
+      "id": "Q266",
+      "question": "Who was the first Indian to become a member of the British Parliament?",
+      "options": ["Dadabhai Naoroji", "Gopal Krishna Gokhale", "Bal Gangadhar Tilak", "Bipin Chandra Pal"],
+      "correctAnswer": "Dadabhai Naoroji"
+    },
+    {
+      "id": "Q267",
+      "question": "Which Article provides for the establishment of the Election Commission?",
+      "options": ["Article 324", "Article 325", "Article 326", "Article 327"],
+      "correctAnswer": "Article 324"
+    },
+    {
+      "id": "Q268",
+      "question": "Who was the first Indian woman to become a commercial pilot?",
+      "options": ["Sarla Thakral", "Durba Banerjee", "Kalpana Chawla", "Sunita Williams"],
+      "correctAnswer": "Durba Banerjee"
+    },
+    {
+      "id": "Q269",
+      "question": "Which Indian state is known as the ‘Land of Red Rivers and Blue Hills’?",
+      "options": ["Assam", "Meghalaya", "Manipur", "Tripura"],
+      "correctAnswer": "Assam"
+    },
+    {
+      "id": "Q270",
+      "question": "Who was the first Indian to win a Grammy Award?",
+      "options": ["A.R. Rahman", "Zakir Hussain", "Ravi Shankar", "Zubin Mehta"],
+      "correctAnswer": "Ravi Shankar"
+    },
+    {
+      "id": "Q271",
+      "question": "Which Fundamental Right guarantees protection against double jeopardy?",
+      "options": ["Article 20", "Article 21", "Article 22", "Article 23"],
+      "correctAnswer": "Article 20"
+    },
+    {
+      "id": "Q272",
+      "question": "Who was the first Indian woman to become a Supreme Court judge?",
+      "options": ["Fathima Beevi", "Leila Seth", "Sujata Manohar", "Indu Malhotra"],
+      "correctAnswer": "Fathima Beevi"
+    },
+    {
+      "id": "Q273",
+      "question": "Which Indian state is known as the ‘Land of Lakes’?",
+      "options": ["Jammu & Kashmir", "Uttarakhand", "Himachal Pradesh", "Meghalaya"],
+      "correctAnswer": "Jammu & Kashmir"
+    },
+    {
+      "id": "Q274",
+      "question": "Who was the first Indian to win a Nobel Prize in Medicine?",
+      "options": ["C.V. Raman", "Har Gobind Khorana", "S. Chandrasekhar", "Amartya Sen"],
+      "correctAnswer": "Har Gobind Khorana"
+    },
+    {
+      "id": "Q275",
+      "question": "Which Fundamental Duty directs citizens to defend the country?",
+      "options": ["To protect the environment", "To defend the country and render national service", "To promote harmony", "To respect the Constitution"],
+      "correctAnswer": "To defend the country and render national service"
+    },
+    {
+      "id": "Q276",
+      "question": "Who was the first Indian woman to win a Grand Slam tennis title?",
+      "options": ["Sania Mirza", "Leander Paes", "Mahesh Bhupathi", "Hima Das"],
+      "correctAnswer": "Sania Mirza"
+    },
+    {
+      "id": "Q277",
+      "question": "Which Indian state is known as the ‘Land of Spices’?",
+      "options": ["Kerala", "Karnataka", "Tamil Nadu", "Andhra Pradesh"],
+      "correctAnswer": "Kerala"
+    },
+    {
+      "id": "Q278",
+      "question": "Who was the first Indian to become a chess Grandmaster?",
+      "options": ["Viswanathan Anand", "Dibyendu Barua", "Pravin Thipsay", "Koneru Humpy"],
+      "correctAnswer": "Viswanathan Anand"
+    },
+    {
+      "id": "Q279",
+      "question": "Which Article provides for the establishment of the Finance Commission?",
+      "options": ["Article 280", "Article 281", "Article 282", "Article 283"],
+      "correctAnswer": "Article 280"
+    },
+    {
+      "id": "Q280",
+      "question": "Who was the first Indian woman to become a Cabinet Minister?",
+      "options": ["Sarojini Naidu", "Vijaya Lakshmi Pandit", "Rajkumari Amrit Kaur", "Indira Gandhi"],
+      "correctAnswer": "Rajkumari Amrit Kaur"
+    },
+    {
+      "id": "Q281",
+      "question": "Which Indian state is known as the ‘Land of the Thunder Dragon’?",
+      "options": ["Sikkim", "Arunachal Pradesh", "Nagaland", "Meghalaya"],
+      "correctAnswer": "Sikkim"
+    },
+    {
+      "id": "Q282",
+      "question": "Who was the first Indian to win a Booker Prize?",
+      "options": ["Arundhati Roy", "Salman Rushdie", "V.S. Naipaul", "Kiran Desai"],
+      "correctAnswer": "Salman Rushdie"
+    },
+    {
+      "id": "Q283",
+      "question": "Which Fundamental Right guarantees the right to form cooperative societies?",
+      "options": ["Article 19", "Article 20", "Article 21", "Article 43B"],
+      "correctAnswer": "Article 19"
+    },
+    {
+      "id": "Q284",
+      "question": "Who was the first Indian woman to win a medal in wrestling at the Olympics?",
+      "options": ["Sakshi Malik", "Geeta Phogat", "Babita Phogat", "Vinesh Phogat"],
+      "correctAnswer": "Sakshi Malik"
+    },
+    {
+      "id": "Q285",
+      "question": "Which Indian state is known as the ‘Land of the Highlanders’?",
+      "options": ["Nagaland", "Manipur", "Mizoram", "Tripura"],
+      "correctAnswer": "Nagaland"
+    },
+    {
+      "id": "Q286",
+      "question": "Who was the first Indian to win a Nobel Prize in Literature?",
+      "options": ["Rabindranath Tagore", "Amartya Sen", "V.S. Naipaul", "Arundhati Roy"],
+      "correctAnswer": "Rabindranath Tagore"
+    },
+    {
+      "id": "Q287",
+      "question": "Which Article provides for the protection of interests of minorities?",
+      "options": ["Article 29", "Article 30", "Article 31", "Article 32"],
+      "correctAnswer": "Article 29"
+    },
+    {
+      "id": "Q288",
+      "question": "Who was the first Indian woman to become an IAS officer?",
+      "options": ["Anna Rajam Malhotra", "Kiran Bedi", "Durga Shakti Nagpal", "Smita Sabharwal"],
+      "correctAnswer": "Anna Rajam Malhotra"
+    },
+    {
+      "id": "Q289",
+      "question": "Which Indian state is known as the ‘Land of Forests’?",
+      "options": ["Madhya Pradesh", "Jharkhand", "Chhattisgarh", "Odisha"],
+      "correctAnswer": "Jharkhand"
+    },
+    {
+      "id": "Q290",
+      "question": "Who was the first Indian to win an Oscar for Best Director?",
+      "options": ["Satyajit Ray", "Mira Nair", "Ashutosh Gowariker", "No Indian has won this award"],
+      "correctAnswer": "No Indian has won this award"
+    },
+    {
+      "id": "Q291",
+      "question": "Which Fundamental Duty directs citizens to strive for excellence?",
+      "options": ["To defend the country", "To strive for excellence", "To protect the environment", "To promote harmony"],
+      "correctAnswer": "To strive for excellence"
+    },
+    {
+      "id": "Q292",
+      "question": "Who was the first Indian woman to become a doctor?",
+      "options": ["Anandi Gopal Joshi", "Kadambini Ganguly", "Savitribai Phule", "Sarojini Naidu"],
+      "correctAnswer": "Anandi Gopal Joshi"
+    },
+    {
+      "id": "Q293",
+      "question": "Which Indian state is known as the ‘Land of Warriors’?",
+      "options": ["Rajasthan", "Haryana", "Punjab", "Gujarat"],
+      "correctAnswer": "Rajasthan"
+    },
+    {
+      "id": "Q294",
+      "question": "Who was the first Indian to win a Nobel Prize in Physics?",
+      "options": ["C.V. Raman", "S. Chandrasekhar", "Har Gobind Khorana", "Venki Ramakrishnan"],
+      "correctAnswer": "C.V. Raman"
+    },
+    {
+      "id": "Q295",
+      "question": "Which Article provides for the establishment of the Public Service Commission?",
+      "options": ["Article 315", "Article 316", "Article 317", "Article 318"],
+      "correctAnswer": "Article 315"
+    },
+    {
+      "id": "Q296",
+      "question": "Who was the first Indian woman to become a police officer?",
+      "options": ["Kiran Bedi", "Sarla Thakral", "Anna Rajam Malhotra", "Smita Sabharwal"],
+      "correctAnswer": "Kiran Bedi"
+    },
+    {
+      "id": "Q297",
+      "question": "Which Indian state is known as the ‘Land of Rivers’?",
+      "options": ["Uttar Pradesh", "Bihar", "West Bengal", "Assam"],
+      "correctAnswer": "Bihar"
+    },
+    {
+      "id": "Q298",
+      "question": "Who was the first Indian to win a Nobel Prize in Economics?",
+      "options": ["Amartya Sen", "Abhijit Banerjee", "C.V. Raman", "Kailash Satyarthi"],
+      "correctAnswer": "Amartya Sen"
+    },
+    {
+      "id": "Q299",
+      "question": "Which Fundamental Right ensures the right to education for children aged 6–14 years?",
+      "options": ["Article 19", "Article 21A", "Article 23", "Article 24"],
+      "correctAnswer": "Article 21A"
+    },
+    {
+      "id": "Q300",
+      "question": "Who was the first Indian woman to become Prime Minister?",
+      "options": ["Sarojini Naidu", "Indira Gandhi", "Sonia Gandhi", "Pratibha Patil"],
+      "correctAnswer": "Indira Gandhi"
+    },
+    {
+      "id": "Q301",
+      "question": "Which Indian state is known as the ‘Land of Orchids’?",
+      "options": ["Sikkim", "Arunachal Pradesh", "Nagaland", "Mizoram"],
+      "correctAnswer": "Sikkim"
+    },
+    {
+      "id": "Q302",
+      "question": "Who was the first Indian to win a Pulitzer Prize?",
+      "options": ["Jhumpa Lahiri", "Arundhati Roy", "Salman Rushdie", "V.S. Naipaul"],
+      "correctAnswer": "Jhumpa Lahiri"
+    },
+    {
+      "id": "Q303",
+      "question": "Which Fundamental Duty directs citizens to protect national heritage?",
+      "options": ["To defend the country", "To protect and improve natural environment", "To preserve rich heritage of our culture", "To promote harmony"],
+      "correctAnswer": "To preserve rich heritage of our culture"
+    },
+    {
+      "id": "Q304",
+      "question": "Who was the first Indian woman to win a medal in badminton at the Olympics?",
+      "options": ["Saina Nehwal", "P.V. Sindhu", "Jwala Gutta", "Ashwini Ponnappa"],
+      "correctAnswer": "Saina Nehwal"
+    },
+    {
+      "id": "Q305",
+      "question": "Which Indian state is known as the ‘Land of the Buddha’?",
+      "options": ["Bihar", "Uttar Pradesh", "Jharkhand", "Odisha"],
+      "correctAnswer": "Bihar"
+    },
+    {
+      "id": "Q306",
+      "question": "Who was the first Indian to win a Fields Medal?",
+      "options": ["Srinivasa Ramanujan", "Manjul Bhargava", "C.R. Rao", "Akshay Venkatesh"],
+      "correctAnswer": "Manjul Bhargava"
+    },
+    {
+      "id": "Q307",
+      "question": "Which Article provides for the establishment of the Comptroller and Auditor General?",
+      "options": ["Article 148", "Article 149", "Article 150", "Article 151"],
+      "correctAnswer": "Article 148"
+    },
+    {
+      "id": "Q308",
+      "question": "Who was the first Indian woman to become a Governor of a Union Territory?",
+      "options": ["Sarojini Naidu", "Kiran Bedi", "Pratibha Patil", "Anandi Gopal Joshi"],
+      "correctAnswer": "Kiran Bedi"
+    },
+    {
+      "id": "Q309",
+      "question": "Which Indian state is known as the ‘Land of Temples’?",
+      "options": ["Tamil Nadu", "Kerala", "Karnataka", "Odisha"],
+      "correctAnswer": "Tamil Nadu"
+    },
+    {
+      "id": "Q310",
+      "question": "Who was the first Indian to win a Nobel Prize in Peace?",
+      "options": ["Mother Teresa", "Kailash Satyarthi", "Amartya Sen", "Rabindranath Tagore"],
+      "correctAnswer": "Mother Teresa"
+    },
+    {
+      "id": "Q311",
+      "question": "Which Fundamental Right protects against self-incrimination?",
+      "options": ["Article 20", "Article 21", "Article 22", "Article 23"],
+      "correctAnswer": "Article 20"
+    },
+    {
+      "id": "Q312",
+      "question": "Who was the first Indian woman to become a judge of the Supreme Court?",
+      "options": ["Fathima Beevi", "Leila Seth", "Sujata Manohar", "Indu Malhotra"],
+      "correctAnswer": "Fathima Beevi"
+    },
+    {
+      "id": "Q313",
+      "question": "Which Indian state is known as the ‘Land of the Saffron’?",
+      "options": ["Jammu & Kashmir", "Himachal Pradesh", "Uttarakhand", "Arunachal Pradesh"],
+      "correctAnswer": "Jammu & Kashmir"
+    },
+    {
+      "id": "Q314",
+      "question": "Who was the first Indian to win a Nobel Prize in Chemistry?",
+      "options": ["C.V. Raman", "Venki Ramakrishnan", "Har Gobind Khorana", "S. Chandrasekhar"],
+      "correctAnswer": "Venki Ramakrishnan"
+    },
+    {
+      "id": "Q315",
+      "question": "Which Fundamental Duty directs citizens to abide by the Constitution?",
+      "options": ["To defend the country", "To abide by the Constitution and respect its ideals", "To promote harmony", "To protect the environment"],
+      "correctAnswer": "To abide by the Constitution and respect its ideals"
+    },
+    {
+      "id": "Q316",
+      "question": "Who was the first Indian woman to become a Chief Election Commissioner?",
+      "options": ["V.S. Ramadevi", "Kiran Bedi", "Sujata Manohar", "No woman has been Chief Election Commissioner"],
+      "correctAnswer": "V.S. Ramadevi"
+    },
+    {
+      "id": "Q317",
+      "question": "Which Indian state is known as the ‘Land of Pearls’?",
+      "options": ["Andhra Pradesh", "Telangana", "Tamil Nadu", "Kerala"],
+      "correctAnswer": "Telangana"
+    },
+    {
+      "id": "Q318",
+      "question": "Who was the first Indian to win a Turing Award?",
+      "options": ["Srinivasa Ramanujan", "Raj Reddy", "Manjul Bhargava", "Vinton Cerf"],
+      "correctAnswer": "Raj Reddy"
+    },
+    {
+      "id": "Q319",
+      "question": "Which Article provides for the establishment of the Attorney General of India?",
+      "options": ["Article 76", "Article 77", "Article 78", "Article 79"],
+      "correctAnswer": "Article 76"
+    },
+    {
+      "id": "Q320",
+      "question": "Who was the first Indian woman to become a Foreign Secretary?",
+      "options": ["Chokila Iyer", "Nirupama Rao", "Sujatha Singh", "Arundhati Ghosh"],
+      "correctAnswer": "Chokila Iyer"
+    },
+    {
+      "id": "Q321",
+      "question": "Which Indian state is known as the ‘Land of Handicrafts’?",
+      "options": ["Gujarat", "Rajasthan", "Odisha", "Uttar Pradesh"],
+      "correctAnswer": "Rajasthan"
+    },
+    {
+      "id": "Q322",
+      "question": "Who was the first Indian to win a Nobel Prize in Medicine?",
+      "options": ["C.V. Raman", "Har Gobind Khorana", "S. Chandrasekhar", "Venki Ramakrishnan"],
+      "correctAnswer": "Har Gobind Khorana"
+    },
+    {
+      "id": "Q323",
+      "question": "Which Fundamental Right allows freedom to manage religious affairs?",
+      "options": ["Article 25", "Article 26", "Article 27", "Article 28"],
+      "correctAnswer": "Article 26"
+    },
+    {
+      "id": "Q324",
+      "question": "Who was the first Indian woman to become a Lok Sabha Speaker?",
+      "options": ["Meira Kumar", "Sumitra Mahajan", "Sonia Gandhi", "Sushma Swaraj"],
+      "correctAnswer": "Meira Kumar"
+    },
+    {
+      "id": "Q325",
+      "question": "Which Indian state is known as the ‘Land of the White Orchid’?",
+      "options": ["Sikkim", "Arunachal Pradesh", "Nagaland", "Mizoram"],
+      "correctAnswer": "Arunachal Pradesh"
+    },
+    {
+      "id": "Q326",
+      "question": "Who was the first Indian to win a World Chess Championship?",
+      "options": ["Viswanathan Anand", "Dibyendu Barua", "Pravin Thipsay", "Koneru Humpy"],
+      "correctAnswer": "Viswanathan Anand"
+    },
+    {
+      "id": "Q327",
+      "question": "Which Article provides for the establishment of the High Courts?",
+      "options": ["Article 214", "Article 215", "Article 216", "Article 217"],
+      "correctAnswer": "Article 214"
+    },
+    {
+      "id": "Q328",
+      "question": "Who was the first Indian woman to become a High Court judge?",
+      "options": ["Leila Seth", "Fathima Beevi", "Sujata Manohar", "Anna Chandy"],
+      "correctAnswer": "Anna Chandy"
+    },
+    {
+      "id": "Q329",
+      "question": "Which Indian state is known as the ‘Land of Festivals and Fairs’?",
+      "options": ["Rajasthan", "Gujarat", "Punjab", "Haryana"],
+      "correctAnswer": "Rajasthan"
+    },
+    {
+      "id": "Q330",
+      "question": "Who was the first Indian to win a Nobel Prize in Economics?",
+      "options": ["Amartya Sen", "Abhijit Banerjee", "C.V. Raman", "Kailash Satyarthi"],
+      "correctAnswer": "Amartya Sen"
+    },
+    {
+      "id": "Q331",
+      "question": "Which Fundamental Right prohibits forced labour?",
+      "options": ["Article 23", "Article 24", "Article 25", "Article 26"],
+      "correctAnswer": "Article 23"
+    },
+    {
+      "id": "Q332",
+      "question": "Who was the first Indian woman to become a Defence Minister?",
+      "options": ["Indira Gandhi", "Nirmala Sitharaman", "Sushma Swaraj", "Sonia Gandhi"],
+      "correctAnswer": "Nirmala Sitharaman"
+    },
+    {
+      "id": "Q333",
+      "question": "Which Indian state is known as the ‘Land of Monsoons’?",
+      "options": ["Meghalaya", "Assam", "Kerala", "West Bengal"],
+      "correctAnswer": "Meghalaya"
+    },
+    {
+      "id": "Q334",
+      "question": "Who was the first Indian to win a Magsaysay Award?",
+      "options": ["Vinoba Bhave", "Mother Teresa", "Jayaprakash Narayan", "Kailash Satyarthi"],
+      "correctAnswer": "Vinoba Bhave"
+    },
+    {
+      "id": "Q335",
+      "question": "Which Article provides for the establishment of the Supreme Court?",
+      "options": ["Article 124", "Article 125", "Article 126", "Article 127"],
+      "correctAnswer": "Article 124"
+    },
+    {
+      "id": "Q336",
+      "question": "Who was the first Indian woman to become a Finance Minister?",
+      "options": ["Indira Gandhi", "Nirmala Sitharaman", "Sushma Swaraj", "Sonia Gandhi"],
+      "correctAnswer": "Nirmala Sitharaman"
+    },
+    {
+      "id": "Q337",
+      "question": "Which Indian state is known as the ‘Land of the Brave’?",
+      "options": ["Punjab", "Haryana", "Rajasthan", "Gujarat"],
+      "correctAnswer": "Rajasthan"
+    },
+    {
+      "id": "Q338",
+      "question": "Who was the first Indian to win a Nobel Prize in Physics?",
+      "options": ["C.V. Raman", "S. Chandrasekhar", "Har Gobind Khorana", "Venki Ramakrishnan"],
+      "correctAnswer": "C.V. Raman"
+    },
+    {
+      "id": "Q339",
+      "question": "Which Fundamental Right allows freedom of movement within India?",
+      "options": ["Article 19", "Article 20", "Article 21", "Article 22"],
+      "correctAnswer": "Article 19"
+    },
+    {
+      "id": "Q340",
+      "question": "Who was the first Indian woman to become a Chief Justice of a High Court?",
+      "options": ["Leila Seth", "Fathima Beevi", "Sujata Manohar", "Anna Chandy"],
+      "correctAnswer": "Leila Seth"
+    },
+    {
+      "id": "Q341",
+      "question": "Which Indian state is known as the ‘Land of the Golden Pagoda’?",
+      "options": ["Arunachal Pradesh", "Sikkim", "Nagaland", "Mizoram"],
+      "correctAnswer": "Arunachal Pradesh"
+    },
+    {
+      "id": "Q342",
+      "question": "Who was the first Indian to win a Nobel Prize in Chemistry?",
+      "options": ["C.V. Raman", "Venki Ramakrishnan", "Har Gobind Khorana", "S. Chandrasekhar"],
+      "correctAnswer": "Venki Ramakrishnan"
+    },
+    {
+      "id": "Q343",
+      "question": "Which Fundamental Duty directs citizens to respect the National Anthem?",
+      "options": ["To defend the country", "To respect the National Flag and National Anthem", "To promote harmony", "To protect the environment"],
+      "correctAnswer": "To respect the National Flag and National Anthem"
+    },
+    {
+      "id": "Q344",
+      "question": "Who was the first Indian woman to become a Governor of a state?",
+      "options": ["Sarojini Naidu", "Vijaya Lakshmi Pandit", "Sucheta Kriplani", "Indira Gandhi"],
+      "correctAnswer": "Sarojini Naidu"
+    },
+    {
+      "id": "Q345",
+      "question": "Which Indian state is known as the ‘Land of the Dawn-Lit Mountains’?",
+      "options": ["Arunachal Pradesh", "Sikkim", "Nagaland", "Mizoram"],
+      "correctAnswer": "Arunachal Pradesh"
+    },
+    {
+      "id": "Q346",
+      "question": "Who was the first Indian to win a Nobel Prize in Literature?",
+      "options": ["Rabindranath Tagore", "Amartya Sen", "V.S. Naipaul", "Arundhati Roy"],
+      "correctAnswer": "Rabindranath Tagore"
+    },
+    {
+      "id": "Q347",
+      "question": "Which Article provides for the establishment of the Finance Commission?",
+      "options": ["Article 280", "Article 281", "Article 282", "Article 283"],
+      "correctAnswer": "Article 280"
+    },
+    {
+      "id": "Q348",
+      "question": "Who was the first Indian woman to become a Speaker of the Lok Sabha?",
+      "options": ["Meira Kumar", "Sumitra Mahajan", "Sonia Gandhi", "Sushma Swaraj"],
+      "correctAnswer": "Meira Kumar"
+    },
+    {
+      "id": "Q349",
+      "question": "Which Indian state is known as the ‘Land of the Gods’?",
+      "options": ["Himachal Pradesh", "Uttarakhand", "Jammu & Kashmir", "Arunachal Pradesh"],
+      "correctAnswer": "Uttarakhand"
+    },
+    {
+      "id": "Q350",
+      "question": "Who was the first Indian to win a Nobel Prize in Peace?",
+      "options": ["Mother Teresa", "Kailash Satyarthi", "Amartya Sen", "Rabindranath Tagore"],
+      "correctAnswer": "Mother Teresa"
+    },
+    {
+      "id": "Q351",
+      "question": "Which Fundamental Right prohibits child labour?",
+      "options": ["Article 23", "Article 24", "Article 25", "Article 26"],
+      "correctAnswer": "Article 24"
+    },
+    {
+      "id": "Q352",
+      "question": "Who was the first Indian woman to become a Chief Minister?",
+      "options": ["Sucheta Kriplani", "Indira Gandhi", "Jayalalithaa", "Mamata Banerjee"],
+      "correctAnswer": "Sucheta Kriplani"
+    },
+    {
+      "id": "Q353",
+      "question": "Which Indian state is known as the ‘Land of the Blue Mountains’?",
+      "options": ["Meghalaya", "Nagaland", "Mizoram", "Manipur"],
+      "correctAnswer": "Mizoram"
+    },
+    {
+      "id": "Q354",
+      "question": "Who was the first Indian to win a Nobel Prize in Economics?",
+      "options": ["Amartya Sen", "Abhijit Banerjee", "C.V. Raman", "Kailash Satyarthi"],
+      "correctAnswer": "Amartya Sen"
+    },
+    {
+      "id": "Q355",
+      "question": "Which Article provides for the establishment of the Election Commission?",
+      "options": ["Article 324", "Article 325", "Article 326", "Article 327"],
+      "correctAnswer": "Article 324"
+    },
+    {
+      "id": "Q356",
+      "question": "Who was the first Indian woman to become a President?",
+      "options": ["Sarojini Naidu", "Indira Gandhi", "Sonia Gandhi", "Pratibha Patil"],
+      "correctAnswer": "Pratibha Patil"
+    },
+    {
+      "id": "Q357",
+      "question": "Which Indian state is known as the ‘Land of the Golden Triangle’?",
+      "options": ["Rajasthan", "Gujarat", "Punjab", "Haryana"],
+      "correctAnswer": "Rajasthan"
+    },
+    {
+      "id": "Q358",
+      "question": "Who was the first Indian to win a Nobel Prize in Physics?",
+      "options": ["C.V. Raman", "S. Chandrasekhar", "Har Gobind Khorana", "Venki Ramakrishnan"],
+      "correctAnswer": "C.V. Raman"
+    },
+    {
+      "id": "Q359",
+      "question": "Which Fundamental Right allows freedom to form associations or unions?",
+      "options": ["Article 19", "Article 20", "Article 21", "Article 22"],
+      "correctAnswer": "Article 19"
+    },
+    {
+      "id": "Q360",
+      "question": "Who was the first Indian woman to become a Nobel laureate?",
+      "options": ["Mother Teresa", "Indira Gandhi", "Sarojini Naidu", "Amartya Sen"],
+      "correctAnswer": "Mother Teresa"
+    }
+  ]

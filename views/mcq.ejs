@@ -1,31 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Main Exam</title>
-<style>
-    body { 
-        font-family: Arial, sans-serif; 
-        margin: 0; 
-        padding: 20px; 
-        background-color: #f4f4f4; 
-        user-select: none;
-    }
-    .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h1 { color: #333; }
-    .question { margin-bottom: 20px; }
-    .question p { font-weight: bold; }
-    .question label { display: block; margin: 5px 0; }
-    button { width: 100%; padding: 12px; background: #28a745; color: #fff; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
-    button:hover { background: #218838; }
-    .error { color: red; font-weight: bold; }
-    #startExamButton { display: block; margin: 20px auto; }
-    #examForm { display: none; }
-    #confirmationScreen { display: none; text-align: center; padding: 20px; }
-    #confirmationScreen h2 { color: #28a745; }
-    .locked { pointer-events: none; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Exam</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f4f4f4; }
+        .container { max-width: 800px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .question { margin-bottom: 20px; }
+        .question p { font-weight: bold; }
+        .question label { display: block; margin: 5px 0; }
+        button { width: 100%; padding: 12px; background: #28a745; color: #fff; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; }
+        button:hover { background: #218838; }
+        .error { color: red; font-weight: bold; }
+    </style>
 </head>
 <body>
 
@@ -33,9 +22,7 @@
     <h1>Main Exam</h1>
     <p id="error-message" class="error"></p>
 
-    <button id="startExamButton">Start Main Exam</button>
-
-    <form id="examForm" action="/submit-mcq" method="POST">
+    <form id="examForm" action="/submit-mcq" method="POST" target="_self">
         <input type="hidden" name="parentMobile1" value="<%= parentMobile1 %>">
         <% if (mcqs && mcqs.length > 0) { %>
             <% mcqs.forEach((mcq, index) => { %>
@@ -54,139 +41,71 @@
             <p>No questions available for this exam.</p>
         <% } %>
     </form>
-
-    <div id="confirmationScreen">
-        <h2>Exam Submitted Successfully!</h2>
-        <p>Your exam has been submitted. Please wait for further instructions.</p>
-    </div>
 </div>
 
 <script>
-let formSubmitted = false;
-let warningCount = 0;
-const maxWarnings = 3;
+    let formSubmitted = false;
+    let warningCount = 0;
+    const maxWarnings = 3;
 
-// Fullscreen
-function enterFullScreen() {
-    const element = document.documentElement;
-    if (element.requestFullscreen) element.requestFullscreen().catch(()=>{});
-    else if (element.mozRequestFullScreen) element.mozRequestFullScreen();
-    else if (element.webkitRequestFullscreen) element.webkitRequestFullscreen();
-    else if (element.msRequestFullscreen) element.msRequestFullscreen();
-}
-
-// Give warning and logout after max warnings
-function giveWarning() {
-    warningCount++;
-    if (warningCount >= maxWarnings) {
-        alert('You switched tab/minimized window or exited full-screen 3 times. You are now logged out.');
-        window.location.href = '/logout';
-    } else {
-        alert(`Warning ${warningCount}: Do not switch tab, minimize window, or exit full-screen during the exam!`);
-    }
-}
-
-// Lock interface after submission
-function lockDownInterface() {
-    document.addEventListener('keydown', e => e.preventDefault());
-    document.body.classList.add('locked');
-    document.addEventListener('dragstart', e => e.preventDefault());
-}
-
-// Start exam
-document.getElementById('startExamButton').addEventListener('click', () => {
-    enterFullScreen();
-    document.getElementById('examForm').style.display = 'block';
-    document.getElementById('startExamButton').style.display = 'none';
-});
-
-// Prevent back navigation
-history.pushState(null, null, location.href);
-window.onpopstate = () => {
-    history.pushState(null, null, location.href);
-    if (!formSubmitted) alert('Back navigation is disabled during the exam!');
-};
-
-// Prevent reload/close
-window.addEventListener('beforeunload', e => {
-    if (!formSubmitted) e.returnValue = '';
-});
-
-// Disable right-click, selection, drag
-document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('selectstart', e => e.preventDefault());
-document.addEventListener('dragstart', e => e.preventDefault());
-
-// Warn if fullscreen exited
-document.addEventListener('fullscreenchange', () => {
-    if (!document.fullscreenElement && !formSubmitted) {
-        giveWarning();
-        enterFullScreen();
-    }
-});
-
-// Warn on visibility change
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden && !formSubmitted) {
-        giveWarning();
-        enterFullScreen();
-    }
-});
-
-// Disable keyboard shortcuts
-document.addEventListener('keydown', e => {
-    if (!formSubmitted) {
-        if (e.ctrlKey || e.shiftKey || e.altKey || e.metaKey) {
-            e.preventDefault();
-            e.stopPropagation();
+    function giveWarning() {
+        warningCount++;
+        if (warningCount >= maxWarnings) {
+            alert('⚠️ You switched tab/minimized window 3 times. You are now logged out.');
+            window.location.href = '/logout';  // ✅ Your logout route here
+        } else {
+            alert(`⚠️ Warning ${warningCount}: Do not switch tab or minimize window during exam!`);
         }
-        if (['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12','Escape'].includes(e.key)) {
-            e.preventDefault();
-            e.stopPropagation();
+    }
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
             giveWarning();
-            enterFullScreen();
         }
-        if ((e.ctrlKey || e.metaKey) && ['c','v','x','u','r','t','s','p'].includes(e.key.toLowerCase())) {
+    });
+
+    document.addEventListener('contextmenu', e => e.preventDefault());
+
+    history.pushState(null, null, location.href);
+    window.onpopstate = function () {
+        history.go(1);
+        alert('⚠️ Back navigation is disabled during the exam!');
+    };
+
+    window.addEventListener('beforeunload', function (e) {
+        if (!formSubmitted) {
             e.preventDefault();
-            e.stopPropagation();
+            e.returnValue = '';
         }
-    }
-});
+    });
 
-// Disable copy/paste
-document.addEventListener('copy', e => e.preventDefault());
-document.addEventListener('paste', e => e.preventDefault());
+    document.addEventListener('keydown', function (e) {
+        if (e.key === "F12" || (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key))) {
+            e.preventDefault();
+            alert('⚠️ Developer tools are disabled during the exam!');
+        }
+    });
 
-// Validate and submit exam
-function validateForm(event) {
-    event.preventDefault();
-    const form = document.getElementById('examForm');
-    const questions = <%- JSON.stringify(mcqs.length) %>;
-    for (let i = 0; i < questions; i++) {
-        const answer = form.querySelector(`input[name="q${i}"]:checked`);
-        if (!answer) {
-            document.getElementById('error-message').innerText = '⚠️ Please answer all questions before submitting.';
+    function validateForm(event) {
+        const form = document.getElementById('examForm');
+        const questions = <%- JSON.stringify(mcqs.length) %>;
+        for (let i = 0; i < questions; i++) {
+            const answer = form.querySelector(`input[name="q${i}"]:checked`);
+            if (!answer) {
+                event.preventDefault();
+                document.getElementById('error-message').innerText = '⚠️ Please answer all questions before submitting.';
+                return false;
+            }
+        }
+        if (!confirm('Are you sure you want to submit your exam? You cannot change your answers after submission.')) {
+            event.preventDefault();
             return false;
         }
+        formSubmitted = true;
+        return true;
     }
-    if (!confirm('Are you sure you want to submit your exam?')) return false;
 
-    formSubmitted = true;
-    document.getElementById('examForm').style.display = 'none';
-    document.getElementById('confirmationScreen').style.display = 'block';
-    document.exitFullscreen();
-    lockDownInterface();
-
-    fetch('/submit-mcq', { method: 'POST', body: new FormData(form) })
-    .then(res => {
-        if (!res.ok) alert('Error submitting exam. Try again.');
-    })
-    .catch(() => alert('Error submitting exam. Try again.'));
-
-    return false;
-}
-
-document.getElementById('examForm').addEventListener('submit', validateForm);
+    document.getElementById('examForm').addEventListener('submit', validateForm);
 </script>
 
 </body>

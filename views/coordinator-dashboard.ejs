@@ -554,435 +554,549 @@
             </form>
         </div>
 
-        <!-- Student Feedback Form Tab -->
-        <div id="student-feedback" class="tab-content">
-            <h3 class="text-xl font-semibold mb-4">Student Feedback Form</h3>
-            <div class="space-y-4">
-                <div>
-                    <a href="/download-feedback-template" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-block">Download Feedback Excel Template</a>
-                </div>
-                <div id="uploadFeedbackError" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
-                <div id="uploadFeedbackSuccess" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"></div>
-                <form method="POST" action="/upload-feedback-excel" enctype="multipart/form-data" class="space-y-4" id="uploadFeedbackForm">
-                    <div>
-                        <label for="feedbackExcelFile" class="block text-sm font-medium text-gray-700">Upload Feedback Excel File</label>
-                        <input type="file" id="feedbackExcelFile" name="feedbackExcelFile" accept=".xlsx,.xls" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
-                        <span id="feedbackExcelFileError" class="field-error hidden"></span>
-                    </div>
-                    <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
-                        <span id="uploadFeedbackSubmitText">Upload</span>
-                        <svg id="uploadFeedbackLoadingSpinner" class="hidden animate-spin h-5 w-5 ml-2 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                        </svg>
-                    </button>
-                </form>
-            </div>
+      <!-- Student Feedback Form Tab -->
+<div id="student-feedback" class="tab-content">
+    <h3 class="text-xl font-semibold mb-4">Student Feedback Form</h3>
+    <div class="space-y-4">
+
+        <!-- Download Template -->
+        <div>
+            <a href="/download-feedback-template" 
+               class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded inline-block">
+               Download Feedback Excel Template
+            </a>
         </div>
+
+        <!-- Messages -->
+        <div id="uploadFeedbackError" 
+             class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4"></div>
+        <div id="uploadFeedbackSuccess" 
+             class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4"></div>
+
+        <!-- Excel Upload Form -->
+        <form method="POST" action="/upload-feedback-excel" enctype="multipart/form-data" 
+              class="space-y-4" id="uploadFeedbackForm">
+            <div>
+                <label for="feedbackExcelFile" class="block text-sm font-medium text-gray-700">
+                    Upload Feedback Excel File
+                </label>
+                <input type="file" id="feedbackExcelFile" name="feedbackExcelFile" 
+                       accept=".xlsx,.xls" 
+                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                <span id="feedbackExcelFileError" class="field-error hidden"></span>
+            </div>
+            <button type="submit" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center">
+                <span id="uploadFeedbackSubmitText">Upload</span>
+                <svg id="uploadFeedbackLoadingSpinner" 
+                     class="hidden animate-spin h-5 w-5 ml-2 text-white" 
+                     xmlns="http://www.w3.org/2000/svg" 
+                     fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" 
+                            stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" 
+                          d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+            </button>
+        </form>
+
+        <!-- PDF Upload Form -->
+        <form method="POST" action="/upload/pdf" enctype="multipart/form-data" 
+              class="space-y-4 mt-6" id="uploadPdfForm">
+            <div>
+                <label for="pdfFile" class="block text-sm font-medium text-gray-700">
+                    Upload Feedback PDF File 
+                </label>
+                <p class="text-xs text-red-500">
+    The PDF will be saved with the school name.
+</p>
+                <input type="file" id="pdfFile" name="pdfFile" accept="application/pdf" 
+                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm" required>
+                <span id="pdfFileError" class="field-error hidden"></span>
+            </div>
+            <button type="submit" 
+                    class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded flex items-center">
+                <span id="uploadPdfSubmitText">Upload PDF</span>
+                <svg id="uploadPdfLoadingSpinner" 
+                     class="hidden animate-spin h-5 w-5 ml-2 text-white" 
+                     xmlns="http://www.w3.org/2000/svg" 
+                     fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" 
+                            stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" 
+                          d="M4 12a8 8 0 018-8v8z"></path>
+                </svg>
+            </button>
+        </form>
+
     </div>
+</div>
 
-    <script>
-        // Tab switching logic
-        function switchTab(targetTab) {
-            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
-            document.querySelector(`#${targetTab}`).classList.add('active');
-            document.querySelector(`.tab-link[href="#${targetTab}"]`).classList.add('active');
-        }
+    </div>
+<script>
+    // Tab switching logic
+    function switchTab(targetTab) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-link').forEach(link => link.classList.remove('active'));
+        document.querySelector(`#${targetTab}`).classList.add('active');
+        document.querySelector(`.tab-link[href="#${targetTab}"]`).classList.add('active');
+    }
 
-        document.querySelectorAll('.tab-link').forEach(link => {
-            link.addEventListener('click', function (e) {
-                e.preventDefault();
-                const targetTab = this.getAttribute('href').substring(1);
-                switchTab(targetTab);
+    document.querySelectorAll('.tab-link').forEach(link => {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const targetTab = this.getAttribute('href').substring(1);
+            switchTab(targetTab);
+        });
+    });
+
+    // Initialize filters for Coordinator Summary Table
+    function initializeFilters(tableId) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const headers = table.querySelectorAll('th[data-filter]');
+        const rows = table.querySelectorAll('tbody tr');
+
+        headers.forEach(header => {
+            const column = header.dataset.filter;
+            const select = header.querySelector('.filter-select');
+            if (!select) return;
+
+            const values = new Set(['All']);
+            rows.forEach(row => {
+                const cell = row.querySelector(`td[data-column="${column}"]`);
+                if (cell && cell.textContent.trim()) values.add(cell.textContent.trim());
             });
+
+            select.innerHTML = '';
+            [...values].sort().forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                if (value === 'All') option.selected = true;
+                select.appendChild(option);
+            });
+
+            select.addEventListener('change', () => applyFilters(tableId));
+        });
+    }
+
+    function applyFilters(tableId) {
+        const table = document.getElementById(tableId);
+        if (!table) return;
+        const rows = table.querySelectorAll('tbody tr');
+        const filters = {};
+
+        table.querySelectorAll('.filter-select').forEach(select => {
+            filters[select.dataset.column] = select.value.trim();
         });
 
-        // Initialize filters for Coordinator Summary Table
-        function initializeFilters(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) return;
-            const headers = table.querySelectorAll('th[data-filter]');
-            const rows = table.querySelectorAll('tbody tr');
-
-            headers.forEach(header => {
-                const column = header.dataset.filter;
-                const select = header.querySelector('.filter-select');
-                if (!select) return;
-
-                const values = new Set(['All']);
-                rows.forEach(row => {
+        rows.forEach(row => {
+            let show = true;
+            for (const [column, value] of Object.entries(filters)) {
+                if (value && value !== 'All') {
                     const cell = row.querySelector(`td[data-column="${column}"]`);
-                    if (cell && cell.textContent.trim()) values.add(cell.textContent.trim());
-                });
-
-                select.innerHTML = '';
-                [...values].sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    if (value === 'All') option.selected = true;
-                    select.appendChild(option);
-                });
-
-                select.addEventListener('change', () => applyFilters(tableId));
-            });
-        }
-
-        function applyFilters(tableId) {
-            const table = document.getElementById(tableId);
-            if (!table) return;
-            const rows = table.querySelectorAll('tbody tr');
-            const filters = {};
-
-            table.querySelectorAll('.filter-select').forEach(select => {
-                filters[select.dataset.column] = select.value.trim();
-            });
-
-            rows.forEach(row => {
-                let show = true;
-                for (const [column, value] of Object.entries(filters)) {
-                    if (value && value !== 'All') {
-                        const cell = row.querySelector(`td[data-column="${column}"]`);
-                        if (cell && cell.textContent.trim() !== value) {
-                            show = false;
-                            break;
-                        }
+                    if (cell && cell.textContent.trim() !== value) {
+                        show = false;
+                        break;
                     }
                 }
-                row.style.display = show ? '' : 'none';
+            }
+            row.style.display = show ? '' : 'none';
+        });
+    }
+
+    // Clear error messages
+    function clearErrors(form) {
+        form.querySelectorAll('.error-border').forEach(field => field.classList.remove('error-border'));
+        form.querySelectorAll('.field-error').forEach(error => {
+            error.classList.add('hidden');
+            error.textContent = '';
+        });
+        document.getElementById('visitedSchoolError').classList.add('hidden');
+        document.getElementById('visitedSchoolSuccess').classList.add('hidden');
+    }
+
+    // Validate Visited School form
+    function validateVisitedSchoolForm(form) {
+        const requiredFields = form.querySelectorAll('input[required], textarea[required]');
+        let isValid = true;
+
+        clearErrors(form);
+
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                isValid = false;
+                field.classList.add('error-border');
+                const errorSpan = document.getElementById(`${field.id}Error`);
+                if (errorSpan) {
+                    errorSpan.textContent = `Please fill in the ${field.name} field.`;
+                    errorSpan.classList.remove('hidden');
+                }
+            }
+        });
+
+        const contactNumber = form.querySelector('#contactNumber');
+        if (contactNumber.value && !/^\+?\d{10,15}$/.test(contactNumber.value)) {
+            isValid = false;
+            contactNumber.classList.add('error-border');
+            document.getElementById('contactNumberError').textContent = 'Invalid phone number';
+            document.getElementById('contactNumberError').classList.remove('hidden');
+        }
+
+        return isValid;
+    }
+
+    // Handle form submission
+    async function handleFormSubmission(form, url, successDiv, errorDiv, submitButton, submitText, loadingSpinner, isEdit = false) {
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData);
+
+        if (!validateVisitedSchoolForm(form)) {
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitText.textContent = isEdit ? 'Updating...' : 'Submitting...';
+        loadingSpinner.classList.remove('hidden');
+        errorDiv.classList.add('hidden');
+        successDiv.classList.add('hidden');
+
+        try {
+            console.log('Sending data:', data);
+            const response = await fetch(url, {
+                method: isEdit ? 'PUT' : 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+            console.log('Server response:', result);
+
+            submitButton.disabled = false;
+            submitText.textContent = isEdit ? 'Update Form' : 'Submit Form';
+            loadingSpinner.classList.add('hidden');
+
+            if (response.ok) {
+                successDiv.textContent = result.message || 'Submission successful!';
+                successDiv.classList.remove('hidden');
+                form.reset();
+                form.classList.add('hidden');
+                await refreshVisitedSchools();
+                setTimeout(() => successDiv.classList.add('hidden'), 5000);
+                if (result.redirect) {
+                    setTimeout(() => {
+                        window.location.href = result.redirect;
+                    }, 1000);
+                }
+            } else {
+                errorDiv.innerHTML = result.error || 'Failed to submit form.';
+                if (result.details) {
+                    errorDiv.innerHTML += '<ul class="list-disc pl-5 mt-2">' +
+                        (Array.isArray(result.details) ? result.details.map(d => `<li>${d}</li>`).join('') : `<li>${result.details}</li>`) +
+                        '</ul>';
+                }
+                errorDiv.classList.remove('hidden');
+                setTimeout(() => errorDiv.classList.add('hidden'), 10000);
+            }
+        } catch (err) {
+            console.error(`Error submitting ${form.id}:`, err);
+            errorDiv.textContent = `Error submitting form: ${err.message}`;
+            errorDiv.classList.remove('hidden');
+            submitButton.disabled = false;
+            submitText.textContent = isEdit ? 'Update Form' : 'Submit Form';
+            loadingSpinner.classList.add('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+        }
+    }
+
+    // Refresh visited schools table
+    async function refreshVisitedSchools() {
+        try {
+            const response = await fetch('/visited-schools');
+            const data = await response.json();
+            if (response.ok) {
+                const tbody = document.querySelector('#visited-school table tbody');
+                tbody.innerHTML = '';
+                if (data.visitedSchools.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="6" class="py-3 px-4 text-center">No visited schools found.</td></tr>';
+                } else {
+                    data.visitedSchools.forEach(school => {
+                        tbody.innerHTML += `
+                            <tr class="border-b">
+                                <td class="py-3 px-4">${school.name || 'N/A'}</td>
+                                <td class="py-3 px-4">${school.visitDate || 'Not set'}</td>
+                                <td class="py-3 px-4">${school.schoolAddress || 'N/A'}</td>
+                                <td class="py-3 px-4">${school.contactPerson || 'N/A'}</td>
+                                <td class="py-3 px-4">${school.contactNumber || 'N/A'}</td>
+                                <td class="py-3 px-4">${school.visitNotes || 'N/A'}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            } else {
+                throw new Error(data.error || 'Failed to fetch visited schools');
+            }
+        } catch (err) {
+            console.error('Error refreshing visited schools:', err);
+            const errorDiv = document.getElementById('visitedSchoolError');
+            errorDiv.textContent = 'Failed to refresh visited schools: ' + err.message;
+            errorDiv.classList.remove('hidden');
+            setTimeout(() => errorDiv.classList.add('hidden'), 5000);
+        }
+    }
+
+    // Window onload for initialization
+    window.onload = function () {
+        switchTab('coordinator-summary');
+        initializeFilters('coordinatorSummaryTable');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('success') || urlParams.has('error')) {
+            history.replaceState(null, '', window.location.pathname);
+        }
+
+        const visitedSchoolForm = document.querySelector('#visitedSchoolForm');
+        if (visitedSchoolForm) {
+            visitedSchoolForm.addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const isEdit = !!this.dataset.id;
+                const url = isEdit ? `/update-visited-school/${this.dataset.id}` : '/submit-visited-school';
+                await handleFormSubmission(
+                    this,
+                    url,
+                    document.getElementById('visitedSchoolSuccess'),
+                    document.getElementById('visitedSchoolError'),
+                    this.querySelector('button[type="submit"]'),
+                    this.querySelector('#visitedSchoolSubmitText'),
+                    this.querySelector('#visitedSchoolLoadingSpinner'),
+                    isEdit
+                );
             });
         }
 
-        // Clear error messages
-        function clearErrors(form) {
-            form.querySelectorAll('.error-border').forEach(field => field.classList.remove('error-border'));
-            form.querySelectorAll('.field-error').forEach(error => {
-                error.classList.add('hidden');
-                error.textContent = '';
-            });
-            document.getElementById('visitedSchoolError').classList.add('hidden');
-            document.getElementById('visitedSchoolSuccess').classList.add('hidden');
-        }
-
-        // Validate Visited School form
-        function validateVisitedSchoolForm(form) {
-            const requiredFields = form.querySelectorAll('input[required], textarea[required]');
-            let isValid = true;
-
+        document.getElementById('addVisitBtn').addEventListener('click', function () {
+            const form = document.getElementById('visitedSchoolForm');
+            form.classList.toggle('hidden');
+            form.reset();
+            form.dataset.id = '';
+            document.getElementById('visitedSchoolSubmitText').textContent = 'Submit Form';
             clearErrors(form);
+        });
 
+        function clearWorkshopSummaryErrors(form) {
+            form.querySelectorAll('.error-border').forEach(f => f.classList.remove('error-border'));
+            form.querySelectorAll('.field-error').forEach(e => {
+                e.classList.add('hidden');
+                e.textContent = '';
+            });
+        }
+
+        // Validate form fields before submit
+        function validateWorkshopSummaryForm(form) {
+            let isValid = true;
+            clearWorkshopSummaryErrors(form);
+
+            const requiredFields = form.querySelectorAll('[required]');
             requiredFields.forEach(field => {
-                if (!field.value.trim()) {
+                if (field.id !== 'trainerFeedback' && field.id !== 'socialMediaFeedback' && !field.value.trim()) {
                     isValid = false;
                     field.classList.add('error-border');
                     const errorSpan = document.getElementById(`${field.id}Error`);
                     if (errorSpan) {
-                        errorSpan.textContent = `Please fill in the ${field.name} field.`;
+                        errorSpan.textContent = `Please fill in the ${field.name || field.id} field.`;
                         errorSpan.classList.remove('hidden');
                     }
                 }
             });
 
-            const contactNumber = form.querySelector('#contactNumber');
-            if (contactNumber.value && !/^\+?\d{10,15}$/.test(contactNumber.value)) {
+            const studentFeedbackFormNumber = form.querySelector('#studentFeedbackFormNumber');
+            if (studentFeedbackFormNumber.value && (isNaN(studentFeedbackFormNumber.value) || studentFeedbackFormNumber.value < 0)) {
                 isValid = false;
-                contactNumber.classList.add('error-border');
-                document.getElementById('contactNumberError').textContent = 'Invalid phone number';
-                document.getElementById('contactNumberError').classList.remove('hidden');
+                studentFeedbackFormNumber.classList.add('error-border');
+                document.getElementById('studentFeedbackFormNumberError').textContent = 'Please enter a valid number of feedback forms (0 or greater).';
+                document.getElementById('studentFeedbackFormNumberError').classList.remove('hidden');
+            }
+
+            const paymentMode = form.querySelector('#paymentMode').value;
+            if (paymentMode === 'Online' || paymentMode === 'Cheque') {
+                const upiId = form.querySelector('#upiId');
+                const transactionId = form.querySelector('#transactionId');
+                if (!upiId.value.trim()) {
+                    isValid = false;
+                    upiId.classList.add('error-border');
+                    document.getElementById('upiIdError').textContent = 'Please fill in the UPI ID field.';
+                    document.getElementById('upiIdError').classList.remove('hidden');
+                }
+                if (!transactionId.value.trim()) {
+                    isValid = false;
+                    transactionId.classList.add('error-border');
+                    document.getElementById('transactionIdError').textContent = 'Please fill in the Transaction ID field.';
+                    document.getElementById('transactionIdError').classList.remove('hidden');
+                }
             }
 
             return isValid;
         }
 
-        // Handle form submission
-        async function handleFormSubmission(form, url, successDiv, errorDiv, submitButton, submitText, loadingSpinner, isEdit = false) {
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData);
+        // Toggle transaction details visibility
+        document.getElementById('paymentMode').addEventListener('change', function () {
+            const transactionDetails = document.getElementById('transactionDetails');
+            const upiId = document.getElementById('upiId');
+            const transactionId = document.getElementById('transactionId');
+            if (this.value === 'Online' || this.value === 'Cheque') {
+                transactionDetails.classList.remove('hidden');
+                upiId.setAttribute('required', '');
+                transactionId.setAttribute('required', '');
+            } else {
+                transactionDetails.classList.add('hidden');
+                upiId.removeAttribute('required');
+                transactionId.removeAttribute('required');
+                upiId.value = '';
+                transactionId.value = '';
+                document.getElementById('upiIdError').classList.add('hidden');
+                document.getElementById('transactionIdError').classList.add('hidden');
+                upiId.classList.remove('error-border');
+                transactionId.classList.remove('error-border');
+            }
+        });
 
-            if (!validateVisitedSchoolForm(form)) {
+        document.getElementById('workshopSummaryForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const submitText = form.querySelector('#submitText');
+            const loadingSpinner = form.querySelector('#loadingSpinner');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+
+            // Validate before sending
+            if (!validateWorkshopSummaryForm(form)) {
                 return;
             }
 
+            // Reset messages
+            successMessage.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+
+            // Disable button and show spinner
             submitButton.disabled = true;
-            submitText.textContent = isEdit ? 'Updating...' : 'Submitting...';
+            submitText.textContent = 'Submitting...';
             loadingSpinner.classList.remove('hidden');
-            errorDiv.classList.add('hidden');
-            successDiv.classList.add('hidden');
 
             try {
-                console.log('Sending data:', data);
-                const response = await fetch(url, {
-                    method: isEdit ? 'PUT' : 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
+                const formObject = Object.fromEntries(new FormData(form).entries());
+                // Convert coordinatorDeclaration to boolean
+                formObject.coordinatorDeclaration = formObject.coordinatorDeclaration === 'on';
+                // Convert studentFeedbackFormNumber to number
+                formObject.studentFeedbackFormNumber = parseInt(formObject.studentFeedbackFormNumber, 10);
+
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
                     },
-                    body: JSON.stringify(data)
+                    body: JSON.stringify(formObject)
                 });
 
                 const result = await response.json();
-                console.log('Server response:', result);
-
-                submitButton.disabled = false;
-                submitText.textContent = isEdit ? 'Update Form' : 'Submit Form';
-                loadingSpinner.classList.add('hidden');
 
                 if (response.ok) {
-                    successDiv.textContent = result.message || 'Submission successful!';
-                    successDiv.classList.remove('hidden');
+                    successMessage.textContent = result.message || 'Form submitted successfully!';
+                    successMessage.classList.remove('hidden');
                     form.reset();
-                    form.classList.add('hidden');
-                    await refreshVisitedSchools();
-                    setTimeout(() => successDiv.classList.add('hidden'), 5000);
-                    if (result.redirect) {
-                        setTimeout(() => {
-                            window.location.href = result.redirect;
-                        }, 1000);
-                    }
+                    document.getElementById('transactionDetails').classList.add('hidden');
+                    document.getElementById('paymentMode').value = '';
+                    setTimeout(() => successMessage.classList.add('hidden'), 5000);
                 } else {
-                    errorDiv.innerHTML = result.error || 'Failed to submit form.';
+                    errorMessage.textContent = result.error || 'Failed to submit form';
                     if (result.details) {
-                        errorDiv.innerHTML += '<ul class="list-disc pl-5 mt-2">' +
-                            (Array.isArray(result.details) ? result.details.map(d => `<li>${d}</li>`).join('') : `<li>${result.details}</li>`) +
+                        errorMessage.innerHTML += '<ul class="list-disc pl-5 mt-2">' +
+                            result.details.map(err => `<li>${err}</li>`).join('') +
                             '</ul>';
                     }
-                    errorDiv.classList.remove('hidden');
-                    setTimeout(() => errorDiv.classList.add('hidden'), 10000);
+                    errorMessage.classList.remove('hidden');
+                    setTimeout(() => errorMessage.classList.add('hidden'), 10000);
                 }
             } catch (err) {
-                console.error(`Error submitting ${form.id}:`, err);
-                errorDiv.textContent = `Error submitting form: ${err.message}`;
-                errorDiv.classList.remove('hidden');
+                console.error('Form submission error:', err);
+                errorMessage.textContent = 'An error occurred: ' + err.message;
+                errorMessage.classList.remove('hidden');
+                setTimeout(() => errorMessage.classList.add('hidden'), 5000);
+            } finally {
+                // Reset button/spinner
                 submitButton.disabled = false;
-                submitText.textContent = isEdit ? 'Update Form' : 'Submit Form';
+                submitText.textContent = 'Submit Form';
                 loadingSpinner.classList.add('hidden');
-                setTimeout(() => errorDiv.classList.add('hidden'), 5000);
             }
+        });
+
+        // ==============================
+        // Excel Upload Spinner Handling
+        // ==============================
+        const uploadFeedbackForm = document.getElementById("uploadFeedbackForm");
+        const uploadFeedbackSubmitText = document.getElementById("uploadFeedbackSubmitText");
+        const uploadFeedbackLoadingSpinner = document.getElementById("uploadFeedbackLoadingSpinner");
+        const uploadFeedbackError = document.getElementById("uploadFeedbackError");
+        const uploadFeedbackSuccess = document.getElementById("uploadFeedbackSuccess");
+
+        if (uploadFeedbackForm) {
+            uploadFeedbackForm.addEventListener("submit", function () {
+                uploadFeedbackSubmitText.textContent = "Uploading...";
+                uploadFeedbackLoadingSpinner.classList.remove("hidden");
+                uploadFeedbackError.classList.add("hidden");
+                uploadFeedbackSuccess.classList.add("hidden");
+            });
         }
 
-        // Refresh visited schools table
-        async function refreshVisitedSchools() {
-            try {
-                const response = await fetch('/visited-schools');
-                const data = await response.json();
-                if (response.ok) {
-                    const tbody = document.querySelector('#visited-school table tbody');
-                    tbody.innerHTML = '';
-                    if (data.visitedSchools.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="6" class="py-3 px-4 text-center">No visited schools found.</td></tr>';
-                    } else {
-                        data.visitedSchools.forEach(school => {
-                            tbody.innerHTML += `
-                                <tr class="border-b">
-                                    <td class="py-3 px-4">${school.name || 'N/A'}</td>
-                                    <td class="py-3 px-4">${school.visitDate || 'Not set'}</td>
-                                    <td class="py-3 px-4">${school.schoolAddress || 'N/A'}</td>
-                                    <td class="py-3 px-4">${school.contactPerson || 'N/A'}</td>
-                                    <td class="py-3 px-4">${school.contactNumber || 'N/A'}</td>
-                                    <td class="py-3 px-4">${school.visitNotes || 'N/A'}</td>
-                                </tr>
-                            `;
-                        });
-                    }
-                } else {
-                    throw new Error(data.error || 'Failed to fetch visited schools');
-                }
-            } catch (err) {
-                console.error('Error refreshing visited schools:', err);
-                const errorDiv = document.getElementById('visitedSchoolError');
-                errorDiv.textContent = 'Failed to refresh visited schools: ' + err.message;
-                errorDiv.classList.remove('hidden');
-                setTimeout(() => errorDiv.classList.add('hidden'), 5000);
-            }
-        }
+        // ==============================
+        // PDF Upload Handling
+        // ==============================
+        const uploadPdfForm = document.getElementById("uploadPdfForm");
+        const uploadPdfSubmitText = document.getElementById("uploadPdfSubmitText");
+        const uploadPdfLoadingSpinner = document.getElementById("uploadPdfLoadingSpinner");
+        const pdfFileError = document.getElementById("pdfFileError");
 
-        // Window onload for initialization
-        window.onload = function () {
-            switchTab('coordinator-summary');
-            initializeFilters('coordinatorSummaryTable');
-
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.has('success') || urlParams.has('error')) {
-                history.replaceState(null, '', window.location.pathname);
-            }
-
-            const visitedSchoolForm = document.querySelector('#visitedSchoolForm');
-            if (visitedSchoolForm) {
-                visitedSchoolForm.addEventListener('submit', async function (e) {
-                    e.preventDefault();
-                    const isEdit = !!this.dataset.id;
-                    const url = isEdit ? `/update-visited-school/${this.dataset.id}` : '/submit-visited-school';
-                    await handleFormSubmission(
-                        this,
-                        url,
-                        document.getElementById('visitedSchoolSuccess'),
-                        document.getElementById('visitedSchoolError'),
-                        this.querySelector('button[type="submit"]'),
-                        this.querySelector('#visitedSchoolSubmitText'),
-                        this.querySelector('#visitedSchoolLoadingSpinner'),
-                        isEdit
-                    );
-                });
-            }
-
-            document.getElementById('addVisitBtn').addEventListener('click', function () {
-                const form = document.getElementById('visitedSchoolForm');
-                form.classList.toggle('hidden');
-                form.reset();
-                form.dataset.id = '';
-                document.getElementById('visitedSchoolSubmitText').textContent = 'Submit Form';
-                clearErrors(form);
-            });
-
-            function clearWorkshopSummaryErrors(form) {
-                form.querySelectorAll('.error-border').forEach(f => f.classList.remove('error-border'));
-                form.querySelectorAll('.field-error').forEach(e => {
-                    e.classList.add('hidden');
-                    e.textContent = '';
-                });
-            }
-
-            // Validate form fields before submit
-            function validateWorkshopSummaryForm(form) {
-                let isValid = true;
-                clearWorkshopSummaryErrors(form);
-
-                const requiredFields = form.querySelectorAll('[required]');
-                requiredFields.forEach(field => {
-                    if (field.id !== 'trainerFeedback' && field.id !== 'socialMediaFeedback' && !field.value.trim()) {
-                        isValid = false;
-                        field.classList.add('error-border');
-                        const errorSpan = document.getElementById(`${field.id}Error`);
-                        if (errorSpan) {
-                            errorSpan.textContent = `Please fill in the ${field.name || field.id} field.`;
-                            errorSpan.classList.remove('hidden');
-                        }
-                    }
-                });
-
-                const studentFeedbackFormNumber = form.querySelector('#studentFeedbackFormNumber');
-                if (studentFeedbackFormNumber.value && (isNaN(studentFeedbackFormNumber.value) || studentFeedbackFormNumber.value < 0)) {
-                    isValid = false;
-                    studentFeedbackFormNumber.classList.add('error-border');
-                    document.getElementById('studentFeedbackFormNumberError').textContent = 'Please enter a valid number of feedback forms (0 or greater).';
-                    document.getElementById('studentFeedbackFormNumberError').classList.remove('hidden');
-                }
-
-                const paymentMode = form.querySelector('#paymentMode').value;
-                if (paymentMode === 'Online' || paymentMode === 'Cheque') {
-                    const upiId = form.querySelector('#upiId');
-                    const transactionId = form.querySelector('#transactionId');
-                    if (!upiId.value.trim()) {
-                        isValid = false;
-                        upiId.classList.add('error-border');
-                        document.getElementById('upiIdError').textContent = 'Please fill in the UPI ID field.';
-                        document.getElementById('upiIdError').classList.remove('hidden');
-                    }
-                    if (!transactionId.value.trim()) {
-                        isValid = false;
-                        transactionId.classList.add('error-border');
-                        document.getElementById('transactionIdError').textContent = 'Please fill in the Transaction ID field.';
-                        document.getElementById('transactionIdError').classList.remove('hidden');
-                    }
-                }
-
-                return isValid;
-            }
-
-            // Toggle transaction details visibility
-            document.getElementById('paymentMode').addEventListener('change', function () {
-                const transactionDetails = document.getElementById('transactionDetails');
-                const upiId = document.getElementById('upiId');
-                const transactionId = document.getElementById('transactionId');
-                if (this.value === 'Online' || this.value === 'Cheque') {
-                    transactionDetails.classList.remove('hidden');
-                    upiId.setAttribute('required', '');
-                    transactionId.setAttribute('required', '');
-                } else {
-                    transactionDetails.classList.add('hidden');
-                    upiId.removeAttribute('required');
-                    transactionId.removeAttribute('required');
-                    upiId.value = '';
-                    transactionId.value = '';
-                    document.getElementById('upiIdError').classList.add('hidden');
-                    document.getElementById('transactionIdError').classList.add('hidden');
-                    upiId.classList.remove('error-border');
-                    transactionId.classList.remove('error-border');
-                }
-            });
-
-            document.getElementById('workshopSummaryForm').addEventListener('submit', async function (e) {
+        if (uploadPdfForm) {
+            uploadPdfForm.addEventListener("submit", async function (e) {
                 e.preventDefault();
 
-                const form = e.target;
-                const submitButton = form.querySelector('button[type="submit"]');
-                const submitText = form.querySelector('#submitText');
-                const loadingSpinner = form.querySelector('#loadingSpinner');
-                const successMessage = document.getElementById('successMessage');
-                const errorMessage = document.getElementById('errorMessage');
+                uploadPdfSubmitText.textContent = "Uploading...";
+                uploadPdfLoadingSpinner.classList.remove("hidden");
+                pdfFileError.classList.add("hidden");
 
-                // Validate before sending
-                if (!validateWorkshopSummaryForm(form)) {
-                    return;
-                }
-
-                // Reset messages
-                successMessage.classList.add('hidden');
-                errorMessage.classList.add('hidden');
-
-                // Disable button and show spinner
-                submitButton.disabled = true;
-                submitText.textContent = 'Submitting...';
-                loadingSpinner.classList.remove('hidden');
+                const formData = new FormData(uploadPdfForm);
 
                 try {
-                    const formObject = Object.fromEntries(new FormData(form).entries());
-                    // Convert coordinatorDeclaration to boolean
-                    formObject.coordinatorDeclaration = formObject.coordinatorDeclaration === 'on';
-                    // Convert studentFeedbackFormNumber to number
-                    formObject.studentFeedbackFormNumber = parseInt(formObject.studentFeedbackFormNumber, 10);
-
-                    const response = await fetch(form.action, {
-                        method: 'POST',
-                        headers: { 
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json'
-                        },
-                        body: JSON.stringify(formObject)
+                    const response = await fetch("/upload/pdf", {
+                        method: "POST",
+                        body: formData,
                     });
 
                     const result = await response.json();
 
                     if (response.ok) {
-                        successMessage.textContent = result.message || 'Form submitted successfully!';
-                        successMessage.classList.remove('hidden');
-                        form.reset();
-                        document.getElementById('transactionDetails').classList.add('hidden');
-                        document.getElementById('paymentMode').value = '';
-                        setTimeout(() => successMessage.classList.add('hidden'), 5000);
+                        alert("✅ " + result.message);
+                        uploadPdfForm.reset();
                     } else {
-                        errorMessage.textContent = result.error || 'Failed to submit form';
-                        if (result.details) {
-                            errorMessage.innerHTML += '<ul class="list-disc pl-5 mt-2">' +
-                                result.details.map(err => `<li>${err}</li>`).join('') +
-                                '</ul>';
-                        }
-                        errorMessage.classList.remove('hidden');
-                        setTimeout(() => errorMessage.classList.add('hidden'), 10000);
+                        pdfFileError.textContent = result.error || "Upload failed";
+                        pdfFileError.classList.remove("hidden");
                     }
-                } catch (err) {
-                    console.error('Form submission error:', err);
-                    errorMessage.textContent = 'An error occurred: ' + err.message;
-                    errorMessage.classList.remove('hidden');
-                    setTimeout(() => errorMessage.classList.add('hidden'), 5000);
+                } catch (error) {
+                    pdfFileError.textContent = "An error occurred while uploading";
+                    pdfFileError.classList.remove("hidden");
                 } finally {
-                    // Reset button/spinner
-                    submitButton.disabled = false;
-                    submitText.textContent = 'Submit Form';
-                    loadingSpinner.classList.add('hidden');
+                    uploadPdfSubmitText.textContent = "Upload PDF";
+                    uploadPdfLoadingSpinner.classList.add("hidden");
                 }
             });
         }
-    </script>
+    }
+</script>
+
 </body>
 </html>

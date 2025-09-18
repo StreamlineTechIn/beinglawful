@@ -1582,7 +1582,66 @@ window.onload = function () {
 }
 
 standardizeWorkshopTimes();
+ async function loadPDFs() {
+    try {
+      const res = await fetch("/api/pdfs");
+      const data = await res.json();
+      const container = document.getElementById("pdf-container");
+
+      if (data.pdfs.length === 0) {
+        container.innerHTML = "<p class='text-gray-500'>No PDF files uploaded yet.</p>";
+        return;
+      }
+
+      container.innerHTML = "";
+      data.pdfs.forEach(pdf => {
+        const div = document.createElement("div");
+        div.className = "p-4 border rounded shadow bg-white";
+
+        div.innerHTML = `
+          <p class="text-gray-700 font-medium mb-2">${pdf.name}</p>
+          <iframe src="${pdf.url}" class="w-full h-96 border rounded"></iframe>
+          <a href="${pdf.url}" target="_blank" class="mt-2 inline-block text-blue-500 hover:underline">
+            Open in new tab
+          </a>
+        `;
+
+        container.appendChild(div);
+      });
+    } catch (err) {
+      console.error("Error loading PDFs:", err);
+    }
+  }
+ const pdfBtn = document.getElementById('pdf-btn');
+    const excelBtn = document.getElementById('excel-btn');
+    const pdfSection = document.getElementById('pdf-section');
+    const excelSection = document.getElementById('excel-section');
+
+    // Initially show PDFs
+    pdfSection.classList.remove('hidden');
+    excelSection.classList.add('hidden');
+
+    pdfBtn.addEventListener('click', () => {
+        pdfSection.classList.remove('hidden');
+        excelSection.classList.add('hidden');
+        pdfBtn.classList.add('bg-blue-500', 'text-white');
+        pdfBtn.classList.remove('bg-gray-200', 'text-gray-700');
+        excelBtn.classList.add('bg-gray-200', 'text-gray-700');
+        excelBtn.classList.remove('bg-blue-500', 'text-white');
+    });
+
+    excelBtn.addEventListener('click', () => {
+        excelSection.classList.remove('hidden');
+        pdfSection.classList.add('hidden');
+        excelBtn.classList.add('bg-blue-500', 'text-white');
+        excelBtn.classList.remove('bg-gray-200', 'text-gray-700');
+        pdfBtn.classList.add('bg-gray-200', 'text-gray-700');
+        pdfBtn.classList.remove('bg-blue-500', 'text-white');
+    });
+  // Call on page load
+  document.addEventListener("DOMContentLoaded", loadPDFs);
 };
+
 </script>
     <style>
         .mark-seen-checkbox:checked {
@@ -2923,54 +2982,84 @@ standardizeWorkshopTimes();
         </div>
     </div>
         <!-- upload by co-ordiantor -->
-<div id="student-feedback" class="tab-content hidden">
+<div id="student-feedback" class="tab-content">
     <h2 class="text-2xl font-bold mb-4 text-gray-700">Student Feedback</h2>
     <p class="text-gray-600 mb-4">Showing student feedback submissions</p>
-    <div class="overflow-x-auto mb-6">
-        <table id="student-feedback-table" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
-            <thead class="bg-gray-100 sticky top-0">
-                <tr>
-                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">
-                        Student Name<br>
-                        <select class="filter-select text-sm w-full" data-column="studentName"></select>
-                    </th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="className">
-                        Class<br>
-                        <select class="filter-select text-sm w-full" data-column="className"></select>
-                    </th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">How would you rate todays workshop?
-</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">Would you recommend this workshop to your friends?
-</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">Which part of the workshop did you enjoy the most?
-</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">What did you learn today that you didn`t know before?
-</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600">Do you have any suggestions to make this workshop better?
-</th>
-                    <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="createdAt">
-                        Submission Date (IST)<br>
-                        <select class="filter-select text-sm w-full" data-column="createdAt"></select>
-                    </th>
-                </tr>
-            </thead>
-            <tbody id="student-feedback-body">
-                <% feedbackEntries.forEach(entry => { %>
-                    <tr>
-                        <td class="py-2 px-4 border-b text-gray-700"><%= entry.studentName %></td>
-                        <td class="py-2 px-4 border-b text-gray-700"><%= entry.className %></td>
-                        <td class="py-2 px-4 border-b text-gray-700"><%= entry.question1 %></td>
-                        <td class="py-2 px-4 border-b text-gray-700"><%= entry.question2 %></td>
-                        <td class="py-2 px-4 border-b text-gray-700"><%= entry.question3 %></td>
-                        <td class="py-2 px-4 border-b text-gray-700"><%= entry.question4 %></td>
-                        <td class="py-2 px-4 border-b text-gray-700"><%= entry.question5 %></td>
-                        <td class="py-2 px-4 border-b text-gray-700"><%= entry.createdAt %></td>
-                    </tr>
+
+    <!-- Toggle Buttons -->
+    <div class="mb-6 flex space-x-4">
+        <button id="pdf-btn" class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+            PDFs
+        </button>
+        <button id="excel-btn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300">
+            Excel
+        </button>
+    </div>
+
+    <!-- PDF Section -->
+    <div id="pdf-section">
+        <h3 class="text-xl font-semibold mb-4 text-gray-700">Uploaded Feedback PDFs</h3>
+        <% if (pdfs && pdfs.length > 0) { %>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <% pdfs.forEach(pdf => { %>
+                    <div class="p-4 border rounded shadow bg-white">
+                        <p class="text-gray-700 font-medium mb-2"><%= pdf.name %></p>
+                        <iframe src="<%= pdf.url %>" class="w-full h-64 border rounded"></iframe>
+                        <a href="<%= pdf.url %>" target="_blank" class="mt-2 inline-block text-blue-500 hover:underline">
+                            Open in new tab
+                        </a>
+                    </div>
                 <% }) %>
-            </tbody>
-        </table>
+            </div>
+        <% } else { %>
+            <p class="text-gray-500">No PDF files uploaded yet.</p>
+        <% } %>
+    </div>
+
+    <!-- Excel/Table Section -->
+    <div id="excel-section" class="hidden">
+        <div class="overflow-x-auto mb-6">
+            <table id="student-feedback-table" class="min-w-full bg-white border border-gray-200 rounded-lg shadow-md">
+                <thead class="bg-gray-100 sticky top-0">
+                    <tr>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="studentName">
+                            Student Name<br>
+                            <select class="filter-select text-sm w-full" data-column="studentName"></select>
+                        </th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="className">
+                            Class<br>
+                            <select class="filter-select text-sm w-full" data-column="className"></select>
+                        </th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">How would you rate today's workshop?</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Would you recommend this workshop?</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Which part did you enjoy the most?</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">What did you learn today?</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600">Any suggestions?</th>
+                        <th class="py-2 px-4 border-b text-left text-gray-600" data-filter="createdAt">
+                            Submission Date (IST)<br>
+                            <select class="filter-select text-sm w-full" data-column="createdAt"></select>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="student-feedback-body">
+                    <% feedbackEntries.forEach(entry => { %>
+                        <tr>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= entry.studentName %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= entry.className %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= entry.question1 %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= entry.question2 %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= entry.question3 %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= entry.question4 %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= entry.question5 %></td>
+                            <td class="py-2 px-4 border-b text-gray-700"><%= entry.createdAt %></td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
 
    
 

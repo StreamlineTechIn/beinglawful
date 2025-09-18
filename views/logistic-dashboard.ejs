@@ -230,7 +230,15 @@
     <a class="navbar-brand" href="#">Logistic Portal</a>
     <div class="navbar-nav">
       <a class="nav-link" href="/logistic-dashboard">Dashboard</a>
-      <a class="nav-link" href="/financial">Financial</a>
+      <div class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="financialDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          Financial
+        </a>
+        <div class="dropdown-menu" aria-labelledby="financialDropdown">
+          <a class="dropdown-item" href="/other">Other</a>
+          <a class="dropdown-item" href="/financial">Financial</a>
+        </div>
+      </div>
     </div>
     <div class="ml-auto">
       <div class="dropdown">

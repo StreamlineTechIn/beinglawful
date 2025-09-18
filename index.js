@@ -18,27 +18,40 @@ const saltRounds = 10;
 // Multer setup for Excel file uploads
 const storage = multer.memoryStorage();
 
-
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = [
-            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            'application/vnd.ms-excel',
-            'image/jpeg',
-            'image/png',
-            'image/jpg'
-        ];
-        if (allowedTypes.includes(file.mimetype)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Only Excel (.xlsx, .xls) and image files are allowed'), false);
-        }
+const uploadpdf = multer({
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === "application/pdf") {
+      cb(null, true);
+    } else {
+      cb(new Error("Only PDF files are allowed"), false);
     }
+  },
+}).single("pdfFile");
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = [
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", // .xlsx
+      "application/vnd.ms-excel", // .xls
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+      "application/pdf", // ✅ added PDF
+    ];
+
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only Excel (.xlsx, .xls), PDF, and image files are allowed"), false);
+    }
+  },
 }).fields([
-    { name: 'excelFile', maxCount: 1 },
-    { name: 'images', maxCount: 10 }
+  { name: "excelFile", maxCount: 1 },
+  { name: "images", maxCount: 10 },
+  { name: "pdfFile", maxCount: 1 }, 
 ]);
 const uploadImages = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -3671,7 +3684,18 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
         } catch (indexErr) {
             console.error('🔥 Firestore Index Error in Today Stats:', indexErr);
         }
+            /* ------------------- pdf get ------------------- */
+const pdfUploadsSnapshot = await db.collection('pdfUploads').get();
 
+const pdfs = pdfUploadsSnapshot.docs.map(doc => {
+    const data = doc.data();
+    return {
+        id: doc.id,
+        name: data.name || 'Unnamed PDF',
+        url: data.url || '',
+        uploadedAt: data.uploadedAt?.toDate ? data.uploadedAt.toDate() : null
+    };
+});
         /* ------------------- RENDER PAGE ------------------- */
         res.render('adminDashboard', {
             schools,
@@ -3687,6 +3711,7 @@ app.get('/admin-dashboard', requireAdmin, async (req, res) => {
             workshopSummaries,
             feedbackEntries,
             visitedSchools,
+             pdfs,
             error: null,
             success: req.query.success || null,
             showRegister: false
@@ -5464,6 +5489,9 @@ app.get('/financial', async (req, res) => {
     res.status(500).send('Internal Server Error');
   }
 });
+app.get('/other', (req, res) => {
+  res.render('other', {});
+});
 
 // Route to update financial details
 app.post('/financial/:schoolId', async (req, res) => {
@@ -5955,6 +5983,57 @@ const isAuthenticated = (req, res, next) => {
     }
     next();
 };
+
+
+app.post("/upload/pdf", uploadpdf, async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No PDF uploaded" });
+
+    const file = req.file;
+    const fileName = `pdfs/${Date.now()}_${file.originalname}`;
+    const fileRef = bucket.file(fileName);
+
+    await fileRef.save(file.buffer, {
+      contentType: file.mimetype,
+      public: true, // make accessible via URL
+    });
+
+    const pdfUrl = `https://storage.googleapis.com/${bucket.name}/${fileName}`;
+
+    // Save metadata to Firestore
+    await db.collection("pdfUploads").add({
+      name: file.originalname,
+      url: pdfUrl,
+      uploadedAt: new Date(),
+    });
+
+    res.json({ message: "PDF uploaded successfully", url: pdfUrl });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
+
+
+// Get all uploaded PDFs
+app.get("/get/pdfs", async (req, res) => {
+  try {
+    const snapshot = await db.collection("pdfUploads").orderBy("uploadedAt", "desc").get();
+
+    const pdfs = snapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data().name,
+      url: doc.data().url,
+      uploadedAt: doc.data().uploadedAt?.toDate ? doc.data().uploadedAt.toDate() : null,
+    }));
+
+    res.json({ pdfs });
+  } catch (err) {
+    console.error("Error fetching PDFs:", err);
+    res.status(500).json({ error: "Failed to fetch PDFs" });
+  }
+});
+
 
     // Register Coordinator Route
   app.post('/co-ordinator-register', async (req, res) => {
@@ -6517,10 +6596,8 @@ app.post('/upload-feedback-excel', isAuthenticated, uploadFeedback, async (req, 
 });
 
 // Route to fetch school tracker data, including trainer financials
-// Route to fetch and display school tracker data
 app.get('/school-tracker', async (req, res) => {
   try {
-    // Fetch data from Firestore collections
     const schoolSnapshot = await db.collection('schools').get();
     const paymentSnapshot = await db.collection('payments').get();
     const participantSnapshot = await db.collection('participants').get();
@@ -6535,7 +6612,7 @@ app.get('/school-tracker', async (req, res) => {
 
     // Process coordinators
     coordinatorSnapshot.forEach(doc => {
-      coordinators[doc.id] = doc.data().name || 'N/A';
+      coordinators[doc.id] = doc.data().name || 'Not Assigned';
     });
 
     // Process workshop summaries
@@ -6543,11 +6620,11 @@ app.get('/school-tracker', async (req, res) => {
       const data = doc.data();
       const key = `${data.schoolName}_${data.coordinatorId}`;
       workshopSummaries[key] = {
-        civicTeachersFeedback: data.civicTeachersFeedback || 'N/A',
-        principalFeedback: data.principalFeedback || 'N/A',
-        socialMediaFeedback: data.socialMediaFeedback || 'N/A',
-        trainer1: data.trainer1 || 'N/A',
-        trainer2: data.trainer2 || 'N/A',
+        civicTeachersFeedback: data.civicTeachersFeedback || 'Not Assigned',
+        principalFeedback: data.principalFeedback || 'Not Assigned',
+        socialMediaFeedback: data.socialMediaFeedback || 'Not Assigned',
+        trainer1: data.trainer1 || 'Not Assigned',
+        trainer2: data.trainer2 || 'Not Assigned',
       };
     });
 
@@ -6555,23 +6632,23 @@ app.get('/school-tracker', async (req, res) => {
     paymentSnapshot.forEach(doc => {
       const data = doc.data();
       payments[doc.id] = {
-        workshopFees: Number(data.workshopFees) || 11000,
-        invoiceStatus: data.invoiceStatus || 'N/A',
+        workshopFees: Number(data.workshopFees) || 0,
+        invoiceStatus: data.invoiceStatus || 'Not Assigned',
         kitCharges: Number(data.kitCharges) || 0,
-        kitOutDate: data.kitOutDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
-        kitReceivedBy: data.kitReceivedBy || 'N/A',
-        status: data.status || 'N/A',
+        kitOutDate: data.kitOutDate?.toDate?.()?.toLocaleDateString('en-IN') || 'Not Assigned',
+        kitReceivedBy: data.kitReceivedBy || 'Not Assigned',
+        status: data.status || 'Not Assigned',
         contentRoyalty: Number(data.contentRoyalty) || 0,
-        bookCharges: Number(data.bookCharges) || 0, // Fetch from payments
-        trainerName1: data.trainerName1 || 'N/A',
-        trainerName2: data.trainerName2 || 'N/A',
+        bookCharges: Number(data.bookCharges) || 0,
+        trainerName1: data.trainerName1 || 'Not Assigned',
+        trainerName2: data.trainerName2 || 'Not Assigned',
         trainerRemuneration: Number(data.trainerRemunerationAmount || data.trainerHonorarium) || 0,
         travellingAllowance: Number(data.travellingAllowance) || 0,
         petrolDiesel: Number(data.petrolDiesel) || 0,
         trainerRemunerationStatus: data.trainerRemunerationStatus || 'Pending',
         paid: Number(data.paid) || 0,
-        paymentDate: data.paymentDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
-        bltAccount: data.bltAccount || 'N/A',
+        paymentDate: data.paymentDate?.toDate?.()?.toLocaleDateString('en-IN') || 'Not Assigned',
+        bltAccount: Number(data.bltAccount) || 0, 
         paymentMethod: data.paymentMethod || 'CASH',
         total: Number(data.total) || 0,
         trainerTotalCost: Number(data.trainerTotalCost) || 0,
@@ -6583,7 +6660,7 @@ app.get('/school-tracker', async (req, res) => {
     participantSnapshot.forEach(doc => {
       const data = doc.data();
       participants.push({
-        schoolNameDropdown: data.schoolNameDropdown || 'N/A',
+        schoolNameDropdown: data.schoolNameDropdown || 'Not Assigned',
         hasCompletedMCQ: data.hasCompletedMCQ || false,
         isChampion: data.isChampion || false,
         feedback: data.feedback || '',
@@ -6595,77 +6672,72 @@ app.get('/school-tracker', async (req, res) => {
       const data = doc.data();
       const schoolId = doc.id;
       const paymentData = payments[schoolId] || {};
-      const coordinatorName = coordinators[data.coordinatorId] || 'N/A';
+      const coordinatorName = coordinators[data.coordinatorId] || 'Not Assigned';
       const feedbackKey = `${data.schoolName}_${data.coordinatorId}`;
       const feedbackData = workshopSummaries[feedbackKey] || {
-        civicTeachersFeedback: 'N/A',
-        principalFeedback: 'N/A',
-        socialMediaFeedback: 'N/A',
-        trainer1: 'N/A',
-        trainer2: 'N/A',
+        civicTeachersFeedback: 'Not Assigned',
+        principalFeedback: 'Not Assigned',
+        socialMediaFeedback: 'Not Assigned',
+        trainer1: 'Not Assigned',
+        trainer2: 'Not Assigned',
       };
 
-      // Handle eventDate
       let eventDate = data.eventDate?.toDate?.() || (typeof data.eventDate === 'string' ? new Date(data.eventDate) : null);
 
-      // Combine trainer names
       const trainerName = [
         feedbackData.trainer1,
         feedbackData.trainer2,
-      ].filter(t => t && t !== 'N/A').join(', ') || [
+      ].filter(t => t && t !== 'Not Assigned').join(', ') || [
         paymentData.trainerName1,
         paymentData.trainerName2,
-      ].filter(t => t && t !== 'N/A').join(', ') || 'N/A';
+      ].filter(t => t && t !== 'Not Assigned').join(', ') || 'Not Assigned';
 
-      // Calculate champFeedbackStatus
       const champFeedbackStatus = participants.some(p =>
         p.schoolNameDropdown === data.schoolName && p.feedback && p.feedback !== ''
       ) ? 'Y' : 'N';
 
-      // Convert thinkingLetter and cotation
-      const thinkingLetter = data.thinkingLetter === true ? 'Yes' : data.thinkingLetter === false ? 'No' : 'N/A';
-      const cotation = data.cotation === true ? 'Yes' : data.cotation === false ? 'No' : 'N/A';
+      const thinkingLetter = data.thinkingLetter === true ? 'Yes' : data.thinkingLetter === false ? 'No' : 'Not Assigned';
+      const cotation = data.cotation === true ? 'Yes' : data.cotation === false ? 'No' : 'Not Assigned';
 
-      // Calculate total expenses and remaining balance
       const totalExpenses = (paymentData.kitCharges || 0) +
                            (paymentData.contentRoyalty || 0) +
                            (paymentData.bookCharges || 0) +
                            (paymentData.travellingAllowance || 0) +
                            (paymentData.petrolDiesel || 0) +
                            (paymentData.trainerRemuneration || 0);
-      const total = (paymentData.workshopFees || 11000) - totalExpenses;
+
+      const total = (paymentData.workshopFees || 0) - totalExpenses;
 
       schools.push({
         schoolId,
-        schoolName: data.schoolName || 'N/A',
-        city: data.city || 'N/A',
-        district: data.district || 'N/A',
-        eventDate: eventDate?.toLocaleDateString('en-IN') || 'N/A',
+        schoolName: data.schoolName || 'Not Assigned',
+        city: data.city || 'Not Assigned',
+        district: data.district || 'Not Assigned',
+        eventDate: eventDate?.toLocaleDateString('en-IN') || 'Not Assigned',
         isApproved: data.isApproved || false,
         deliveryMode: data.deliveryMode || 'pending',
         coordinatorName,
-        workshopFees: paymentData.workshopFees || 11000,
-        invoiceStatus: paymentData.invoiceStatus || 'N/A',
+        workshopFees: paymentData.workshopFees || 0,
+        invoiceStatus: paymentData.invoiceStatus || 'Not Assigned',
         kitCharges: paymentData.kitCharges || 0,
-        kitDispatchedDate: paymentData.kitOutDate || 'N/A',
-        kitReceivedBy: paymentData.kitReceivedBy || 'N/A',
-        status: paymentData.status || 'N/A',
+        kitDispatchedDate: paymentData.kitOutDate || 'Not Assigned',
+        kitReceivedBy: paymentData.kitReceivedBy || 'Not Assigned',
+        status: paymentData.status || 'Not Assigned',
         contentRoyalty: paymentData.contentRoyalty || 0,
-        bookCharges: paymentData.bookCharges || 0, // Use payments collection
+        bookCharges: paymentData.bookCharges || 0,
         trainerName,
         trainerRemuneration: paymentData.trainerRemuneration || 0,
         travellingAllowance: paymentData.travellingAllowance || 0,
         petrolDiesel: paymentData.petrolDiesel || 0,
         totalTrainerCost: paymentData.trainerTotalCost || 0,
         trainerRemunerationStatus: paymentData.trainerRemunerationStatus || 'Pending',
-        paid: paymentData.paid || 0,
-        paymentDate: paymentData.paymentDate || 'N/A',
-        bltAccount: paymentData.bltAccount || 'N/A',
+        paymentDate: paymentData.paymentDate || 'Not Assigned',
+        bltAccount: paymentData.bltAccount || 0,
         paymentMethod: paymentData.paymentMethod || 'CASH',
-        total,
-        totalExpenses,
+        total: total || 0,
+        totalExpenses: totalExpenses || 0,
         civicTeachersFeedback: feedbackData.civicTeachersFeedback,
-        principalFeedback: feedbackData.principalFeedback !== 'N/A' && feedbackData.principalFeedback ? 'Y' : 'N',
+        principalFeedback: feedbackData.principalFeedback !== 'Not Assigned' && feedbackData.principalFeedback ? 'Y' : 'N',
         feedbackSocialMedia: feedbackData.socialMediaFeedback,
         centreCoordinationExpenses: paymentData.petrolDiesel || 0,
         champFeedbackStatus,
@@ -6674,11 +6746,9 @@ app.get('/school-tracker', async (req, res) => {
       });
     });
 
-    // Calculate totals
     const totalTrainerCost = schools.reduce((sum, school) => sum + (school.totalTrainerCost || 0), 0);
     const totalAllExpenses = schools.reduce((sum, school) => sum + (school.totalExpenses || 0), 0);
 
-    // Render EJS template
     res.render('tracker', {
       schools,
       participants,
@@ -6686,6 +6756,7 @@ app.get('/school-tracker', async (req, res) => {
       totalTrainerCost: totalTrainerCost.toLocaleString('en-IN'),
       totalAllExpenses: totalAllExpenses.toLocaleString('en-IN'),
     });
+
   } catch (err) {
     console.error('Error fetching data:', err);
     res.render('tracker', {
@@ -6698,10 +6769,11 @@ app.get('/school-tracker', async (req, res) => {
   }
 });
 
-// New endpoint for exporting to Excel
+
+
+// Excel export route
 app.get('/school-tracker/export', async (req, res) => {
   try {
-    // Fetch data
     const schoolSnapshot = await db.collection('schools').get();
     const paymentSnapshot = await db.collection('payments').get();
     const participantSnapshot = await db.collection('participants').get();
@@ -6714,29 +6786,10 @@ app.get('/school-tracker/export', async (req, res) => {
     const coordinators = {};
     const workshopSummaries = {};
 
-    // Check for empty collections
-    if (schoolSnapshot.empty) {
-      console.warn('No schools found in Firestore');
-    }
-    if (paymentSnapshot.empty) {
-      console.warn('No payments found in Firestore');
-    }
-    if (participantSnapshot.empty) {
-      console.warn('No participants found in Firestore');
-    }
-    if (coordinatorSnapshot.empty) {
-      console.warn('No coordinators found in Firestore');
-    }
-    if (workshopSummarySnapshot.empty) {
-      console.warn('No workshop summaries found in Firestore');
-    }
-
-    // Process coordinators
     coordinatorSnapshot.forEach(doc => {
       coordinators[doc.id] = doc.data().name || 'N/A';
     });
 
-    // Process workshop summaries
     workshopSummarySnapshot.forEach(doc => {
       const data = doc.data();
       const key = `${data.schoolName}_${data.coordinatorId}`;
@@ -6749,39 +6802,28 @@ app.get('/school-tracker/export', async (req, res) => {
       };
     });
 
-    // Process payments
     paymentSnapshot.forEach(doc => {
       const data = doc.data();
-      const totalExpenses = (data.kitCharges || 0) +
-                           (data.contentRoyalty || 0) +
-                           (data.bookCharges || 0) +
-                           (data.trainerHonorarium || 0) +
-                           (data.travellingAllowance || 0) +
-                           (data.petrolDiesel || 0);
       payments[doc.id] = {
-        workshopFees: data.workshopFees || 11000,
+        workshopFees: Number(data.workshopFees) || 11000,
         invoiceStatus: data.invoiceStatus || 'N/A',
-        kitCharges: data.kitCharges || 0,
+        kitCharges: Number(data.kitCharges) || 0,
         kitOutDate: data.kitOutDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
         kitReceivedBy: data.kitReceivedBy || 'N/A',
-        status: data.status || 'N/A',
-        contentRoyalty: data.contentRoyalty || 0,
-        bookCharges: data.bookCharges || 0,
+        contentRoyalty: Number(data.contentRoyalty) || 0,
+        bookCharges: Number(data.bookCharges) || 0,
         trainerName1: data.trainerName1 || 'N/A',
         trainerName2: data.trainerName2 || 'N/A',
-        trainerHonorarium: data.trainerHonorarium || 0,
-        travellingAllowance: data.travellingAllowance || 0,
-        petrolDiesel: data.petrolDiesel || 0,
-        paid: data.paid || 0,
+        trainerRemuneration: Number(data.trainerRemunerationAmount || data.trainerHonorarium) || 0,
+        travellingAllowance: Number(data.travellingAllowance) || 0,
+        petrolDiesel: Number(data.petrolDiesel) || 0,
         paymentDate: data.paymentDate?.toDate?.()?.toLocaleDateString('en-IN') || 'N/A',
-        bltAccount: data.bltAccount || 'N/A',
+        bltAccount: Number(data.bltAccount) || 0, // default 0
         paymentMethod: data.paymentMethod || 'CASH',
-        totalExpenses,
-        total: (data.workshopFees || 11000) - totalExpenses - (data.paid || 0),
+        totalExpenses: Number(data.totalExpenses) || 0,
       };
     });
 
-    // Process participants
     participantSnapshot.forEach(doc => {
       const data = doc.data();
       participants.push({
@@ -6792,7 +6834,6 @@ app.get('/school-tracker/export', async (req, res) => {
       });
     });
 
-    // Process schools
     schoolSnapshot.forEach(doc => {
       const data = doc.data();
       const schoolId = doc.id;
@@ -6807,10 +6848,7 @@ app.get('/school-tracker/export', async (req, res) => {
         trainer2: 'N/A',
       };
 
-      let eventDate = null;
-      if (data.eventDate) {
-        eventDate = data.eventDate.toDate?.() || (typeof data.eventDate === 'string' ? new Date(data.eventDate) : null);
-      }
+      let eventDate = data.eventDate?.toDate?.() || (typeof data.eventDate === 'string' ? new Date(data.eventDate) : null);
 
       const trainerName = [
         feedbackData.trainer1,
@@ -6833,147 +6871,74 @@ app.get('/school-tracker/export', async (req, res) => {
         city: data.city || 'N/A',
         district: data.district || 'N/A',
         eventDate: eventDate?.toLocaleDateString('en-IN') || 'N/A',
-        isApproved: data.isApproved || false,
-        deliveryMode: data.deliveryMode || 'pending',
         coordinatorName,
         workshopFees: paymentData.workshopFees || 11000,
-        invoiceStatus: paymentData.invoiceStatus || 'N/A',
         kitCharges: paymentData.kitCharges || 0,
         kitDispatchedDate: paymentData.kitOutDate || 'N/A',
         kitReceivedBy: paymentData.kitReceivedBy || 'N/A',
-        status: paymentData.status || 'N/A',
         contentRoyalty: paymentData.contentRoyalty || 0,
         bookCharges: paymentData.bookCharges || 0,
         trainerName,
-        trainerRemuneration: paymentData.trainerHonorarium || 0,
+        trainerRemuneration: paymentData.trainerRemuneration || 0,
         travellingAllowance: paymentData.travellingAllowance || 0,
         petrolDiesel: paymentData.petrolDiesel || 0,
-        paid: paymentData.paid || 0,
-        paymentDate: paymentData.paymentDate || 'N/A',
-        bltAccount: paymentData.bltAccount || 'N/A',
-        paymentMethod: paymentData.paymentMethod || 'CASH',
         totalExpenses: paymentData.totalExpenses || 0,
-        total: paymentData.total || 0,
         civicTeachersFeedback: feedbackData.civicTeachersFeedback,
         principalFeedback: feedbackData.principalFeedback !== 'N/A' && feedbackData.principalFeedback ? 'Y' : 'N',
         feedbackSocialMedia: feedbackData.socialMediaFeedback,
-        centreCoordinationExpenses: paymentData.petrolDiesel || 0,
         champFeedbackStatus,
         thinkingLetter,
         cotation,
+        bltAccount: paymentData.bltAccount != null ? paymentData.bltAccount : 0, // default 0
       });
     });
 
-    // Prepare data for Excel (schools sheet)
     const excelData = schools.map((school, index) => ({
       'S. No': index + 1,
-      'School ID': school.schoolId || 'N/A',
-      'School Name': school.schoolName || 'N/A',
-      'City': school.city || 'N/A',
-      'District': school.district || 'N/A',
-      'Event Date': school.eventDate || 'N/A',
-      'Is Approved': school.isApproved ? 'Yes' : 'No',
-      'Delivery Mode': school.deliveryMode || 'pending',
-      'Event Coordinator': school.coordinatorName || 'N/A',
+      'School Name': school.schoolName,
+      'City': school.city,
+      'District': school.district,
+      'Event Date': school.eventDate,
+      'Event Coordinator': school.coordinatorName,
       'Student Login': participants.filter(p => p.schoolNameDropdown === school.schoolName).length,
       'MCQ Completed': participants.filter(p => p.schoolNameDropdown === school.schoolName && p.hasCompletedMCQ).length,
       'Champ Status': participants.filter(p => p.schoolNameDropdown === school.schoolName && p.isChampion).length,
-      'Champ Feedback Status': school.champFeedbackStatus || 'N/A',
-      'Feedback for Social Media': school.feedbackSocialMedia || 'N/A',
-      'Principal Feedback (Y/N)': school.principalFeedback || 'N/A',
-      'Civic Teachers Feedback': school.civicTeachersFeedback || 'N/A',
-      'Workshop Fees': `₹${(school.workshopFees || 11000).toLocaleString('en-IN')}`,
-      'Invoice & Thanking Letter': school.invoiceStatus || 'N/A',
-      'Kit Charges': `₹${(school.kitCharges || 0).toLocaleString('en-IN')}`,
-      'Kit Dispatched Date': school.kitDispatchedDate || 'N/A',
-      'Kit Received By': school.kitReceivedBy || 'N/A',
-      'Status': school.status || 'N/A',
-      'Content Royalty': `₹${(school.contentRoyalty || 0).toLocaleString('en-IN')}`,
-      'Book Charges': `₹${(school.bookCharges || 0).toLocaleString('en-IN')}`,
-      'Centre Coordination Expenses': `₹${(school.centreCoordinationExpenses || 0).toLocaleString('en-IN')}`,
-      'Trainer Name': school.trainerName || 'N/A',
-      'Trainer Remuneration': `₹${(school.trainerRemuneration || 0).toLocaleString('en-IN')}`,
-      'Travelling Allowance': `₹${(school.travellingAllowance || 0).toLocaleString('en-IN')}`,
-      'Petrol/Diesel': `₹${(school.petrolDiesel || 0).toLocaleString('en-IN')}`,
-      'Total Expenses': `₹${(school.totalExpenses || 0).toLocaleString('en-IN')}`,
-      'Total': `₹${(school.total || 0).toLocaleString('en-IN')}`,
-      'Paid': `₹${(school.paid || 0).toLocaleString('en-IN')}`,
-      'Payment Date': school.paymentDate || 'N/A',
-      'BLT Account': school.bltAccount || 'N/A',
-      'Payment Method': school.paymentMethod || 'CASH',
-      'Thinking Letter': school.thinkingLetter || 'N/A',
-      'Cotation': school.cotation || 'N/A',
+      'Champ Feedback Status': school.champFeedbackStatus,
+      'Feedback for Social Media': school.feedbackSocialMedia,
+      'Principal Feedback (Y/N)': school.principalFeedback,
+      'Civic Teachers Feedback': school.civicTeachersFeedback,
+      'Workshop Fees': school.workshopFees,
+      'Delivery Mode': school.deliveryMode || 'pending',
+      'Kit Dispatched Date': school.kitDispatchedDate,
+      'Kit Received By': school.kitReceivedBy,
+      'Kit Charges': school.kitCharges,
+      'Content Royalty': school.contentRoyalty,
+      'Book Charges': school.bookCharges,
+      'Centre Coordination Expenses': school.petrolDiesel,
+      'Trainer Name': school.trainerName,
+      'Trainer Remuneration': school.trainerRemuneration,
+      'Travelling Allowance': school.travellingAllowance,
+      'Total Expenses': school.totalExpenses,
+      'BLT Account': school.bltAccount, // default 0
+      'Thanking Letter': school.thinkingLetter,
+      'Cotation': school.cotation,
     }));
 
-    // Prepare data for participants sheet
-    const participantData = participants.map((p, index) => ({
-      'S. No': index + 1,
-      'School Name': p.schoolNameDropdown || 'N/A',
-      'Has Completed MCQ': p.hasCompletedMCQ ? 'Yes' : 'No',
-      'Is Champion': p.isChampion ? 'Yes' : 'No',
-      'Feedback': p.feedback || 'N/A',
-    }));
-
-    // Create workbook and worksheets
-    const XLSX = require('xlsx');
     const wb = XLSX.utils.book_new();
-
-    // Schools sheet
     const ws = XLSX.utils.json_to_sheet(excelData);
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    for (let col = range.s.c; col <= range.e.c; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-      if (!ws[cellAddress]) continue;
-      ws[cellAddress].s = {
-        fill: { type: 'pattern', pattern: 'solid', fgColor: { rgb: 'FFFF00' } },
-        font: { bold: true },
-        alignment: { horizontal: 'center', vertical: 'center' },
-      };
-    }
-    const colWidths = [];
-    Object.keys(excelData[0]).forEach((key, i) => {
-      const maxLength = Math.max(
-        key.length,
-        ...excelData.map(row => (row[key] || '').toString().length)
-      );
-      colWidths[i] = { wch: Math.min(maxLength + 2, 50) };
-    });
-    ws['!cols'] = colWidths;
     XLSX.utils.book_append_sheet(wb, ws, 'School Tracker');
 
-    // Participants sheet
-    const participantWs = XLSX.utils.json_to_sheet(participantData);
-    const participantRange = XLSX.utils.decode_range(participantWs['!ref']);
-    for (let col = participantRange.s.c; col <= participantRange.e.c; col++) {
-      const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col });
-      if (!participantWs[cellAddress]) continue;
-      participantWs[cellAddress].s = {
-        fill: { type: 'pattern', pattern: 'solid', fgColor: { rgb: 'FFFF00' } },
-        font: { bold: true },
-        alignment: { horizontal: 'center', vertical: 'center' },
-      };
-    }
-    const participantColWidths = [];
-    Object.keys(participantData[0]).forEach((key, i) => {
-      const maxLength = Math.max(
-        key.length,
-        ...participantData.map(row => (row[key] || '').toString().length)
-      );
-      participantColWidths[i] = { wch: Math.min(maxLength + 2, 50) };
-    });
-    participantWs['!cols'] = participantColWidths;
-    XLSX.utils.book_append_sheet(wb, participantWs, 'Participants');
-
-    // Generate and send Excel file
     const buffer = XLSX.write(wb, { bookType: 'xlsx', type: 'buffer' });
     res.setHeader('Content-Disposition', 'attachment; filename=School_Tracker.xlsx');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buffer);
+
   } catch (err) {
     console.error('Error generating Excel:', err);
     res.status(500).json({ error: 'Failed to generate Excel file' });
   }
 });
+
 
 
 // POST endpoint for submitting workshop summary
@@ -6991,7 +6956,7 @@ app.post('/submit-workshop-summary', isAuthenticated, async (req, res) => {
             schoolName: req.body.schoolName?.trim(),
             schoolAddress: req.body.schoolAddress?.trim(),
             workshopDate: req.body.workshopDate?.trim(),
-            studentFeedbackFormNumber: parseInt(req.body.studentFeedbackFormNumber, 10),
+            studentFeedbackFormNumber: parseInt(req.body.studentFeedbackFormNumber, 50),
             trainer1: req.body.trainer1?.trim(),
             trainer2: req.body.trainer2?.trim() || '',
             coordinatorName: req.body.coordinatorName?.trim(),

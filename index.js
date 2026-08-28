@@ -7244,58 +7244,143 @@ app.get('/get-login-logs', async (req, res) => {
 // server.js or app.js
 app.get('/api/impact-stats', async (req, res) => {
   try {
-    // Fetch schools
-    const schoolsSnapshot = await db.collection('schools').get();
-    const schools = schoolsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const approvedSchools = schools.filter(s => s.isApproved).length;
+    // Fetch schools, trainers and participants together
+    const [
+      schoolsSnapshot,
+      trainersSnapshot,
+      participantsSnapshot
+    ] = await Promise.all([
+      db.collection('schools').get(),
+      db.collection('trainers').get(),
+      db.collection('participants').get()
+    ]);
 
-    // Fetch trainers
-    const trainersSnapshot = await db.collection('trainers').get();
-    const trainers = trainersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // ---------------- SCHOOLS ----------------
 
-    // Fetch participants
-    const participantsSnapshot = await db.collection('participants').get();
-    const participants = participantsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const studentsCompletedMCQ = participants.filter(p => p.hasCompletedMCQ).length;
-    const averageScore = participants.filter(p => p.hasCompletedMCQ).length > 0
-      ? (participants.reduce((sum, p) => sum + (Number(p.score) || 0), 0) / participants.filter(p => p.hasCompletedMCQ).length).toFixed(2)
-      : 'N/A';
+    const totalSchools = schoolsSnapshot.size;
+    let approvedSchools = 0;
 
-    // District-wise distribution (aggregate by city)
-    const districtCounts = schools.reduce((acc, school) => {
+    const districtCounts = {};
+
+    schoolsSnapshot.forEach(doc => {
+      const school = doc.data();
+
+      if (school.isApproved === true) {
+        approvedSchools++;
+      }
+
       const city = school.city || 'Other';
-      acc[city] = (acc[city] || 0) + 1;
-      return acc;
-    }, {});
-    const districtData = Object.entries(districtCounts).map(([city, count]) => ({ city, count }));
 
-    // Profession-wise trainers
-    const professionCounts = trainers.reduce((acc, trainer) => {
+      districtCounts[city] =
+        (districtCounts[city] || 0) + 1;
+    });
+
+    const districtData = Object.entries(districtCounts).map(
+      ([city, count]) => ({
+        city,
+        count
+      })
+    );
+
+    // ---------------- TRAINERS ----------------
+
+    const totalTrainers = trainersSnapshot.size;
+
+    const professionCounts = {};
+
+    trainersSnapshot.forEach(doc => {
+      const trainer = doc.data();
+
       const profession = trainer.profession || 'Other';
-      acc[profession] = (acc[profession] || 0) + 1;
-      return acc;
-    }, {});
-    const professionData = Object.entries(professionCounts).map(([profession, count]) => ({ profession, count }));
 
-    // Today's stats
+      professionCounts[profession] =
+        (professionCounts[profession] || 0) + 1;
+    });
+
+    const professionData = Object.entries(professionCounts).map(
+      ([profession, count]) => ({
+        profession,
+        count
+      })
+    );
+
+    // ---------------- PARTICIPANTS ----------------
+
+    const totalStudents = participantsSnapshot.size;
+
+    let studentsCompletedMCQ = 0;
+    let totalScore = 0;
+
+    let studentsTodayCount = 0;
+    let totalScoreToday = 0;
+
+    // Today's date
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+
     const tomorrow = new Date(today);
     tomorrow.setDate(today.getDate() + 1);
-    const studentsTodaySnapshot = await db.collection('participants')
-      .where('hasCompletedMCQ', '==', true)
-      .where('completedAt', '>=', today)
-      .where('completedAt', '<', tomorrow)
-      .get();
-    const studentsTodayCount = studentsTodaySnapshot.size;
-    const totalScoreToday = studentsTodaySnapshot.docs.reduce((sum, doc) => sum + (Number(doc.data().score) || 0), 0);
-    const averageScoreToday = studentsTodayCount > 0 ? (totalScoreToday / studentsTodayCount).toFixed(2) : 0;
+
+    participantsSnapshot.forEach(doc => {
+      const participant = doc.data();
+
+      // Completed MCQ
+      if (participant.hasCompletedMCQ === true) {
+
+        studentsCompletedMCQ++;
+
+        totalScore += Number(participant.score) || 0;
+
+        // Today's completed MCQ
+        if (participant.completedAt) {
+
+          let completedAt;
+
+          // Firestore Timestamp
+          if (
+            typeof participant.completedAt.toDate === 'function'
+          ) {
+            completedAt = participant.completedAt.toDate();
+          } else {
+            completedAt = new Date(participant.completedAt);
+          }
+
+          if (
+            completedAt >= today &&
+            completedAt < tomorrow
+          ) {
+            studentsTodayCount++;
+
+            totalScoreToday +=
+              Number(participant.score) || 0;
+          }
+        }
+      }
+    });
+
+    // ---------------- AVERAGE SCORE ----------------
+
+    const averageScore =
+      studentsCompletedMCQ > 0
+        ? (
+            totalScore / studentsCompletedMCQ
+          ).toFixed(2)
+        : 'N/A';
+
+    const averageScoreToday =
+      studentsTodayCount > 0
+        ? (
+            totalScoreToday / studentsTodayCount
+          ).toFixed(2)
+        : 0;
+
+    // ---------------- RESPONSE ----------------
 
     res.json({
-      totalSchools: schools.length,
+      totalSchools,
       approvedSchools,
-      totalTrainers: trainers.length,
-      totalStudents: participants.length,
+      totalTrainers,
+      totalStudents,
       studentsCompletedMCQ,
       averageScore,
       studentsTodayCount,
@@ -7303,9 +7388,18 @@ app.get('/api/impact-stats', async (req, res) => {
       districtData,
       professionData
     });
+
   } catch (err) {
-    console.error('Error fetching impact stats:', err);
-    res.status(500).json({ error: 'Failed to load stats' });
+
+    console.error(
+      'Error fetching impact stats:',
+      err
+    );
+
+    res.status(500).json({
+      error: 'Failed to load stats',
+      details: err.message
+    });
   }
 });
 
